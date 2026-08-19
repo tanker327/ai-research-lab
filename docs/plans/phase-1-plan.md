@@ -90,10 +90,16 @@ Order inside a session is fixed; sessions run in order A → D.
   on the poll interval (readiness) / every 30s (stale) inside the api process.
 - Also: deps-include-FAILED → BLOCKED (the §9.3 footnote); stale release marks
   the RUNNING attempt FAILED(TRANSIENT_INFRA) + `kind:'warn'` event.
+- **Amended during the phase (gate finding):** stale release parks the task in
+  `EVALUATING`, not `READY` — sending it straight to READY bypassed
+  `decideRetry` (CLAUDE.md rule 10), so neither backoff nor `max_attempts`
+  applied and a claim timeout shorter than a task's work time produced an
+  unbounded reclaim loop. The retry ladder now governs every re-run.
 - **Accept:** dependency chain becomes READY in waves; a task whose claim
-  expired (`claimed_at` older than `TASK_CLAIM_TIMEOUT_S`) returns to READY with
-  its attempt failed; SIGKILL-mid-attempt fixture passes (matrix row 1 — no
-  duplicate live rows because the re-run writes a new attempt).
+  expired (`claimed_at` older than `TASK_CLAIM_TIMEOUT_S`) has its attempt
+  failed and is re-run only via the ladder; SIGKILL-mid-attempt fixture passes
+  (matrix row 1 — no duplicate live rows because the re-run writes a new
+  attempt).
 
 ### Session C — liveness + events (tickets 1.4, 1.6)
 

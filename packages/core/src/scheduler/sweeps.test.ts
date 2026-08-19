@@ -7,6 +7,7 @@ import { newId } from "@lab/schemas";
 import postgres from "postgres";
 import { afterAll, afterEach, beforeEach, describe, expect, it } from "vitest";
 import { claimNextReadyTask } from "../claim";
+import { sweepEvaluations } from "./evaluate";
 import { sweepReadiness, sweepStaleClaims } from "./sweeps";
 
 const url = process.env.DATABASE_URL ?? "postgres://lab:lab@localhost:5434/research_lab";
@@ -95,7 +96,7 @@ describe("sweepReadiness", () => {
 });
 
 describe("sweepStaleClaims", () => {
-  it("releases an expired claim: task READY, attempt FAILED(TRANSIENT_INFRA), warn event", async () => {
+  it("parks an expired claim in EVALUATING: attempt FAILED(TRANSIENT_INFRA), ladder governs the re-run", async () => {
     const t = newId();
     await seedTask(db, { id: t, runId });
     const work = await claimNextReadyTask(db, "doomed-worker");
@@ -106,9 +107,11 @@ describe("sweepStaleClaims", () => {
     const released = await sweepStaleClaims(db, 900);
     expect(released).toEqual([t]);
 
+    // Rule 10: the sweep never decides the retry — it parks the task for the
+    // retry ladder instead of sending it straight back to READY.
     const [task] = await raw`SELECT status, claimed_by, claimed_at
                              FROM research_tasks WHERE id = ${t}`;
-    expect(task).toMatchObject({ status: "READY", claimed_by: null, claimed_at: null });
+    expect(task).toMatchObject({ status: "EVALUATING", claimed_by: null, claimed_at: null });
     const [attempt] = await raw`SELECT status, error FROM attempts WHERE id = ${work.attempt.id}`;
     expect(attempt?.status).toBe("FAILED");
     expect(attempt?.error).toMatchObject({ category: "TRANSIENT_INFRA" });
@@ -116,10 +119,28 @@ describe("sweepStaleClaims", () => {
                               WHERE task_id = ${t} AND type = 'TASK_CLAIM_EXPIRED'`;
     expect(event?.kind).toBe("warn");
 
-    // Re-claim writes a fresh attempt — the dead one's rows stay dark.
+    // The ladder (backoff elapsed) releases it; the re-claim writes a fresh
+    // attempt — the dead one's rows stay dark.
+    const swept = await sweepEvaluations(db, () => new Date(Date.now() + 10 * 60_000));
+    expect(swept.retried).toEqual([t]);
     const rerun = await claimNextReadyTask(db, "healthy-worker");
     expect(rerun?.task.id).toBe(t);
     expect(rerun?.attempt.attemptNumber).toBe(2);
+  });
+
+  it("caps stale-claim churn at max_attempts via the ladder (the gate's runaway-loop finding)", async () => {
+    const t = newId();
+    await seedTask(db, { id: t, runId, maxAttempts: 1 });
+    const work = await claimNextReadyTask(db, "doomed-worker");
+    if (!work) throw new Error("expected claim");
+    await raw`UPDATE research_tasks SET claimed_at = now() - interval '1 hour' WHERE id = ${t}`;
+    await sweepStaleClaims(db, 900);
+
+    const swept = await sweepEvaluations(db, () => new Date(Date.now() + 10 * 60_000));
+    expect(swept.failed).toEqual([t]);
+    expect((await raw`SELECT status FROM research_tasks WHERE id = ${t}`)[0]?.status).toBe(
+      "FAILED",
+    );
   });
 
   it("leaves fresh claims alone", async () => {

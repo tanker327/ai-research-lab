@@ -54,16 +54,17 @@ export async function sweepReadiness(db: Db): Promise<ReadinessSweepResult> {
   });
 }
 
-// Matrix row 1: a SIGKILLed worker leaves task RUNNING + attempt RUNNING. Past
-// the claim timeout the task returns to READY and the orphaned attempt fails
-// with TRANSIENT_INFRA — the re-claim writes a fresh attempt, so side-effect
-// rows of the dead one stay dark (never ACCEPTED).
+// Matrix row 1: a SIGKILLed worker leaves task RUNNING + attempt RUNNING.
+// Past the claim timeout the orphaned attempt fails with TRANSIENT_INFRA and
+// the task parks in EVALUATING — the retry ladder (rule 10) then decides
+// backoff and enforces max_attempts before any re-claim. The eventual re-run
+// writes a fresh attempt, so side-effect rows of the dead one stay dark.
 export async function sweepStaleClaims(db: Db, timeoutSeconds: number): Promise<string[]> {
   return db.transaction(async (tx) => {
     const stale = await selectExpiredClaims(tx, timeoutSeconds);
     for (const s of stale) {
       assertAttemptTransition("RUNNING", "FAILED");
-      assertTaskTransition("RUNNING", "READY");
+      assertTaskTransition("RUNNING", "EVALUATING");
       const error = new CategorizedError(
         "TRANSIENT_INFRA",
         `claim by ${s.claimedBy ?? "unknown"} expired after ${timeoutSeconds}s — worker presumed dead`,

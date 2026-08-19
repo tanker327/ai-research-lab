@@ -81,9 +81,14 @@ export async function selectExpiredClaims(
   }));
 }
 
+// Parks the task in EVALUATING, not READY: the retry ladder — not the sweep —
+// decides whether/when a re-run happens (rule 10). Sending straight to READY
+// bypassed decideRetry entirely, so neither backoff nor the max_attempts cap
+// applied — found by the phase gate when a claim timeout shorter than the
+// task's work time produced an unbounded reclaim loop.
 export async function releaseTaskClaim(tx: SqlExecutor, taskId: string): Promise<void> {
   await tx.execute(sql`
     UPDATE research_tasks
-    SET status = 'READY', claimed_by = NULL, claimed_at = NULL, updated_at = now()
+    SET status = 'EVALUATING', claimed_by = NULL, claimed_at = NULL, updated_at = now()
     WHERE id = ${taskId}`);
 }
