@@ -2,3 +2,5 @@
 // (rule 1); the worker wires it into agent dispatch from Phase 3 on.
 export * from "./client";
 export * from "./errors";
+export * from "./policy";
+export * from "./semaphore";

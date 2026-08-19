@@ -22,10 +22,12 @@
     {
       "id": "2.1",
       "title": "packages/model: ModelClient via AI SDK \u2192 ai-hub (\u00a75.6) + usage/reasoning persistence",
-      "status": "in_progress",
+      "status": "completed",
       "priority": 2,
       "depends_on": ["2.0"],
-      "started_at": "2026-08-19"
+      "started_at": "2026-08-19",
+      "completed_at": "2026-08-19",
+      "commit": "2722256"
     },
     {
       "id": "2.2",
@@ -64,6 +66,7 @@
     "Per-phase planning cadence (user-approved 2026-08-19): draft docs/plans/phase-2-plan.md with decisions + acceptance criteria before coding, mirror of phase-1-plan.md.",
     "Post-phase audit 2026-08-19 (344c4c2): doc-sync gaps closed (design \u00a78.2/\u00a78.3 amended, D2 OPEN-QUESTION comment, .env.example) + handler unit tests added. Phase 2 plan template should include a doc-sync checklist in its DoD.",
     "PLAN CHANGE 2026-08-19 (user): UI-first \u2014 console built incrementally from now on, placeholders OK; every phase's DoD includes wiring new capabilities into apps/web. implementation-plan Phase 6 carries the amendment note. Console v0 shipped: bun run dev:web (:5173, proxies /api \u2192 :8787).",
-    "2.0 pre-flight done 2026-08-19: deployed ai-hub at http://192.168.10.114/v1 (x-service-name auth); local model passes json_schema + tool calls; deepseek no json_schema; openai/xai keys invalid on hub (USER ACTION for frontier tier). Phase 2 plan drafted: docs/plans/phase-2-plan.md \u2014 awaiting user review. Open: D4 web_search provider choice."
+    "2.0 pre-flight done 2026-08-19: deployed ai-hub at http://192.168.10.114/v1 (x-service-name auth); local model passes json_schema + tool calls; deepseek no json_schema; openai/xai keys invalid on hub (USER ACTION for frontier tier). Phase 2 plan drafted: docs/plans/phase-2-plan.md \u2014 awaiting user review. Open: D4 web_search provider choice.",
+    "Lesson 2026-08-19: a running dev stack (api scheduler + workers) and the test suite share one DB and interfere \u2014 stop dev processes before bun run check. Real fix (separate test database) is a candidate Phase 2/3 chore; do NOT create the task without approval."
   ]
 }

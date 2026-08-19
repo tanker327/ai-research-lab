@@ -9,6 +9,7 @@ import { type ModelCallContext, type ModelMessage, newId, type StructuredMode } 
 import { generateText, Output } from "ai";
 import { z } from "zod";
 import { mapModelError } from "./errors";
+import { createTierLimiter, type TierLimiter } from "./semaphore";
 
 export interface ModelClientOptions {
   baseUrl: string;
@@ -17,6 +18,8 @@ export interface ModelClientOptions {
   // 2.4 wires the content-addressed artifact store here; returns artifact id.
   reasoningSink?: (ctx: ModelCallContext, reasoning: string) => Promise<string | null>;
   fetch?: typeof globalThis.fetch; // tests inject a stub
+  // D3: client-side per-tier in-flight caps (e.g. { strong_local: GPU_CONCURRENCY_STRONG_LOCAL }).
+  concurrency?: Partial<Record<ModelCallContext["tier"], number>>;
 }
 
 export interface GenerateBaseArgs {
@@ -64,6 +67,7 @@ export function createModelClient(opts: ModelClientOptions): ModelClient {
     supportsStructuredOutputs: true,
   });
   const plainProvider = createOpenAICompatible(providerSettings);
+  const limiter: TierLimiter = createTierLimiter(opts.concurrency ?? {});
 
   async function run<T>(
     args: GenerateBaseArgs,
@@ -87,17 +91,21 @@ export function createModelClient(opts: ModelClientOptions): ModelClient {
     }
 
     try {
-      const res = await generateText({
-        model,
-        // Rule 10: decideRetry owns ALL retry policy — the SDK's built-in
-        // transport retries would mask transient failures from the ladder.
-        maxRetries: 0,
-        system,
-        messages: args.messages,
-        temperature: args.temperature,
-        maxOutputTokens: args.maxOutputTokens,
-        ...(output ? { output: Output.object({ schema: output.schema, name: output.name }) } : {}),
-      });
+      const res = await limiter.withPermit(args.ctx.tier, () =>
+        generateText({
+          model,
+          // Rule 10: decideRetry owns ALL retry policy — the SDK's built-in
+          // transport retries would mask transient failures from the ladder.
+          maxRetries: 0,
+          system,
+          messages: args.messages,
+          temperature: args.temperature,
+          maxOutputTokens: args.maxOutputTokens,
+          ...(output
+            ? { output: Output.object({ schema: output.schema, name: output.name }) }
+            : {}),
+        }),
+      );
 
       const meta = await persistCall({
         args,

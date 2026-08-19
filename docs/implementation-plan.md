@@ -383,7 +383,7 @@ flowchart LR
 | # | Ticket | Notes |
 |---|---|---|
 | 2.1 | `packages/model`: ModelClient via AI SDK → ai-hub (§5.6) + usage/reasoning persistence | |
-| 2.2 | Router policy table + gateway-side `GPU_CONCURRENCY_STRONG_LOCAL` semaphore | |
+| 2.2 | Router policy table + `GPU_CONCURRENCY_STRONG_LOCAL` semaphore (amended P2.2: client-side in packages/model per phase-2-plan D3 — no hub deploy in the critical path) | |
 | 2.3 | `packages/tools`: web_search + web_fetch (snapshot → content-addressed artifact) + registry with per-role allowlists + `seq` logging | |
 | 2.4 | Artifact store: local fs, sha256 content addressing | |
 
