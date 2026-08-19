@@ -51,14 +51,25 @@
     "apps/worker": {
       "name": "@lab/worker",
       "dependencies": {
+        "@lab/agents": "workspace:*",
+        "@lab/context": "workspace:*",
         "@lab/core": "workspace:*",
         "@lab/db": "workspace:*",
+        "@lab/model": "workspace:*",
         "@lab/schemas": "workspace:*",
+        "@lab/tools": "workspace:*",
         "pino": "^10.3.1",
       },
     },
     "packages/agents": {
       "name": "@lab/agents",
+      "dependencies": {
+        "@lab/db": "workspace:*",
+        "@lab/model": "workspace:*",
+        "@lab/schemas": "workspace:*",
+        "@lab/tools": "workspace:*",
+        "zod": "^4.4.3",
+      },
     },
     "packages/context": {
       "name": "@lab/context",
@@ -80,6 +91,7 @@
         "zod": "^4.1.13",
       },
       "devDependencies": {
+        "drizzle-orm": "^0.45.2",
         "postgres": "^3.4.9",
       },
     },

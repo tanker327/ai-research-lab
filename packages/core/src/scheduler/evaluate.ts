@@ -13,7 +13,8 @@ import {
 import { CategorizedError, newId, ResearchStrategy, TaskType } from "@lab/schemas";
 import { emitEvent } from "../events";
 import { acceptAttempt } from "../liveness";
-import { decideRetry, type RetryVerdict } from "../retry";
+import { applyAcceptedPlan } from "../plan";
+import { decideRetry, enforceAttemptCap, type RetryVerdict } from "../retry";
 import { assertTaskTransition } from "../state/task";
 
 const ACTOR = "retry_coordinator";
@@ -27,12 +28,21 @@ export interface EvaluationSweepResult {
 export async function sweepEvaluations(
   db: Db,
   now = () => new Date(),
+  maxAttemptsDefault = 3,
 ): Promise<EvaluationSweepResult> {
   const result: EvaluationSweepResult = { accepted: [], retried: [], failed: [] };
   const candidates = await selectEvaluationCandidates(db);
 
   for (const c of candidates) {
     if (c.attemptStatus === "SUCCEEDED") {
+      // Plan tasks: acceptance and PlanDelta interpretation are one
+      // transaction (ticket 3.2, ADR-003/011) — a rejected delta rides the
+      // same retry ladder as any other quality rejection.
+      if (c.taskType === "plan") {
+        const applied = await applyAcceptedPlan(db, c, maxAttemptsDefault);
+        (applied.outcome === "applied" ? result.accepted : result.retried).push(c.taskId);
+        continue;
+      }
       await acceptAttempt(db, c.attemptId, ACTOR);
       result.accepted.push(c.taskId);
       continue;
@@ -97,11 +107,5 @@ function resolveVerdict(c: EvaluationCandidate): RetryVerdict {
     null,
   );
   // Attempt budget is a hard cap on top of the ladder (design §8.1 readiness).
-  if (verdict.kind !== "task_failed" && c.attemptCount >= c.maxAttempts) {
-    return {
-      kind: "task_failed",
-      rationale: `max_attempts (${c.maxAttempts}) exhausted after ${c.attemptCount} attempts; overriding ${verdict.kind}. Ladder said: ${verdict.rationale}`,
-    };
-  }
-  return verdict;
+  return enforceAttemptCap(verdict, c.attemptCount, c.maxAttempts);
 }

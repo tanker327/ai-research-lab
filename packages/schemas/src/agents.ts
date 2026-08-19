@@ -3,7 +3,7 @@
 // their agent tickets (3.2–3.4). D1 norm (phase-3-plan): every array and
 // string is bounded — constrained decoding degenerates on unbounded shapes.
 import { z } from "zod";
-import { ResearchStrategy } from "./enums";
+import { ModelTier, ResearchStrategy, TaskType } from "./enums";
 
 const shortText = z.string().max(2000);
 const digestText = z.string().max(60_000);
@@ -69,6 +69,56 @@ export const ResearcherInput = z.object({
   timeContext: z.string().max(500),
 });
 export type ResearcherInput = z.infer<typeof ResearcherInput>;
+
+// ---- Planner output (design §6.1, ticket 3.2) ----
+
+// The version and all ids are assigned by the Control Plane — the model never
+// mints identity or version numbers.
+export const PlannerSpecDraft = ResearchSpecification.omit({
+  version: true,
+  clarificationsAssumed: true,
+});
+export type PlannerSpecDraft = z.infer<typeof PlannerSpecDraft>;
+
+export const PlannedTask = z.object({
+  localId: z.string().min(1).max(60),
+  type: TaskType,
+  title: z.string().min(1).max(500),
+  description: z.string().max(4000).default(""),
+  researchQuestion: z.string().max(4000).optional(),
+  strategy: ResearchStrategy.optional(),
+  priority: z.number().int().min(0).max(100),
+  dependencies: z.array(z.string().min(1).max(60)).max(50),
+  successCriteria: z.array(shortText).max(20),
+  suggestedModelTier: ModelTier.optional(),
+  parallelizable: z.boolean(),
+  // Fully concrete at creation (ADR-011) — the interpreter enforces this with
+  // the placeholder guard; the schema can only bound the shape.
+  input: z.record(z.string(), z.unknown()),
+});
+export type PlannedTask = z.infer<typeof PlannedTask>;
+
+export const PlanDelta = z.object({
+  addTasks: z.array(PlannedTask).max(30),
+  cancelTaskIds: z.array(z.string().max(60)).max(50),
+  supersedeTaskIds: z.array(z.string().max(60)).max(50),
+  rationale: z.string().min(1).max(4000),
+});
+export type PlanDelta = z.infer<typeof PlanDelta>;
+
+export const HumanQuestion = z.object({
+  question: shortText,
+  whyUnsafeToInfer: shortText,
+});
+export type HumanQuestion = z.infer<typeof HumanQuestion>;
+
+export const PlannerOutput = z.object({
+  specification: PlannerSpecDraft,
+  clarificationsAssumed: z.array(shortText).max(20),
+  humanQuestions: z.array(HumanQuestion).max(5).optional(),
+  planDelta: PlanDelta,
+});
+export type PlannerOutput = z.infer<typeof PlannerOutput>;
 
 // The extract task's `input` column IS this shape, written fully concrete by
 // the Control Plane when the research attempt is accepted (ADR-011, plan D5) —

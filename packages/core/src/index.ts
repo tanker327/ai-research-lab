@@ -4,6 +4,7 @@ export * from "./config";
 export * from "./events";
 export * from "./liveness";
 export * from "./logger";
+export * from "./plan";
 export * from "./retry";
 export * from "./scheduler";
 export * from "./state";

@@ -12,6 +12,7 @@
     "@lab/db": "workspace:*"
   },
   "devDependencies": {
-    "postgres": "^3.4.9"
+    "postgres": "^3.4.9",
+    "drizzle-orm": "^0.45.2"
   }
 }

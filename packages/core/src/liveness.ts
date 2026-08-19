@@ -9,6 +9,7 @@ import {
   getTaskForUpdate,
   markAttemptAccepted,
   supersedePriorAttempts,
+  type Tx,
   updateTaskStatus,
 } from "@lab/db";
 import { CategorizedError, type TaskStatus } from "@lab/schemas";
@@ -26,7 +27,18 @@ export async function acceptAttempt(
   attemptId: string,
   actor = "run_coordinator",
 ): Promise<AcceptResult> {
-  return db.transaction(async (tx) => {
+  return db.transaction((tx) => acceptAttemptInTx(tx, attemptId, actor));
+}
+
+// Composable form: the plan-interpretation path (ticket 3.2) accepts the
+// attempt and applies its PlanDelta in ONE transaction — readers never see an
+// accepted plan whose tasks don't exist yet.
+export async function acceptAttemptInTx(
+  tx: Tx,
+  attemptId: string,
+  actor = "run_coordinator",
+): Promise<AcceptResult> {
+  {
     const attempt = await getAttemptForUpdate(tx, attemptId);
     if (!attempt) {
       throw new CategorizedError("PERMANENT_INFRA", `attempt ${attemptId} does not exist`);
@@ -57,7 +69,7 @@ export async function acceptAttempt(
     });
 
     return { taskId: attempt.taskId, supersededAttemptIds };
-  });
+  }
 }
 
 // Phase-1 stub (phase-1-plan 1.4): canonicalization re-runs over the changed

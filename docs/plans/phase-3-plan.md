@@ -18,7 +18,7 @@
 
 ## Findings during the phase (append-only)
 
-*(empty — populated as tickets land)*
+- **ai v7 forbids system-role rows in `messages` (3.2):** `AI_InvalidPromptError` at runtime — the system prompt must go through `generateText`'s separate `system` option. ModelClient already exposes it; agents pass `system: SYSTEM`, never a system message.
 
 ## Design decisions (settled before coding; D3/D4 need user input)
 

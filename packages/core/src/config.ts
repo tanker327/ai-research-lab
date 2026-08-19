@@ -19,6 +19,12 @@ export const ConfigSchema = z.object({
   MODEL_STRONG_LOCAL: z.string().min(1).default("default"),
   MODEL_FAST_LOCAL: z.string().min(1).default("cheapest"),
 
+  // TEMPORARY routing amendment (phase-3-plan D3, user-approved 2026-08-19):
+  // the hub's frontier keys are invalid, so the Planner runs on strong_local
+  // and every off-frontier planner attempt emits a warn event. Flip back to
+  // 'frontier' the day the keys work.
+  PLANNER_TIER: z.enum(["frontier", "strong_local", "fast_local"]).default("strong_local"),
+
   API_PORT: intFromEnv(8787),
   WORKER_CONCURRENCY: intFromEnv(2),
   GPU_CONCURRENCY_STRONG_LOCAL: intFromEnv(2),

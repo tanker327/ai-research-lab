@@ -91,3 +91,106 @@ describe("fake handler registry", () => {
     expect(rows[0]).toMatchObject({ attempt_id: work.attempt.id, excerpt: "handler-test" });
   });
 });
+
+// ---- Planner dispatch (ticket 3.2): contract test with a stubbed hub ----
+import { createContextBuilder } from "@lab/context";
+import { loadConfig } from "@lab/core";
+import { createArtifactStore } from "@lab/db";
+import { createModelClient } from "@lab/model";
+import { type PlannerOutput, PlannerOutput as PlannerOutputSchema } from "@lab/schemas";
+import { createToolRegistry } from "@lab/tools";
+
+const PLAN: PlannerOutput = {
+  specification: {
+    objective: "o",
+    scope: [],
+    exclusions: [],
+    constraints: [],
+    successCriteria: ["s"],
+    keyQuestions: ["k"],
+  },
+  clarificationsAssumed: [],
+  planDelta: {
+    addTasks: [],
+    cancelTaskIds: [],
+    supersedeTaskIds: [],
+    rationale: "empty stage",
+  },
+};
+
+function stubHubFetch(json: unknown): typeof globalThis.fetch {
+  return (async () =>
+    new Response(
+      JSON.stringify({
+        id: "c1",
+        object: "chat.completion",
+        created: 1,
+        model: "local-llm/resolved",
+        choices: [
+          {
+            index: 0,
+            message: { role: "assistant", content: JSON.stringify(json) },
+            finish_reason: "stop",
+          },
+        ],
+        usage: { prompt_tokens: 10, completion_tokens: 5 },
+      }),
+      { status: 200, headers: { "content-type": "application/json" } },
+    )) as unknown as typeof globalThis.fetch;
+}
+
+function agentDeps(fetchImpl: typeof globalThis.fetch) {
+  const config = loadConfig({ DATABASE_URL: url });
+  const artifacts = createArtifactStore("./data/test-artifacts");
+  return {
+    config,
+    model: createModelClient({
+      baseUrl: config.AIHUB_BASE_URL,
+      serviceName: config.AIHUB_SERVICE_NAME,
+      db,
+      fetch: fetchImpl,
+    }),
+    tools: createToolRegistry({ db, store: artifacts, fetchImpl }, []),
+    artifacts,
+    context: createContextBuilder({
+      db,
+      capabilities: [{ name: "web_fetch", description: "fetch" }],
+    }),
+  };
+}
+
+describe("planner dispatch (3.2)", () => {
+  it("builds context, persists input+output verbatim, emits the D3 tier warn event", async () => {
+    const registry3 = createHandlerRegistry(agentDeps(stubHubFetch(PLAN)));
+    const work = await seedWork({ planStage: 1 });
+    await sql`UPDATE research_tasks SET type = 'plan', agent_role = 'planner' WHERE id = ${work.task.id}`;
+
+    await registry3.plan(db, { ...work, task: { ...work.task, type: "plan" } });
+
+    const attempt = await sql`SELECT input, output FROM attempts WHERE id = ${work.attempt.id}`;
+    const input = attempt[0]?.input as Record<string, unknown>;
+    expect(input.planStage).toBe(1); // R12: the built PlannerInput, not task.input
+    expect(input.availableCapabilities).toBeDefined();
+    expect(PlannerOutputSchema.parse(attempt[0]?.output)).toEqual(PLAN);
+
+    const events = await sql`
+      SELECT kind FROM events WHERE run_id = ${work.task.runId} AND type = 'PLANNER_TIER_DOWNGRADED'`;
+    expect(events[0]?.kind).toBe("warn"); // D3: loud, never silent
+  });
+
+  it("malformed model JSON is a SCHEMA_FAILURE (rule 7)", async () => {
+    const registry3 = createHandlerRegistry(agentDeps(stubHubFetch({ garbage: true })));
+    const work = await seedWork({ planStage: 1 });
+    await expect(
+      registry3.plan(db, { ...work, task: { ...work.task, type: "plan" } }),
+    ).rejects.toMatchObject({ category: "SCHEMA_FAILURE" });
+  });
+
+  it("fake-input plan tasks still take the fake path (gate:p1 compatibility)", async () => {
+    const registry3 = createHandlerRegistry(agentDeps(stubHubFetch(PLAN)));
+    const work = await seedWork({ fake: { behavior: "sleep", ms: 5 } });
+    await registry3.plan(db, { ...work, task: { ...work.task, type: "plan" } });
+    const attempt = await sql`SELECT output FROM attempts WHERE id = ${work.attempt.id}`;
+    expect(attempt[0]?.output).toBeNull(); // fake path — no model call, no output
+  });
+});

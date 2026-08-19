@@ -1,6 +1,7 @@
 // Worker: poll → claim → dispatch → finish (§8.3, ticket 1.2). One process =
 // one claimer; run several for concurrency. WORKER_RUN_ONCE=1 does a single
 // poll iteration and exits (used by gate scripts and boot checks).
+import { createContextBuilder } from "@lab/context";
 import {
   type ClaimedWork,
   claimNextReadyTask,
@@ -8,8 +9,10 @@ import {
   finishAttempt,
   loadConfig,
 } from "@lab/core";
-import { createDb, type Db } from "@lab/db";
+import { createArtifactStore, createDb, type Db } from "@lab/db";
+import { createArtifactReasoningSink, createModelClient } from "@lab/model";
 import { CategorizedError } from "@lab/schemas";
+import { createToolRegistry, webFetchTool } from "@lab/tools";
 import { createHandlerRegistry, type TaskHandler } from "./handlers";
 
 export async function runWorker({ once = false } = {}): Promise<void> {
@@ -20,7 +23,25 @@ export async function runWorker({ once = false } = {}): Promise<void> {
   await sql`SELECT 1`;
   log.info({ database: "connected", once }, "worker boot ok");
 
-  const registry = createHandlerRegistry();
+  // Real agent dispatch deps (ticket 3.2). Constructing the model client is
+  // side-effect free — nothing talks to the hub until an agent task runs.
+  const artifacts = createArtifactStore(config.ARTIFACT_ROOT);
+  const registry = createHandlerRegistry({
+    config,
+    model: createModelClient({
+      baseUrl: config.AIHUB_BASE_URL,
+      serviceName: config.AIHUB_SERVICE_NAME,
+      db,
+      reasoningSink: createArtifactReasoningSink(artifacts, db),
+      concurrency: { strong_local: config.GPU_CONCURRENCY_STRONG_LOCAL },
+    }),
+    tools: createToolRegistry({ db, store: artifacts, fetchImpl: fetch }, [webFetchTool]),
+    artifacts,
+    context: createContextBuilder({
+      db,
+      capabilities: [{ name: "web_fetch", description: "fetch a URL; page snapshot is persisted" }],
+    }),
+  });
   let running = true;
   const stop = (signal: string) => {
     log.info({ signal }, "shutting down after current poll");

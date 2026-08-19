@@ -9,6 +9,7 @@ export * from "./raw/decisions";
 export * from "./raw/evaluation";
 export * from "./raw/events";
 export * from "./raw/liveness";
+export * from "./raw/plan";
 export * from "./raw/runs";
 export * from "./raw/sweeps";
 export * from "./raw/toolcalls";

@@ -102,3 +102,20 @@ export function decideRetry(
       : "Attempt failed with no categorized error and no quality verdict — nothing to retry against; failing the task.",
   };
 }
+
+// The attempt budget is a hard cap ON TOP of the ladder (design §8.1) — part
+// of retry policy, so it lives here (rule 10) and every caller of decideRetry
+// applies it the same way.
+export function enforceAttemptCap(
+  verdict: RetryVerdict,
+  attemptCount: number,
+  maxAttempts: number,
+): RetryVerdict {
+  if (verdict.kind !== "task_failed" && attemptCount >= maxAttempts) {
+    return {
+      kind: "task_failed",
+      rationale: `max_attempts (${maxAttempts}) exhausted after ${attemptCount} attempts; overriding ${verdict.kind}. Ladder said: ${verdict.rationale}`,
+    };
+  }
+  return verdict;
+}

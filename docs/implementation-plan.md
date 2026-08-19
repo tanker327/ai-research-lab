@@ -114,6 +114,7 @@ AIHUB_SERVICE_NAME=research-lab                 # hub auth = x-service-name head
 MODEL_FRONTIER=best                             # openai/gpt-5.6-sol (needs valid key on hub)
 MODEL_STRONG_LOCAL=default                      # local model; json_schema + tools verified
 MODEL_FAST_LOCAL=cheapest                       # deepseek; json_object mode (D2)
+PLANNER_TIER=strong_local                       # TEMPORARY (phase-3-plan D3): frontier once hub keys work
 
 WORKER_CONCURRENCY=2
 GPU_CONCURRENCY_STRONG_LOCAL=2                  # gateway-side cap

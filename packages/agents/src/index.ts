@@ -1,2 +1,4 @@
-// @lab/agents — see docs/implementation-plan.md §3. Populated by its phase tickets.
-export {};
+// @lab/agents — versioned agent implementations (implementation-plan §3).
+// Prompts are versioned source: packages/agents/src/<role>/<version>/.
+export { plannerV1 } from "./planner/v1";
+export type { Agent, AgentContext } from "./types";

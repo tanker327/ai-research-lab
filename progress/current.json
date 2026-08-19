@@ -24,9 +24,11 @@
     {
       "id": "3.2",
       "title": "Planner v1: clarify-stage prompt, PlannerOutput schema, PlanDelta interpretation in core (staged planning, ADR-011)",
-      "status": "pending",
+      "status": "completed",
       "priority": 3,
-      "depends_on": ["3.1"]
+      "depends_on": ["3.1"],
+      "started_at": "2026-08-19",
+      "completed_at": "2026-08-19"
     },
     {
       "id": "3.3",
