@@ -1,67 +1,75 @@
+import { Content, PageTitle, Topbar } from "@/components/layout";
+import { StatusBadge } from "@/components/status-badge";
+import { Card } from "@/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { navigate } from "../App";
 import { type RunRow, useRuns } from "../api";
-
-export function statusChip(status: string): string {
-  if (["COMPLETED", "DONE", "ACCEPTED"].includes(status)) return "chip live";
-  if (["FAILED", "CANCELLED"].includes(status)) return "chip fail";
-  if (["CREATED"].includes(status)) return "chip";
-  return "chip run"; // any active phase
-}
 
 export function RunsView() {
   const { data: runs, isLoading, error } = useRuns();
   return (
     <>
-      <div className="topbar">
-        <h2>Runs</h2>
-        <span className="mono faint">{runs?.length ?? 0} total</span>
-      </div>
-      <div className="content">
-        <div className="card">
-          {isLoading && <div className="bd faint">loading…</div>}
-          {error && (
-            <div className="bd" style={{ color: "var(--fail)" }}>
-              {String(error)}
-            </div>
-          )}
+      <Topbar>
+        <PageTitle>Runs</PageTitle>
+        <span className="font-mono text-[0.76rem] text-muted-foreground">
+          {runs?.length ?? 0} total
+        </span>
+      </Topbar>
+      <Content>
+        <Card>
+          {isLoading && <div className="p-4 text-muted-foreground">loading…</div>}
+          {error && <div className="p-4 text-fail">{String(error)}</div>}
           {runs && (
-            <table>
-              <thead>
-                <tr>
-                  <th>Run</th>
-                  <th>Status</th>
-                  <th>Cycles</th>
-                  <th>Created</th>
-                  <th>Finished</th>
-                </tr>
-              </thead>
-              <tbody>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Run</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Cycles</TableHead>
+                  <TableHead>Created</TableHead>
+                  <TableHead>Finished</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
                 {runs.map((r: RunRow) => (
-                  <tr key={r.id} className="rowlink" onClick={() => navigate(`/run/${r.id}`)}>
-                    <td>
+                  <TableRow key={r.id} data-clickable onClick={() => navigate(`/run/${r.id}`)}>
+                    <TableCell>
                       <div>{r.title ?? r.userRequest}</div>
-                      <div className="mono faint">{r.id}</div>
-                    </td>
-                    <td>
-                      <span className={statusChip(r.status)}>{r.status}</span>
-                    </td>
-                    <td className="mono soft">{r.evalCycleCount}</td>
-                    <td className="mono faint">{r.createdAt.slice(0, 19)}</td>
-                    <td className="mono faint">{r.completedAt?.slice(0, 19) ?? "—"}</td>
-                  </tr>
+                      <div className="font-mono text-[0.76rem] text-muted-foreground">{r.id}</div>
+                    </TableCell>
+                    <TableCell>
+                      <StatusBadge status={r.status} />
+                    </TableCell>
+                    <TableCell className="font-mono text-[0.76rem] text-secondary-foreground">
+                      {r.evalCycleCount}
+                    </TableCell>
+                    <TableCell className="font-mono text-[0.76rem] text-muted-foreground">
+                      {r.createdAt.slice(0, 19)}
+                    </TableCell>
+                    <TableCell className="font-mono text-[0.76rem] text-muted-foreground">
+                      {r.completedAt?.slice(0, 19) ?? "—"}
+                    </TableCell>
+                  </TableRow>
                 ))}
                 {runs.length === 0 && (
-                  <tr>
-                    <td colSpan={5} className="faint">
+                  <TableRow>
+                    <TableCell colSpan={5} className="text-muted-foreground">
                       No runs yet — start one under “New research”.
-                    </td>
-                  </tr>
+                    </TableCell>
+                  </TableRow>
                 )}
-              </tbody>
-            </table>
+              </TableBody>
+            </Table>
           )}
-        </div>
-      </div>
+        </Card>
+      </Content>
     </>
   );
 }

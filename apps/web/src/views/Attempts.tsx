@@ -2,8 +2,20 @@
 // cost, latency) and ordered tool calls — the Phase 2 capabilities made
 // visible. Superseded attempts render dimmed (liveness made visible, §24).
 import { useQuery } from "@tanstack/react-query";
+import { ChevronDown, ChevronRight } from "lucide-react";
 import { useState } from "react";
-import { statusChip } from "./Runs";
+import { StatusBadge } from "@/components/status-badge";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { cn } from "@/lib/utils";
 
 interface AttemptRow {
   id: string;
@@ -39,81 +51,88 @@ const get = async <T,>(path: string): Promise<T> => {
   return res.json() as Promise<T>;
 };
 
+const mono = "font-mono text-[0.76rem]";
+
 function CallsPanel({ attemptId }: { attemptId: string }) {
   const { data } = useQuery({
     queryKey: ["calls", attemptId],
     queryFn: () =>
       get<{ modelCalls: ModelCall[]; toolCalls: ToolCall[] }>(`/attempts/${attemptId}/calls`),
   });
-  if (!data) return <div className="faint">loading…</div>;
+  if (!data) return <div className="text-muted-foreground">loading…</div>;
   const { modelCalls, toolCalls } = data;
   if (modelCalls.length === 0 && toolCalls.length === 0) {
     return (
-      <div className="faint">
+      <div className="text-muted-foreground">
         no model or tool calls (fake handler era — real calls arrive with Phase 3 agents)
       </div>
     );
   }
   return (
-    <div style={{ display: "grid", gap: 10 }}>
+    <div className="grid gap-2.5">
       {modelCalls.length > 0 && (
-        <table>
-          <thead>
-            <tr>
-              <th>Model</th>
-              <th>Tier</th>
-              <th>Tokens in/out</th>
-              <th>Cost</th>
-              <th>Latency</th>
-              <th>Finish</th>
-            </tr>
-          </thead>
-          <tbody>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Model</TableHead>
+              <TableHead>Tier</TableHead>
+              <TableHead>Tokens in/out</TableHead>
+              <TableHead>Cost</TableHead>
+              <TableHead>Latency</TableHead>
+              <TableHead>Finish</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
             {modelCalls.map((m) => (
-              <tr key={m.id}>
-                <td className="mono">{m.model}</td>
-                <td>
-                  <span className={`chip ${m.modelTier === "frontier" ? "frontier" : ""}`}>
+              <TableRow key={m.id}>
+                <TableCell className={mono}>{m.model}</TableCell>
+                <TableCell>
+                  <Badge variant={m.modelTier === "frontier" ? "frontier" : "secondary"}>
                     {m.modelTier}
-                  </span>
-                </td>
-                <td className="mono soft">
+                  </Badge>
+                </TableCell>
+                <TableCell className={cn(mono, "text-secondary-foreground")}>
                   {m.inputTokens ?? "—"}/{m.outputTokens ?? "—"}
-                </td>
-                <td className="mono soft">{m.costUsd !== null ? `$${m.costUsd}` : "—"}</td>
-                <td className="mono soft">{m.latencyMs}ms</td>
-                <td className="mono faint">{m.finishReason ?? "—"}</td>
-              </tr>
+                </TableCell>
+                <TableCell className={cn(mono, "text-secondary-foreground")}>
+                  {m.costUsd !== null ? `$${m.costUsd}` : "—"}
+                </TableCell>
+                <TableCell className={cn(mono, "text-secondary-foreground")}>
+                  {m.latencyMs}ms
+                </TableCell>
+                <TableCell className={cn(mono, "text-muted-foreground")}>
+                  {m.finishReason ?? "—"}
+                </TableCell>
+              </TableRow>
             ))}
-          </tbody>
-        </table>
+          </TableBody>
+        </Table>
       )}
       {toolCalls.length > 0 && (
-        <table>
-          <thead>
-            <tr>
-              <th>#</th>
-              <th>Tool</th>
-              <th>Result</th>
-              <th>Latency</th>
-            </tr>
-          </thead>
-          <tbody>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>#</TableHead>
+              <TableHead>Tool</TableHead>
+              <TableHead>Result</TableHead>
+              <TableHead>Latency</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
             {toolCalls.map((t) => (
-              <tr key={t.id}>
-                <td className="mono">{t.seq}</td>
-                <td className="mono">{t.toolName}</td>
-                <td
-                  className={t.error ? "" : "soft"}
-                  style={t.error ? { color: "var(--fail)" } : {}}
-                >
+              <TableRow key={t.id}>
+                <TableCell className={mono}>{t.seq}</TableCell>
+                <TableCell className={mono}>{t.toolName}</TableCell>
+                <TableCell className={t.error ? "text-fail" : "text-secondary-foreground"}>
                   {t.error ? (t.error.message ?? "failed") : (t.responseSnippet ?? "ok")}
-                </td>
-                <td className="mono faint">{t.latencyMs !== null ? `${t.latencyMs}ms` : "—"}</td>
-              </tr>
+                </TableCell>
+                <TableCell className={cn(mono, "text-muted-foreground")}>
+                  {t.latencyMs !== null ? `${t.latencyMs}ms` : "—"}
+                </TableCell>
+              </TableRow>
             ))}
-          </tbody>
-        </table>
+          </TableBody>
+        </Table>
       )}
     </div>
   );
@@ -128,41 +147,45 @@ export function AttemptsView({ runId }: { runId: string }) {
   const [open, setOpen] = useState<string | null>(null);
 
   return (
-    <div className="card">
-      <div className="hd">Attempts · model &amp; tool calls</div>
-      <div className="bd" style={{ display: "grid", gap: 8 }}>
+    <Card>
+      <CardHeader>Attempts · model &amp; tool calls</CardHeader>
+      <CardContent className="grid gap-2">
         {attempts?.map((a) => (
           <div
             key={a.id}
-            className="taskcard"
-            style={a.status === "SUPERSEDED" ? { opacity: 0.5 } : {}}
+            className={cn(
+              "rounded-md border bg-card px-3 py-2.5 text-[0.8rem]",
+              a.status === "SUPERSEDED" && "opacity-50",
+            )}
           >
             <button
               type="button"
               onClick={() => setOpen(open === a.id ? null : a.id)}
-              style={{ display: "flex", gap: 10, width: "100%", alignItems: "center" }}
+              className="flex w-full cursor-pointer items-center gap-2.5"
             >
-              <span className="mono faint">#{a.attemptNumber}</span>
-              <span className="mono">{a.agentName}</span>
-              <span className={statusChip(a.status)}>{a.status}</span>
-              {a.error && (
-                <span className="mono" style={{ color: "var(--fail)" }}>
-                  {a.error.category}
-                </span>
-              )}
-              <span className="mono faint" style={{ marginLeft: "auto" }}>
-                {open === a.id ? "▾" : "▸"}
+              <span className={cn(mono, "text-muted-foreground")}>#{a.attemptNumber}</span>
+              <span className={mono}>{a.agentName}</span>
+              <StatusBadge status={a.status} />
+              {a.error && <span className={cn(mono, "text-fail")}>{a.error.category}</span>}
+              <span className="ml-auto text-muted-foreground">
+                {open === a.id ? (
+                  <ChevronDown className="size-3.5" />
+                ) : (
+                  <ChevronRight className="size-3.5" />
+                )}
               </span>
             </button>
             {open === a.id && (
-              <div style={{ marginTop: 10 }}>
+              <div className="mt-2.5">
                 <CallsPanel attemptId={a.id} />
               </div>
             )}
           </div>
         ))}
-        {(attempts?.length ?? 0) === 0 && <div className="faint">no attempts yet</div>}
-      </div>
-    </div>
+        {(attempts?.length ?? 0) === 0 && (
+          <div className="text-muted-foreground">no attempts yet</div>
+        )}
+      </CardContent>
+    </Card>
   );
 }

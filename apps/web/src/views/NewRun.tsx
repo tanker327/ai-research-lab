@@ -1,4 +1,8 @@
 import { useState } from "react";
+import { Content, PageTitle, Topbar } from "@/components/layout";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Textarea } from "@/components/ui/textarea";
 import { navigate } from "../App";
 import { createRun } from "../api";
 
@@ -56,31 +60,31 @@ export function NewRunView() {
 
   return (
     <>
-      <div className="topbar">
-        <h2>New research</h2>
-      </div>
-      <div className="content">
-        <div className="card">
-          <div className="hd">Research request</div>
-          <div className="bd" style={{ display: "grid", gap: 12 }}>
-            <textarea
+      <Topbar>
+        <PageTitle>New research</PageTitle>
+      </Topbar>
+      <Content>
+        <Card>
+          <CardHeader>Research request</CardHeader>
+          <CardContent className="grid gap-3">
+            <Textarea
               rows={3}
               placeholder="What should the lab research? (free text — Phase 1 runs a fake demo task chain; the Planner turns this into a real plan in Phase 3)"
               value={request}
               onChange={(e) => setRequest(e.target.value)}
             />
-            <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
-              <button type="button" className="btn primary" onClick={submit} disabled={busy}>
+            <div className="flex items-center gap-2.5">
+              <Button onClick={submit} disabled={busy}>
                 {busy ? "Starting…" : "Start run (demo task chain)"}
-              </button>
-              <span className="mono faint">
+              </Button>
+              <span className="font-mono text-[0.76rem] text-muted-foreground">
                 seeds 4 fake tasks · 3 dependency waves · Planner arrives P3
               </span>
             </div>
-            {err && <div style={{ color: "var(--fail)" }}>{err}</div>}
-          </div>
-        </div>
-      </div>
+            {err && <div className="text-fail">{err}</div>}
+          </CardContent>
+        </Card>
+      </Content>
     </>
   );
 }

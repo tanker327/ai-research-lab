@@ -35,7 +35,7 @@ Each decision records what was rejected, so we don't relitigate mid-build.
 | IDs | **UUIDv7** | UUIDv4, cuid | Time-ordered — events/attempts index and sort naturally. |
 | Logging | **pino** | console, winston | Structured; child loggers per run/task/attempt. |
 | Tests | **Vitest** + real Postgres (compose; testcontainers optional) | mocked DB | The control plane's correctness *is* SQL semantics — mock DB tests would test nothing. |
-| Web | **Vite + React + TanStack Query** | Next.js | Console is a pure projection of read APIs (ADR-017); no SSR need. Mockup's CSS tokens port directly. |
+| Web | **Vite + React + TanStack Query + Tailwind v4 + shadcn/ui** | Next.js | Console is a pure projection of read APIs (ADR-017); no SSR need. Mockup's CSS tokens are mapped onto shadcn's semantic theme variables (user-approved amendment 2026-08-19; the palette itself stays ADR-019-normative). |
 | Deploy | docker compose on Proxmox VM; vLLM on Blackwell box (OpenAI-compatible); k3s later | k8s now | App is stateless-except-Postgres by design; the k3s migration should be boring. |
 
 ---

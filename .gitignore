@@ -7,3 +7,4 @@ dist/
 
 # runtime artifact store (ARTIFACT_ROOT) — content-addressed blobs, never source
 data/
+tsconfig.tsbuildinfo

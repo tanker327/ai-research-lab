@@ -1,8 +1,15 @@
+import { ArrowLeft } from "lucide-react";
+import { Topbar } from "@/components/layout";
+import { StatusBadge, statusVariant } from "@/components/status-badge";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { cn } from "@/lib/utils";
 import { navigate } from "../App";
 import { cancelRun, useRun, useTasks } from "../api";
 import { AttemptsView } from "./Attempts";
 import { Placeholder } from "./Placeholder";
-import { statusChip } from "./Runs";
 import { Timeline } from "./Timeline";
 
 const PHASES = [
@@ -34,6 +41,28 @@ const TABS = [
   { key: "transcript", label: "Transcript", badge: "P5" },
 ];
 
+// Phase-rail pill (mockup .rail .ph) — done/now/pending/terminal states.
+function PhasePill({
+  state,
+  children,
+}: {
+  state: "done" | "now" | "pending" | "terminal";
+  children: React.ReactNode;
+}) {
+  return (
+    <span
+      className={cn(
+        "rounded-full border px-2.5 py-1 font-mono text-[0.68rem] text-muted-foreground",
+        state === "done" && "border-transparent bg-live-soft text-live",
+        state === "now" && "border-transparent bg-run-soft font-semibold text-run",
+        state === "terminal" && "border-transparent bg-fail-soft text-fail",
+      )}
+    >
+      {children}
+    </span>
+  );
+}
+
 export function RunDetail({ runId, tab }: { runId: string; tab: string }) {
   const { data: run } = useRun(runId);
   const { data: tasks } = useTasks(runId);
@@ -41,110 +70,119 @@ export function RunDetail({ runId, tab }: { runId: string; tab: string }) {
 
   return (
     <>
-      <div className="topbar">
-        <button type="button" className="mono faint" onClick={() => navigate("/runs")}>
-          ← runs
-        </button>
-        <h2>{run?.title ?? run?.userRequest ?? runId}</h2>
-        {run && <span className={statusChip(run.status)}>{run.status}</span>}
+      <Topbar>
+        <Button
+          variant="ghost"
+          size="sm"
+          className="font-mono text-[0.76rem] text-muted-foreground"
+          onClick={() => navigate("/runs")}
+        >
+          <ArrowLeft className="size-3.5" /> runs
+        </Button>
+        <h2 className="font-serif text-[1.15rem]">{run?.title ?? run?.userRequest ?? runId}</h2>
+        {run && <StatusBadge status={run.status} />}
         {run && !terminal && (
-          <button
-            type="button"
-            className="btn danger"
-            style={{ marginLeft: "auto" }}
+          <Button
+            variant="destructive"
+            size="sm"
+            className="ml-auto"
             onClick={() => cancelRun(runId)}
           >
             Cancel run
-          </button>
+          </Button>
         )}
-      </div>
-      <div className="tabs">
-        {TABS.map((t) => (
-          <button
-            type="button"
-            key={t.key}
-            className={`tab ${tab === t.key ? "on" : ""}`}
-            onClick={() => navigate(`/run/${runId}/${t.key}`)}
-          >
-            {t.label}
-            {t.badge && <span className="badge">{t.badge}</span>}
-          </button>
-        ))}
-      </div>
-      <div className="content">
+      </Topbar>
+      <Tabs value={tab} onValueChange={(t) => navigate(`/run/${runId}/${t}`)}>
+        <TabsList>
+          {TABS.map((t) => (
+            <TabsTrigger key={t.key} value={t.key}>
+              {t.label}
+              {t.badge && (
+                <span className="ml-1.5 font-mono text-[0.62rem] text-muted-foreground">
+                  {t.badge}
+                </span>
+              )}
+            </TabsTrigger>
+          ))}
+        </TabsList>
+      </Tabs>
+      <div className="grid gap-4.5 px-7 py-6">
         {tab === "overview" && run && (
           <>
-            <div className="card">
-              <div className="hd">Run phase</div>
-              <div className="bd">
-                <div className="rail">
+            <Card>
+              <CardHeader>Run phase</CardHeader>
+              <CardContent>
+                <div className="flex flex-wrap items-center gap-1.5">
                   {PHASES.map((p, i) => {
                     const idx = PHASES.indexOf(run.status);
                     const isTerm = ["FAILED", "CANCELLED"].includes(run.status);
-                    const cls = p === run.status ? "ph now" : !isTerm && idx > i ? "ph done" : "ph";
+                    const state =
+                      p === run.status
+                        ? p === "COMPLETED"
+                          ? "done"
+                          : "now"
+                        : !isTerm && idx > i
+                          ? "done"
+                          : "pending";
                     return (
-                      <span key={p} style={{ display: "contents" }}>
-                        {i > 0 && <span className="arrow">→</span>}
-                        <span
-                          className={
-                            p === "COMPLETED" && run.status === "COMPLETED" ? "ph done" : cls
-                          }
-                        >
-                          {p.toLowerCase()}
-                        </span>
+                      <span key={p} className="contents">
+                        {i > 0 && <span className="text-[0.7rem] text-muted-foreground">→</span>}
+                        <PhasePill state={state}>{p.toLowerCase()}</PhasePill>
                       </span>
                     );
                   })}
                   {["FAILED", "CANCELLED"].includes(run.status) && (
                     <>
-                      <span className="arrow">→</span>
-                      <span
-                        className="ph"
-                        style={{ background: "var(--fail-soft)", color: "var(--fail)" }}
-                      >
-                        {run.status.toLowerCase()}
-                      </span>
+                      <span className="text-[0.7rem] text-muted-foreground">→</span>
+                      <PhasePill state="terminal">{run.status.toLowerCase()}</PhasePill>
                     </>
                   )}
                 </div>
-              </div>
-            </div>
-            <div className="card">
-              <div className="hd">Tasks</div>
-              <div className="bd rail">
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader>Tasks</CardHeader>
+              <CardContent className="flex flex-wrap items-center gap-1.5">
                 {TASK_COLUMNS.map((s) => {
                   const n = tasks?.filter((t) => t.status === s).length ?? 0;
                   return n > 0 ? (
-                    <span key={s} className={statusChip(s)}>
+                    <Badge key={s} variant={statusVariant(s)}>
                       {s.toLowerCase()} · {n}
-                    </span>
+                    </Badge>
                   ) : null;
                 })}
-                {(tasks?.length ?? 0) === 0 && <span className="faint">no tasks</span>}
-              </div>
-            </div>
-            <div className="card">
-              <div className="hd">Request</div>
-              <div className="bd soft">{run.userRequest}</div>
-            </div>
+                {(tasks?.length ?? 0) === 0 && (
+                  <span className="text-muted-foreground">no tasks</span>
+                )}
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader>Request</CardHeader>
+              <CardContent className="text-secondary-foreground">{run.userRequest}</CardContent>
+            </Card>
           </>
         )}
 
         {tab === "tasks" && (
-          <div className="board">
+          <div className="grid grid-cols-[repeat(auto-fit,minmax(170px,1fr))] gap-3">
             {TASK_COLUMNS.filter((s) => tasks?.some((t) => t.status === s)).map((s) => (
-              <div className="col" key={s}>
-                <div className="colhd">
+              <div key={s}>
+                <div className="flex justify-between px-0.5 pb-2 pt-1 font-mono text-[0.64rem] uppercase tracking-[0.08em] text-muted-foreground">
                   <span>{s}</span>
                   <span>{tasks?.filter((t) => t.status === s).length}</span>
                 </div>
                 {tasks
                   ?.filter((t) => t.status === s)
                   .map((t) => (
-                    <div className="taskcard" key={t.id}>
-                      <div className="ty">{t.type}</div>
+                    <div
+                      key={t.id}
+                      className="mb-2 rounded-md border bg-card px-3 py-2.5 text-[0.8rem]"
+                    >
+                      <div className="mb-0.5 font-mono text-[0.62rem] uppercase tracking-[0.06em] text-muted-foreground">
+                        {t.type}
+                      </div>
                       <div>{t.title}</div>
-                      <div className="meta">
+                      <div className="mt-1.5 font-mono text-[0.66rem] text-muted-foreground">
                         attempts {t.attemptCount}/{t.maxAttempts}
                         {t.claimedBy ? ` · ${t.claimedBy}` : ""}
                       </div>
