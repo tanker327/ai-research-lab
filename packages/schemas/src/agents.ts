@@ -220,8 +220,10 @@ export const ProposedEvidence = z.object({
 export type ProposedEvidence = z.infer<typeof ProposedEvidence>;
 
 export const ExtractorOutput = z.object({
-  claims: z.array(ProposedClaim).max(50),
-  evidence: z.array(ProposedEvidence).max(100),
+  // Tight caps (gate finding): over-extraction + reasoning tokens truncated
+  // the JSON mid-array on the fast tier. Fewer, stronger items.
+  claims: z.array(ProposedClaim).max(20),
+  evidence: z.array(ProposedEvidence).max(30),
   contradictionsNoticed: z
     .array(
       z.object({
