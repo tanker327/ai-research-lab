@@ -16,6 +16,7 @@ export const ConfigSchema = z.object({
   MODEL_STRONG_LOCAL: z.string().min(1),
   MODEL_FAST_LOCAL: z.string().min(1),
 
+  API_PORT: intFromEnv(8787),
   WORKER_CONCURRENCY: intFromEnv(2),
   GPU_CONCURRENCY_STRONG_LOCAL: intFromEnv(2),
   TASK_CLAIM_TIMEOUT_S: intFromEnv(900),

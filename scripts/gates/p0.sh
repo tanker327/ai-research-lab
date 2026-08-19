@@ -15,7 +15,7 @@ bun run migrate
 echo "→ check (lint, import-lint, typecheck, tests)"
 bun run check
 echo "→ api boot"
-bun apps/api/src/index.ts
+API_BOOT_ONLY=1 bun apps/api/src/index.ts
 echo "→ worker boot"
 WORKER_RUN_ONCE=1 bun apps/worker/src/main.ts
 echo "✓ Phase 0 gate passed"

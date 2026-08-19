@@ -8,6 +8,9 @@
   "dependencies": {
     "hono": "^4.13.3",
     "@lab/core": "workspace:*",
-    "@lab/db": "workspace:*"
+    "@lab/db": "workspace:*",
+    "pino": "^10.3.1",
+    "postgres": "^3.4.9",
+    "@lab/schemas": "workspace:*"
   }
 }
