@@ -145,7 +145,13 @@ export function createModelClient(opts: ModelClientOptions): ModelClient {
     const candidate = stripped.includes("{") ? stripped : text;
     const start = candidate.indexOf("{");
     const end = candidate.lastIndexOf("}");
-    if (start === -1 || end <= start) throw new Error("no JSON object in model output");
+    if (start === -1 || end <= start) {
+      throw new Error(
+        text.trim().length === 0
+          ? "model produced no content — reasoning likely exhausted the output budget (finishReason=length)"
+          : "no JSON object in model output",
+      );
+    }
     return JSON.parse(candidate.slice(start, end + 1));
   }
 
