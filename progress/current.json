@@ -32,23 +32,29 @@
     {
       "id": "2.2",
       "title": "Router policy table + gateway-side GPU_CONCURRENCY_STRONG_LOCAL semaphore",
-      "status": "pending",
+      "status": "completed",
       "priority": 3,
-      "depends_on": ["2.1"]
+      "depends_on": ["2.1"],
+      "completed_at": "2026-08-19",
+      "commit": "9220706"
     },
     {
       "id": "2.3",
       "title": "packages/tools: web_search + web_fetch (snapshot \u2192 content-addressed artifact) + registry with per-role allowlists + seq logging",
-      "status": "pending",
+      "status": "completed",
       "priority": 4,
-      "depends_on": ["2.4"]
+      "depends_on": ["2.4"],
+      "completed_at": "2026-08-19",
+      "commit": "bac0357"
     },
     {
       "id": "2.4",
       "title": "Artifact store: local fs, sha256 content addressing",
-      "status": "pending",
+      "status": "completed",
       "priority": 3,
-      "depends_on": []
+      "depends_on": [],
+      "completed_at": "2026-08-19",
+      "commit": "bac0357"
     },
     {
       "id": "2.5",
