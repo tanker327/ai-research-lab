@@ -41,7 +41,7 @@ export interface ContextBuilder {
 export interface ContextBuilderDeps {
   db: Db;
   // What the worker can actually offer agents right now (web_search appears
-  // here only once SEARXNG_BASE_URL is configured — plan D4).
+  // here only once FIRECRAWL_BASE_URL is configured — plan D4, amended).
   capabilities: CapabilitySummary[];
   budgets?: Partial<RoleBudgets>;
   now?: () => Date;

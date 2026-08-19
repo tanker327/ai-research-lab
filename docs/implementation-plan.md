@@ -115,7 +115,7 @@ MODEL_FRONTIER=best                             # openai/gpt-5.6-sol (needs vali
 MODEL_STRONG_LOCAL=default                      # local model; json_schema + tools verified
 MODEL_FAST_LOCAL=cheapest                       # deepseek; json_object mode (D2)
 PLANNER_TIER=strong_local                       # TEMPORARY (phase-3-plan D3): frontier once hub keys work
-# SEARXNG_BASE_URL=...                          # D4: web_search registers only when set (SearXNG)
+FIRECRAWL_BASE_URL=http://192.168.10.120:3002   # D4 amended: self-hosted Firecrawl (search + markdown scrape)
 RESEARCHER_MAX_TOOL_CALLS=8                     # deterministic researcher loop cap (ADR-016)
 
 WORKER_CONCURRENCY=2

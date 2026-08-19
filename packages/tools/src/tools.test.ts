@@ -134,47 +134,53 @@ describe("web_fetch", () => {
   });
 });
 
-// ---- web_search (ticket 3.3, D4: SearXNG) ----
+// ---- web_search + firecrawl scrape (ticket 3.3, D4 amended: Firecrawl) ----
 import { createWebSearchTool } from "./web-search";
 
-describe("web_search (searxng)", () => {
-  it("queries the JSON API, bounds results, persists an ordered tool_call", async () => {
-    const seen: string[] = [];
-    const fetchImpl = (async (input: Parameters<typeof globalThis.fetch>[0]) => {
-      seen.push(String(input));
+describe("web_search (firecrawl)", () => {
+  it("POSTs /v2/search, bounds results, persists an ordered tool_call", async () => {
+    const seen: Array<{ url: string; body: Record<string, unknown> }> = [];
+    const fetchImpl = (async (
+      input: Parameters<typeof globalThis.fetch>[0],
+      init?: RequestInit,
+    ) => {
+      seen.push({ url: String(input), body: JSON.parse(String(init?.body)) });
       return new Response(
         JSON.stringify({
-          results: Array.from({ length: 20 }, (_, i) => ({
-            title: `r${i}`,
-            url: `https://example.com/${i}`,
-            content: "snippet",
-          })),
+          success: true,
+          data: {
+            web: Array.from({ length: 20 }, (_, i) => ({
+              title: `r${i}`,
+              url: `https://example.com/${i}`,
+              description: "snippet",
+            })),
+          },
         }),
         { status: 200, headers: { "content-type": "application/json" } },
       );
     }) as unknown as typeof globalThis.fetch;
 
     const registry = createToolRegistry({ db, store, fetchImpl }, [
-      createWebSearchTool("http://searx.local:8888"),
+      createWebSearchTool("http://firecrawl.local:3002"),
     ]);
     const scoped = registry.forAttempt(ctx);
     const out = (await scoped.invoke("web_search", { query: "qwen quantization" })) as {
       results: unknown[];
     };
     expect(out.results).toHaveLength(8); // default maxResults bound
-    expect(seen[0]).toContain("http://searx.local:8888/search?q=qwen");
-    expect(seen[0]).toContain("format=json");
+    expect(seen[0]?.url).toBe("http://firecrawl.local:3002/v2/search");
+    expect(seen[0]?.body).toMatchObject({ query: "qwen quantization", limit: 8 });
 
     const rows = await raw`SELECT tool_name, error FROM tool_calls
                            WHERE attempt_id = ${ctx.attemptId}`;
     expect(rows[0]).toMatchObject({ tool_name: "web_search", error: null });
   });
 
-  it("non-200 from searxng is a TOOL_FAILURE with the failure persisted", async () => {
+  it("non-200 from firecrawl is a TOOL_FAILURE with the failure persisted", async () => {
     const fetchImpl = (async () =>
       new Response("busy", { status: 503 })) as unknown as typeof globalThis.fetch;
     const registry = createToolRegistry({ db, store, fetchImpl }, [
-      createWebSearchTool("http://searx.local:8888"),
+      createWebSearchTool("http://firecrawl.local:3002"),
     ]);
     const scoped = registry.forAttempt(ctx);
     await expect(scoped.invoke("web_search", { query: "anything" })).rejects.toMatchObject({
@@ -182,5 +188,48 @@ describe("web_search (searxng)", () => {
     });
     const rows = await raw`SELECT error FROM tool_calls WHERE attempt_id = ${ctx.attemptId}`;
     expect(rows[0]?.error).not.toBeNull();
+  });
+});
+
+describe("web_fetch via firecrawl", () => {
+  it("scrapes markdown, snapshots it, and falls back to direct fetch on failure", async () => {
+    const fetchImpl = (async (
+      input: Parameters<typeof globalThis.fetch>[0],
+      init?: RequestInit,
+    ) => {
+      const target = String(input);
+      if (target.includes("/v2/scrape")) {
+        const { url } = JSON.parse(String(init?.body)) as { url: string };
+        if (url.includes("broken")) return new Response("nope", { status: 500 });
+        return new Response(
+          JSON.stringify({
+            success: true,
+            data: { markdown: "# Clean markdown\ncontent", metadata: { statusCode: 200 } },
+          }),
+          { status: 200, headers: { "content-type": "application/json" } },
+        );
+      }
+      return new Response("<p>raw html fallback</p>", {
+        status: 200,
+        headers: { "content-type": "text/html" },
+      });
+    }) as unknown as typeof globalThis.fetch;
+
+    const registry = createToolRegistry(
+      { db, store, fetchImpl, firecrawlBaseUrl: "http://firecrawl.local:3002" },
+      [webFetchTool],
+    );
+    const scoped = registry.forAttempt(ctx);
+    const md = (await scoped.invoke("web_fetch", { url: "https://a.test/doc" })) as {
+      excerpt: string;
+      contentType: string | null;
+    };
+    expect(md.excerpt).toContain("# Clean markdown");
+    expect(md.contentType).toBe("text/markdown");
+
+    const fallback = (await scoped.invoke("web_fetch", { url: "https://a.test/broken" })) as {
+      excerpt: string;
+    };
+    expect(fallback.excerpt).toContain("raw html fallback");
   });
 });

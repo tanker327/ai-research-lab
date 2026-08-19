@@ -16,6 +16,9 @@ export interface ToolDeps {
   db: Db;
   store: ArtifactStore;
   fetchImpl: typeof globalThis.fetch;
+  // Self-hosted Firecrawl (D4-amended): web_fetch scrapes clean markdown and
+  // web_search queries /v2/search when set; absent → direct-fetch fallback.
+  firecrawlBaseUrl?: string;
 }
 
 export interface ToolOutcome {

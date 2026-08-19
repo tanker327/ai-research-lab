@@ -111,7 +111,7 @@ function agentContext(
       const { content } = await deps.artifacts.read(artifactId, db);
       return content.toString("utf8");
     },
-    searchAvailable: deps.config.SEARXNG_BASE_URL !== undefined,
+    searchAvailable: deps.config.FIRECRAWL_BASE_URL !== undefined,
     limits: { maxToolCalls: deps.config.RESEARCHER_MAX_TOOL_CALLS },
     signal: new AbortController().signal,
   };

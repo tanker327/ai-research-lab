@@ -29,8 +29,10 @@ export const ConfigSchema = z.object({
   // to strong_local instead of hard-failing on 401. Set to 1 when keys work.
   FRONTIER_ENABLED: z.coerce.number().int().min(0).max(1).default(0),
 
-  // D4: self-hosted SearXNG. web_search is registered only when this is set.
-  SEARXNG_BASE_URL: z.string().url().optional(),
+  // D4 (amended 2026-08-19): self-hosted Firecrawl (SearXNG is its backend —
+  // we call Firecrawl, never SearXNG directly). web_search registers and
+  // web_fetch scrapes markdown when set.
+  FIRECRAWL_BASE_URL: z.string().url().default("http://192.168.10.120:3002"),
   RESEARCHER_MAX_TOOL_CALLS: intFromEnv(8), // deterministic loop cap (ADR-016)
   MIN_EVIDENCE_PER_TASK: intFromEnv(3), // deterministic min-evidence check (3.6)
   MAX_PLAN_STAGES: intFromEnv(2), // staged-planning cap: discovery + deep wave (3.7; Evaluator drives more in P4)

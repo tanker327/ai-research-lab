@@ -204,7 +204,7 @@ describe("researcher dispatch (3.3)", () => {
       { action: "fetch", url: "https://docs.example.com/q", why: "official docs" },
       {
         action: "finish",
-        note: "# Question\nq\n# Findings\na sufficiently long research note body for the schema minimum.",
+        note: `# Question\nq\n# Findings\n${"Quoted excerpt from the official documentation follows, with source URL noted. ".repeat(10)}`,
         selfAssessment: { complete: true, confidence: "medium", gaps: ["no benchmarks"] },
       },
     ];

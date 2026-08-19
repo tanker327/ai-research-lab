@@ -35,15 +35,18 @@ export async function runWorker({ once = false } = {}): Promise<void> {
       reasoningSink: createArtifactReasoningSink(artifacts, db),
       concurrency: { strong_local: config.GPU_CONCURRENCY_STRONG_LOCAL },
     }),
-    tools: createToolRegistry({ db, store: artifacts, fetchImpl: fetch }, [
-      webFetchTool,
-      // D4: web_search only exists once the SearXNG endpoint is configured.
-      ...(config.SEARXNG_BASE_URL ? [createWebSearchTool(config.SEARXNG_BASE_URL)] : []),
-    ]),
+    tools: createToolRegistry(
+      // D4 (amended): Firecrawl backs both tools — markdown scrape + search.
+      { db, store: artifacts, fetchImpl: fetch, firecrawlBaseUrl: config.FIRECRAWL_BASE_URL },
+      [webFetchTool, createWebSearchTool(config.FIRECRAWL_BASE_URL)],
+    ),
     artifacts,
     context: createContextBuilder({
       db,
-      capabilities: [{ name: "web_fetch", description: "fetch a URL; page snapshot is persisted" }],
+      capabilities: [
+        { name: "web_fetch", description: "fetch a URL as clean markdown; snapshot persisted" },
+        { name: "web_search", description: "web search (Firecrawl/SearXNG)" },
+      ],
     }),
   });
   let running = true;
