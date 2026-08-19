@@ -30,9 +30,13 @@ export function loadConfig(env: Record<string, string | undefined> = process.env
   const parsed = ConfigSchema.safeParse(env);
   if (!parsed.success) {
     const missing = parsed.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`).join("; ");
-    throw new CategorizedError("PERMANENT_INFRA", `Invalid environment configuration — ${missing}`, {
-      detail: parsed.error.issues,
-    });
+    throw new CategorizedError(
+      "PERMANENT_INFRA",
+      `Invalid environment configuration — ${missing}`,
+      {
+        detail: parsed.error.issues,
+      },
+    );
   }
   return parsed.data;
 }

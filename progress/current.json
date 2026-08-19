@@ -17,9 +17,7 @@
       "title": "infra/docker-compose.yml: postgres16 + volumes",
       "status": "completed",
       "priority": 2,
-      "depends_on": [
-        "0.1"
-      ],
+      "depends_on": ["0.1"],
       "completed_at": "2026-08-19",
       "commit": "1019f71"
     },
@@ -28,10 +26,7 @@
       "title": "packages/db: drizzle schema for all v0.2.1 tables + migration 0001 (schema from design §17/§24.7)",
       "status": "completed",
       "priority": 3,
-      "depends_on": [
-        "0.1",
-        "0.2"
-      ],
+      "depends_on": ["0.1", "0.2"],
       "completed_at": "2026-08-19",
       "commit": "0cf33d6"
     },
@@ -40,9 +35,7 @@
       "title": "packages/schemas: TaskStatus/AttemptStatus/EventKind enums + error taxonomy",
       "status": "completed",
       "priority": 4,
-      "depends_on": [
-        "0.1"
-      ],
+      "depends_on": ["0.1"],
       "completed_at": "2026-08-19",
       "commit": "1027584"
     },
@@ -51,9 +44,7 @@
       "title": "Typed config + pino setup + uuidv7 helper",
       "status": "completed",
       "priority": 5,
-      "depends_on": [
-        "0.1"
-      ],
+      "depends_on": ["0.1"],
       "completed_at": "2026-08-19",
       "commit": "0b79157"
     }
