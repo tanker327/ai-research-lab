@@ -11,6 +11,7 @@ export default defineConfig({
     alias: { "@": fileURLToPath(new URL("./src", import.meta.url)) },
   },
   server: {
+    host: true, // listen on all interfaces so the console is reachable over Tailscale/LAN
     port: 5173,
     proxy: {
       "/api": {
