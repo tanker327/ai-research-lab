@@ -41,9 +41,10 @@
   ],
   "known_issues": [],
   "notes": [
-    "Phase 1 archived to progress/archive/phase-1.json 2026-08-19 \u2014 gate green twice + pg-restart variant; 355 tests.",
+    "Phase 1 archived to progress/archive/phase-1.json 2026-08-19 \u2014 gate green twice + pg-restart variant; 361 tests after audit commit 344c4c2.",
     "Phase 1 carry-over: RUNNING\u2192READY task transition retained per \u00a75.1 but currently unused (stale release now routes through EVALUATING per rule 10 \u2014 see phase-1-plan amendment).",
     "2.0 pre-flight was deferred from late Phase 1 (phase-1-plan risk item) \u2014 do it first.",
-    "Per-phase planning cadence (user-approved 2026-08-19): draft docs/plans/phase-2-plan.md with decisions + acceptance criteria before coding, mirror of phase-1-plan.md."
+    "Per-phase planning cadence (user-approved 2026-08-19): draft docs/plans/phase-2-plan.md with decisions + acceptance criteria before coding, mirror of phase-1-plan.md.",
+    "Post-phase audit 2026-08-19 (344c4c2): doc-sync gaps closed (design \u00a78.2/\u00a78.3 amended, D2 OPEN-QUESTION comment, .env.example) + handler unit tests added. Phase 2 plan template should include a doc-sync checklist in its DoD."
   ]
 }
