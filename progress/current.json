@@ -6,58 +6,74 @@
     {
       "id": "3.0",
       "title": "Draft docs/plans/phase-3-plan.md (decisions: context builder shape, prompt v1 conventions incl. bounded-schema norm from P2 gate finding) \u2014 review with user before coding",
-      "status": "pending",
+      "status": "completed",
       "priority": 1,
-      "depends_on": []
+      "depends_on": [],
+      "completed_at": "2026-08-19",
+      "notes": "docs/plans/phase-3-plan.md drafted; D3 (planner tier while frontier dark) and D4 (search provider vs seedUrls) presented for user decision"
     },
     {
       "id": "3.1",
       "title": "packages/context: forPlanner/forResearcher builders + token budgeting (R12: output persisted verbatim; never selects reasoning artifacts \u2014 ADR-018)",
       "status": "pending",
       "priority": 2,
-      "depends_on": ["3.0"]
+      "depends_on": [
+        "3.0"
+      ]
     },
     {
       "id": "3.2",
       "title": "Planner v1: clarify-stage prompt, PlannerOutput schema, PlanDelta interpretation in core (staged planning, ADR-011)",
       "status": "pending",
       "priority": 3,
-      "depends_on": ["3.1"]
+      "depends_on": [
+        "3.1"
+      ]
     },
     {
       "id": "3.3",
       "title": "Researcher v1: pass-1 tool loop \u2192 Research Note artifact + tool-layer sourcesVisited",
       "status": "pending",
       "priority": 4,
-      "depends_on": ["3.1"]
+      "depends_on": [
+        "3.1"
+      ]
     },
     {
       "id": "3.4",
       "title": "Extractor v1: guided decoding, auto-created extract task after research accept",
       "status": "pending",
       "priority": 5,
-      "depends_on": ["3.3"]
+      "depends_on": [
+        "3.3"
+      ]
     },
     {
       "id": "3.5",
       "title": "packages/evidence: canonicalization (normalize \u2192 trgm candidates \u2192 batch-confirm \u2192 upsert)",
       "status": "pending",
       "priority": 6,
-      "depends_on": ["3.4"]
+      "depends_on": [
+        "3.4"
+      ]
     },
     {
       "id": "3.6",
       "title": "Deterministic checks: min-evidence, non-vendor rule (core/checks)",
       "status": "pending",
       "priority": 7,
-      "depends_on": ["3.4"]
+      "depends_on": [
+        "3.4"
+      ]
     },
     {
       "id": "3.7",
       "title": "Console wiring: evidence & claims browser, Planner-driven new-run (standing UI rule)",
       "status": "pending",
       "priority": 8,
-      "depends_on": ["3.5"]
+      "depends_on": [
+        "3.5"
+      ]
     }
   ],
   "known_issues": [
