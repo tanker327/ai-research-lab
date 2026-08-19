@@ -52,7 +52,9 @@ button {
   *,
   *::before,
   *::after {
+    /* biome-ignore lint/complexity/noImportantStyles: must override every animation (mockup-normative a11y rule) */
     animation: none !important;
+    /* biome-ignore lint/complexity/noImportantStyles: same */
     transition: none !important;
   }
 }

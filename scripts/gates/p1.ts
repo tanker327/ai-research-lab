@@ -34,7 +34,7 @@ function spawn(cmd: string[], extra: Record<string, string> = {}): Bun.Subproces
   return proc;
 }
 
-const { db, sql, close } = createDb(env.DATABASE_URL);
+const { sql, close } = createDb(env.DATABASE_URL);
 
 async function until<T>(what: string, fn: () => Promise<T | null>, timeoutMs = 90_000): Promise<T> {
   const deadline = Date.now() + timeoutMs;

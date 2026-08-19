@@ -9,12 +9,15 @@ export const ConfigSchema = z.object({
   DATABASE_URL: z.string().min(1),
   ARTIFACT_ROOT: z.string().min(1).default("./data/artifacts"),
 
-  AIHUB_BASE_URL: z.string().url(),
-  AIHUB_API_KEY: z.string().default(""),
+  // Pre-flight 2026-08-19: the deployed hub authenticates via the
+  // x-service-name header, and tiers bind to hub ALIASES (phase-2-plan D1) —
+  // the hub owns which concrete model backs an alias.
+  AIHUB_BASE_URL: z.string().url().default("http://192.168.10.114/v1"),
+  AIHUB_SERVICE_NAME: z.string().min(1).default("research-lab"),
 
-  MODEL_FRONTIER: z.string().min(1),
-  MODEL_STRONG_LOCAL: z.string().min(1),
-  MODEL_FAST_LOCAL: z.string().min(1),
+  MODEL_FRONTIER: z.string().min(1).default("best"),
+  MODEL_STRONG_LOCAL: z.string().min(1).default("default"),
+  MODEL_FAST_LOCAL: z.string().min(1).default("cheapest"),
 
   API_PORT: intFromEnv(8787),
   WORKER_CONCURRENCY: intFromEnv(2),

@@ -7,6 +7,12 @@
   },
   "dependencies": {
     "@ai-sdk/openai-compatible": "^3.0.31",
-    "ai": "^7.0.68"
+    "ai": "^7.0.68",
+    "@lab/db": "workspace:*",
+    "@lab/schemas": "workspace:*",
+    "zod": "^4.1.13"
+  },
+  "devDependencies": {
+    "postgres": "^3.4.9"
   }
 }

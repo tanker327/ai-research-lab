@@ -1,5 +1,6 @@
 export { createDb, type Db, type SqlExecutor, type Tx } from "./client";
 export * from "./fixtures";
+export * from "./raw/calls";
 export * from "./raw/claim";
 export * from "./raw/decisions";
 export * from "./raw/evaluation";

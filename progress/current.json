@@ -22,9 +22,10 @@
     {
       "id": "2.1",
       "title": "packages/model: ModelClient via AI SDK \u2192 ai-hub (\u00a75.6) + usage/reasoning persistence",
-      "status": "pending",
+      "status": "in_progress",
       "priority": 2,
-      "depends_on": ["2.0"]
+      "depends_on": ["2.0"],
+      "started_at": "2026-08-19"
     },
     {
       "id": "2.2",

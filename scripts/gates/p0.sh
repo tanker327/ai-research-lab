@@ -5,10 +5,7 @@
 set -euo pipefail
 
 export DATABASE_URL="${DATABASE_URL:-postgres://lab:lab@localhost:5434/research_lab}"
-export AIHUB_BASE_URL="${AIHUB_BASE_URL:-http://ai-hub.local:3000/v1}"
-export MODEL_FRONTIER="${MODEL_FRONTIER:-claude-opus-4-8}"
-export MODEL_STRONG_LOCAL="${MODEL_STRONG_LOCAL:-qwen3.6-27b-fp8}"
-export MODEL_FAST_LOCAL="${MODEL_FAST_LOCAL:-qwen3.5-7b}"
+# AIHUB_*/MODEL_* have config defaults since P2.1; the gate makes no model calls.
 
 echo "→ migrate"
 bun run migrate

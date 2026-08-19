@@ -52,9 +52,11 @@ export function Timeline({ runId }: { runId: string }) {
   }, [runId, historyLast]);
 
   const seen = new Set<string>();
-  const all = [...(history ?? []), ...liveEvents].filter((e) =>
-    seen.has(e.id) ? false : (seen.add(e.id), true),
-  );
+  const all = [...(history ?? []), ...liveEvents].filter((e) => {
+    if (seen.has(e.id)) return false;
+    seen.add(e.id);
+    return true;
+  });
 
   return (
     <div className="card">

@@ -107,12 +107,13 @@ ai-research-lab/
 DATABASE_URL=postgres://lab:lab@localhost:5432/research_lab
 ARTIFACT_ROOT=./data/artifacts
 
-AIHUB_BASE_URL=http://ai-hub.local:3000/v1     # OpenAI-compatible
-AIHUB_API_KEY=
+AIHUB_BASE_URL=http://192.168.10.114/v1        # OpenAI-compatible (deployed hub; amended P2.1)
+AIHUB_SERVICE_NAME=research-lab                 # hub auth = x-service-name header, not a bearer key
 
-MODEL_FRONTIER=claude-opus-4-8                  # via ai-hub routing
-MODEL_STRONG_LOCAL=qwen3.6-27b-fp8
-MODEL_FAST_LOCAL=qwen3.5-7b
+# Tiers bind to hub ALIASES (phase-2-plan D1) — the hub owns the concrete model behind each.
+MODEL_FRONTIER=best                             # openai/gpt-5.6-sol (needs valid key on hub)
+MODEL_STRONG_LOCAL=default                      # local model; json_schema + tools verified
+MODEL_FAST_LOCAL=cheapest                       # deepseek; json_object mode (D2)
 
 WORKER_CONCURRENCY=2
 GPU_CONCURRENCY_STRONG_LOCAL=2                  # gateway-side cap
