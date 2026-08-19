@@ -21,6 +21,9 @@ export const CreateRunRequest = z.object({
   title: z.string().nullish(),
   userRequest: z.string().min(1),
   budget: z.record(z.string(), z.unknown()).default({}),
-  tasks: z.array(CreateRunTask).min(1),
+  // Absent tasks = planner-driven run (3.7): the api seeds a single stage-1
+  // plan task and staged planning grows the DAG (ADR-011). An explicit list
+  // remains for demos/tests/gates.
+  tasks: z.array(CreateRunTask).min(1).optional(),
 });
 export type CreateRunRequest = z.infer<typeof CreateRunRequest>;

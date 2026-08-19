@@ -1,7 +1,7 @@
 // Console v0 shell — a subset of the normative mockup (ADR-019, §24.6),
 // pulled forward so every phase's capabilities land visibly. Views over real
 // Phase-1 data: runs, new, overview, tasks, timeline (SSE live tail).
-// Evidence / report / transcript are placeholders until Phases 3–5.
+// Report / transcript are placeholders until Phase 5; evidence is live (3.7).
 import { Database, FileText, FlaskConical, List } from "lucide-react";
 import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
@@ -87,7 +87,7 @@ export function App() {
           Coming online
         </div>
         <NavButton disabled title="Phase 3">
-          <Database className="size-3.5" /> Evidence · P3
+          <Database className="size-3.5" /> Evidence · per run
         </NavButton>
         <NavButton disabled title="Phase 5">
           <FileText className="size-3.5" /> Reports · P5
@@ -97,7 +97,7 @@ export function App() {
             <span className="mr-1.5 inline-block size-[7px] animate-pulse rounded-full bg-live align-[1px]" />
             api :8787
           </div>
-          <div>phase 2 gateway · agents at P3</div>
+          <div>phase 3 · planner+researcher+extractor</div>
         </div>
       </nav>
       <main className="min-w-0 pb-15">

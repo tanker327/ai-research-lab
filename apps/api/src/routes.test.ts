@@ -128,3 +128,28 @@ describe("API surface", () => {
     expect(second.status).toBe(409);
   });
 });
+
+describe("Phase 3 console surface (3.7)", () => {
+  it("POST /runs without tasks seeds a planner-driven stage-1 plan task", async () => {
+    const res = await app.request("/runs", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ userRequest: "compare local coding models" }),
+    });
+    expect(res.status).toBe(201);
+    const { id } = (await res.json()) as { id: string };
+    cleanup.push(id);
+    const tasks = (await (await app.request(`/runs/${id}/tasks`)).json()) as Array<{
+      type: string;
+      title: string;
+    }>;
+    expect(tasks).toHaveLength(1);
+    expect(tasks[0]).toMatchObject({ type: "plan", title: "Plan · stage 1" });
+  });
+
+  it("GET /runs/:id/claims serves live canonical claims (empty for a fresh run)", async () => {
+    const id = await createRun();
+    const claims = (await (await app.request(`/runs/${id}/claims`)).json()) as unknown[];
+    expect(claims).toEqual([]);
+  });
+});

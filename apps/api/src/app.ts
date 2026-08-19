@@ -5,6 +5,8 @@ import type { Db } from "@lab/db";
 import {
   selectAttemptsByRun,
   selectEventsAfter,
+  selectLiveClaimEvidence,
+  selectLiveClaims,
   selectModelCallsByAttempt,
   selectRun,
   selectRuns,
@@ -36,8 +38,23 @@ export function createApp({ db, bus, log }: ApiDeps): Hono {
       return c.json({ error: "invalid request", issues: parsed.error.issues }, 400);
     }
     const req = parsed.data;
+    // Planner-driven run (3.7): no explicit tasks → seed the stage-1 plan
+    // task; the PlanDelta interpreter grows the DAG from there (ADR-011).
+    const requested =
+      req.tasks ??
+      ([
+        {
+          type: "plan",
+          title: "Plan · stage 1",
+          priority: 90,
+          strategy: null,
+          maxAttempts: 3,
+          input: { planStage: 1 },
+          dependsOn: [],
+        },
+      ] as const);
     // Tasks with dependants need stable ids before insert.
-    const tasks = req.tasks.map((t) => ({ ...t, strategy: t.strategy ?? null }));
+    const tasks = requested.map((t) => ({ ...t, strategy: t.strategy ?? null }));
     const id = await startRun(db, { ...req, title: req.title ?? null, tasks });
     log.info({ runId: id, tasks: tasks.length }, "run created");
     return c.json({ id }, 201);
@@ -57,6 +74,34 @@ export function createApp({ db, bus, log }: ApiDeps): Hono {
   });
 
   // Console inspector (ticket 2.5): attempts with their model/tool calls.
+  // Evidence & claims browser (3.7): live canonical claims + their live
+  // evidence, grouped claim-first. Reads go through live_* views only.
+  app.get("/runs/:id/claims", async (c) => {
+    const runId = c.req.param("id");
+    const [claims, evidence] = await Promise.all([
+      selectLiveClaims(db, runId),
+      selectLiveClaimEvidence(db, runId),
+    ]);
+    const byClaim = new Map<string, typeof evidence>();
+    for (const e of evidence) {
+      byClaim.set(e.canonicalClaimId, [...(byClaim.get(e.canonicalClaimId) ?? []), e]);
+    }
+    return c.json(
+      claims.map((cl) => ({
+        ...cl,
+        evidence: (byClaim.get(cl.id) ?? []).map((e) => ({
+          relation: e.relation,
+          excerpt: e.excerpt,
+          sourceUrl: e.sourceUrl,
+          sourceClass: e.sourceClass,
+          vendorAffiliated: e.vendorAffiliated,
+          benchmarkOrigin: e.benchmarkOrigin,
+          retrievedAt: e.retrievedAt,
+        })),
+      })),
+    );
+  });
+
   app.get("/runs/:id/attempts", async (c) => {
     return c.json(await selectAttemptsByRun(db, c.req.param("id")));
   });

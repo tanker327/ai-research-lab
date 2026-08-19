@@ -41,6 +41,26 @@ export interface EventRow {
   createdAt: string;
 }
 
+export interface ClaimEvidenceRow {
+  relation: "supports" | "contradicts" | "context";
+  excerpt: string;
+  sourceUrl: string | null;
+  sourceClass: string;
+  vendorAffiliated: boolean | null;
+  benchmarkOrigin: string | null;
+  retrievedAt: string;
+}
+
+export interface ClaimRow {
+  id: string;
+  subjectKey: string;
+  predicateKey: string;
+  statement: string;
+  status: string;
+  contestNote: string | null;
+  evidence: ClaimEvidenceRow[];
+}
+
 async function get<T>(path: string): Promise<T> {
   const res = await fetch(`${BASE}${path}`);
   if (!res.ok) throw new Error(`${path} → ${res.status}`);
@@ -68,6 +88,13 @@ export const useEvents = (runId: string) =>
   useQuery({
     queryKey: ["events", runId],
     queryFn: () => get<EventRow[]>(`/runs/${runId}/events`),
+  });
+
+export const useClaims = (runId: string) =>
+  useQuery({
+    queryKey: ["claims", runId],
+    queryFn: () => get<ClaimRow[]>(`/runs/${runId}/claims`),
+    refetchInterval: 3000,
   });
 
 export async function createRun(body: unknown): Promise<{ id: string }> {

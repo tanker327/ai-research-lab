@@ -81,7 +81,7 @@ export function findDependencyCycle(tasks: PlannedTask[]): string | null {
   return null;
 }
 
-const ROLE_FOR_TYPE: Record<TaskType, string> = {
+export const ROLE_FOR_TYPE: Record<TaskType, string> = {
   plan: "planner",
   research: "researcher",
   extract: "extractor",

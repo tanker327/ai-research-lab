@@ -6,9 +6,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { navigate } from "../App";
 import { createRun } from "../api";
 
-// Phase 1: the engine takes an explicit task list (the Planner arrives in
-// Phase 3 and replaces this). The demo chain exercises waves + a side-effect
-// write so the run is interesting to watch.
+// Planner-driven since 3.7: submitting a question seeds a stage-1 plan task
+// and staged planning grows the DAG (ADR-011). The Phase-1 fake demo chain
+// stays behind a toggle — it exercises the engine with zero model spend.
 function demoTasks() {
   const a = crypto.randomUUID();
   const b = crypto.randomUUID();
@@ -41,14 +41,14 @@ export function NewRunView() {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
-  const submit = async () => {
+  const submit = async (mode: "planner" | "demo") => {
     setBusy(true);
     setErr(null);
     try {
       const { id } = await createRun({
-        title: request.slice(0, 60) || "console run",
+        title: request.slice(0, 60) || (mode === "demo" ? "demo run" : "research run"),
         userRequest: request || "console demo run",
-        tasks: demoTasks(),
+        ...(mode === "demo" ? { tasks: demoTasks() } : {}), // no tasks → Planner
       });
       navigate(`/run/${id}`);
     } catch (e) {
@@ -69,17 +69,26 @@ export function NewRunView() {
           <CardContent className="grid gap-3">
             <Textarea
               rows={3}
-              placeholder="What should the lab research? (free text — Phase 1 runs a fake demo task chain; the Planner turns this into a real plan in Phase 3)"
+              placeholder="What should the lab research? The Planner turns this into a staged research plan — discovery first, deep tasks once it knows what exists."
               value={request}
               onChange={(e) => setRequest(e.target.value)}
             />
-            <div className="flex items-center gap-2.5">
-              <Button onClick={submit} disabled={busy}>
-                {busy ? "Starting…" : "Start run (demo task chain)"}
+            <div className="flex flex-wrap items-center gap-2.5">
+              <Button onClick={() => submit("planner")} disabled={busy || !request.trim()}>
+                {busy ? "Starting…" : "Start research"}
               </Button>
               <span className="font-mono text-[0.76rem] text-muted-foreground">
-                seeds 4 fake tasks · 3 dependency waves · Planner arrives P3
+                planner · stage-1 discovery → extract → canonical claims → stage 2
               </span>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="ml-auto font-mono text-[0.72rem] text-muted-foreground"
+                onClick={() => submit("demo")}
+                disabled={busy}
+              >
+                run fake demo chain instead (no model spend)
+              </Button>
             </div>
             {err && <div className="text-fail">{err}</div>}
           </CardContent>

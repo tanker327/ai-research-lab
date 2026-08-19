@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils";
 import { navigate } from "../App";
 import { cancelRun, useRun, useTasks } from "../api";
 import { AttemptsView } from "./Attempts";
+import { ClaimsView } from "./Claims";
 import { Placeholder } from "./Placeholder";
 import { Timeline } from "./Timeline";
 
@@ -36,7 +37,7 @@ const TABS = [
   { key: "tasks", label: "Tasks" },
   { key: "timeline", label: "Timeline" },
   { key: "attempts", label: "Attempts" },
-  { key: "evidence", label: "Evidence", badge: "P3" },
+  { key: "evidence", label: "Evidence" },
   { key: "report", label: "Report", badge: "P5" },
   { key: "transcript", label: "Transcript", badge: "P5" },
 ];
@@ -197,13 +198,7 @@ export function RunDetail({ runId, tab }: { runId: string; tab: string }) {
 
         {tab === "attempts" && <AttemptsView runId={runId} />}
 
-        {tab === "evidence" && (
-          <Placeholder
-            title="Evidence & claims browser"
-            phase="Phase 3"
-            note="live_evidence / canonical claims land with the Researcher + Extractor pipeline. The liveness machinery already runs underneath — superseded attempts' rows are already going dark."
-          />
-        )}
+        {tab === "evidence" && <ClaimsView runId={runId} />}
         {tab === "report" && (
           <Placeholder
             title="Report with citation chips"

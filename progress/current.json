@@ -70,9 +70,10 @@
     {
       "id": "3.7",
       "title": "Console wiring: evidence & claims browser, Planner-driven new-run (standing UI rule)",
-      "status": "pending",
+      "status": "in_progress",
       "priority": 8,
-      "depends_on": ["3.5"]
+      "depends_on": ["3.5"],
+      "started_at": "2026-08-19"
     }
   ],
   "known_issues": [

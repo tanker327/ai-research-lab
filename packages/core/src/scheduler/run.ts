@@ -13,8 +13,9 @@ import {
   taskStatusCounts,
   updateRunStatus,
 } from "@lab/db";
-import { CategorizedError, newId, type RunStatus } from "@lab/schemas";
+import { CategorizedError, newId, type RunStatus, TaskType } from "@lab/schemas";
 import { emitEvent } from "../events";
+import { ROLE_FOR_TYPE } from "../plan";
 import { assertRunTransition } from "../state/run";
 import { checkBudgetStub } from "./budget";
 
@@ -96,7 +97,8 @@ export async function startRun(db: Db, req: StartRunInput): Promise<string> {
         strategy: t.strategy ?? null,
         maxAttempts: t.maxAttempts ?? 3,
         input: t.input,
-        agentRole: "fake", // Phase 2 wires real agent resolution
+        // real dispatch since 3.2; fake inputs still escape to the fake handler
+        agentRole: ROLE_FOR_TYPE[TaskType.parse(t.type)],
       });
     }
     for (const t of withIds) {
