@@ -3,7 +3,9 @@
 // evidence — judgment about quality happens later (checks, Evaluator).
 import type { ExtractorInput } from "@lab/schemas";
 
-export const OUTPUT_BUDGET = 6000;
+// deepseek-v4-flash thinks ~3k tokens before answering (gate finding) — the
+// JSON needs real headroom on top (P2 norm).
+export const OUTPUT_BUDGET = 14_000;
 
 export const SYSTEM = `You extract structured claims and evidence from a research note. You are a
 faithful transcriber, not a judge: extract what the note actually supports.
