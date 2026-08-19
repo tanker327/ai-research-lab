@@ -1,0 +1,1030 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI Research Lab — Run Console</title>
+<meta name="description" content="Observability console mockup for the AI Research Lab multi-agent research system: run dashboard, staged task graph, evidence browser, event timeline, and provenance-linked final report.">
+<meta name="keywords" content="AI Research Lab, multi-agent, research runs, task DAG, evidence, provenance, control plane, observability, mockup">
+<meta name="group" content="ai-research-lab">
+<meta name="author" content="AI Research Lab v0.2 design">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#F2F4F2;          /* cool lab white */
+  --surface:#FFFFFF;
+  --surface-2:#FAFBFA;
+  --ink:#17241F;         /* spruce ink */
+  --ink-soft:#4E5C56;
+  --ink-faint:#8A968F;
+  --line:#DDE3DE;
+  --line-strong:#C4CCC6;
+  --live:#0E7C66;        /* verdigris — accepted / live evidence */
+  --live-soft:#E2F0EB;
+  --run:#C77E1F;         /* amber — running / contested */
+  --run-soft:#F8EEDC;
+  --frontier:#6B4FBB;    /* violet — frontier-tier calls */
+  --frontier-soft:#EDE8F8;
+  --fail:#B3402E;
+  --fail-soft:#F7E4DF;
+  --mono:'IBM Plex Mono',ui-monospace,monospace;
+  --sans:'IBM Plex Sans',system-ui,sans-serif;
+  --serif:'Instrument Serif',Georgia,serif;
+  --r:6px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{font-size:15px}
+body{font-family:var(--sans);background:var(--bg);color:var(--ink);min-height:100vh;-webkit-font-smoothing:antialiased}
+button{font:inherit;cursor:pointer;background:none;border:none;color:inherit}
+:focus-visible{outline:2px solid var(--live);outline-offset:2px}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
+
+/* ---------- shell ---------- */
+.shell{display:grid;grid-template-columns:216px 1fr;min-height:100vh}
+.side{background:var(--surface);border-right:1px solid var(--line);padding:18px 0;display:flex;flex-direction:column;gap:4px;position:sticky;top:0;height:100vh}
+.brand{padding:2px 18px 16px;border-bottom:1px solid var(--line);margin-bottom:10px}
+.brand h1{font-family:var(--serif);font-weight:400;font-size:1.25rem;letter-spacing:.01em}
+.brand .sub{font-family:var(--mono);font-size:.66rem;color:var(--ink-faint);letter-spacing:.08em;text-transform:uppercase;margin-top:2px}
+.navsec{font-family:var(--mono);font-size:.62rem;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-faint);padding:12px 18px 5px}
+.navbtn{display:flex;align-items:center;gap:9px;width:100%;text-align:left;padding:7px 18px;font-size:.86rem;color:var(--ink-soft);border-left:2px solid transparent}
+.navbtn:hover{background:var(--surface-2);color:var(--ink)}
+.navbtn.on{color:var(--ink);border-left-color:var(--live);background:var(--surface-2);font-weight:600}
+.navbtn .k{font-family:var(--mono);font-size:.66rem;color:var(--ink-faint);margin-left:auto}
+.side-foot{margin-top:auto;padding:12px 18px;border-top:1px solid var(--line);font-family:var(--mono);font-size:.64rem;color:var(--ink-faint);line-height:1.7}
+.dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--live);margin-right:6px;vertical-align:1px}
+.dot.pulse{animation:pulse 1.6s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+
+.main{padding:0 0 60px;min-width:0}
+.topbar{display:flex;align-items:center;gap:14px;padding:14px 28px;border-bottom:1px solid var(--line);background:var(--surface);position:sticky;top:0;z-index:20}
+.crumb{font-family:var(--mono);font-size:.72rem;color:var(--ink-faint)}
+.crumb b{color:var(--ink);font-weight:500}
+.topbar .spacer{flex:1}
+.wrap{padding:24px 28px;max-width:1180px}
+
+/* ---------- primitives ---------- */
+.badge{display:inline-flex;align-items:center;gap:5px;font-family:var(--mono);font-size:.64rem;letter-spacing:.05em;padding:2px 8px;border-radius:99px;border:1px solid var(--line-strong);color:var(--ink-soft);white-space:nowrap}
+.badge.live{background:var(--live-soft);border-color:transparent;color:var(--live)}
+.badge.run{background:var(--run-soft);border-color:transparent;color:#96600F}
+.badge.frontier{background:var(--frontier-soft);border-color:transparent;color:var(--frontier)}
+.badge.fail{background:var(--fail-soft);border-color:transparent;color:var(--fail)}
+.badge.ghost{color:var(--ink-faint)}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r)}
+.card+.card{margin-top:14px}
+.card-h{display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid var(--line)}
+.card-h h3{font-size:.8rem;font-weight:600;letter-spacing:.02em}
+.card-h .hint{font-family:var(--mono);font-size:.66rem;color:var(--ink-faint);margin-left:auto}
+.card-b{padding:16px}
+.mono{font-family:var(--mono)}
+.btn{display:inline-flex;align-items:center;gap:7px;padding:8px 14px;border-radius:var(--r);border:1px solid var(--line-strong);background:var(--surface);font-size:.82rem;font-weight:500;color:var(--ink)}
+.btn:hover{border-color:var(--ink-soft)}
+.btn.primary{background:var(--ink);color:#fff;border-color:var(--ink)}
+.btn.primary:hover{background:#233830}
+.btn.sm{padding:4px 10px;font-size:.74rem}
+table{width:100%;border-collapse:collapse;font-size:.82rem}
+th{font-family:var(--mono);font-size:.62rem;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-faint);text-align:left;padding:8px 12px;border-bottom:1px solid var(--line);font-weight:500}
+td{padding:9px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+tr:last-child td{border-bottom:none}
+tr.rowbtn{cursor:pointer}
+tr.rowbtn:hover td{background:var(--surface-2)}
+.faint{color:var(--ink-faint)}
+.soft{color:var(--ink-soft)}
+h2.pageh{font-family:var(--serif);font-weight:400;font-size:1.55rem;margin-bottom:4px}
+.pagesub{font-size:.84rem;color:var(--ink-soft);margin-bottom:20px}
+
+/* ---------- phase rail ---------- */
+.rail{display:flex;align-items:stretch;gap:0;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);overflow-x:auto}
+.ph{flex:1;min-width:104px;padding:11px 14px;border-right:1px solid var(--line);position:relative}
+.ph:last-child{border-right:none}
+.ph .pn{font-family:var(--mono);font-size:.6rem;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-faint)}
+.ph .pl{font-size:.82rem;font-weight:600;margin-top:2px;color:var(--ink-faint)}
+.ph .pm{font-family:var(--mono);font-size:.64rem;color:var(--ink-faint);margin-top:3px}
+.ph.done .pl{color:var(--ink)}
+.ph.done::before{content:"";position:absolute;left:0;top:0;right:0;height:2px;background:var(--live)}
+.ph.now::before{content:"";position:absolute;left:0;top:0;right:0;height:2px;background:var(--run)}
+.ph.now .pl{color:#96600F}
+.ph.now{background:var(--run-soft)}
+
+/* ---------- metric grid ---------- */
+.metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px;margin:14px 0}
+.metric{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:13px 15px}
+.metric .mv{font-family:var(--mono);font-size:1.35rem;font-weight:500}
+.metric .mv small{font-size:.72rem;color:var(--ink-faint);font-weight:400}
+.metric .ml{font-size:.7rem;color:var(--ink-soft);margin-top:2px}
+.metric .md{font-family:var(--mono);font-size:.62rem;color:var(--ink-faint);margin-top:5px}
+
+/* ---------- DAG ---------- */
+.dag{display:flex;gap:0;overflow-x:auto;padding:6px 2px 14px;align-items:flex-start}
+.stage{min-width:228px;flex:0 0 228px;position:relative;padding-right:34px}
+.stage:not(:last-child)::after{content:"";position:absolute;right:12px;top:110px;width:12px;height:12px;border-top:2px solid var(--line-strong);border-right:2px solid var(--line-strong);transform:rotate(45deg)}
+.stage-h{font-family:var(--mono);font-size:.62rem;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-faint);padding:0 2px 8px;border-bottom:1px dashed var(--line-strong);margin-bottom:10px;display:flex;justify-content:space-between}
+.tk{background:var(--surface);border:1px solid var(--line);border-left-width:3px;border-radius:var(--r);padding:9px 11px;margin-bottom:9px;cursor:pointer;transition:border-color .12s}
+.tk:hover{border-color:var(--ink-soft)}
+.tk.sel{outline:2px solid var(--ink);outline-offset:1px}
+.tk.done{border-left-color:var(--live)}
+.tk.running{border-left-color:var(--run)}
+.tk.failed{border-left-color:var(--fail)}
+.tk.pending{border-left-color:var(--line-strong)}
+.tk .tid{font-family:var(--mono);font-size:.62rem;color:var(--ink-faint)}
+.tk .tt{font-size:.8rem;font-weight:600;margin:2px 0 5px;line-height:1.3}
+.tk .tm{display:flex;flex-wrap:wrap;gap:4px}
+
+/* ---------- inspector drawer ---------- */
+.drawer{position:fixed;top:0;right:0;bottom:0;width:min(460px,92vw);background:var(--surface);border-left:1px solid var(--line);box-shadow:-12px 0 32px rgba(23,36,31,.08);transform:translateX(102%);transition:transform .22s ease;z-index:60;display:flex;flex-direction:column}
+.drawer.open{transform:none}
+.drawer-h{padding:16px 20px;border-bottom:1px solid var(--line);display:flex;align-items:flex-start;gap:10px}
+.drawer-h h3{font-size:.95rem;font-weight:600;line-height:1.3}
+.drawer-b{padding:18px 20px;overflow-y:auto;flex:1}
+.kv{display:grid;grid-template-columns:110px 1fr;gap:6px 12px;font-size:.79rem;margin-bottom:16px}
+.kv dt{font-family:var(--mono);font-size:.64rem;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-faint);padding-top:2px}
+.kv dd{color:var(--ink)}
+.att{border:1px solid var(--line);border-radius:var(--r);padding:10px 12px;margin-bottom:10px;font-size:.79rem}
+.att.superseded{opacity:.62;background:var(--surface-2)}
+.att .ah{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+.att .ah b{font-family:var(--mono);font-size:.72rem;font-weight:500}
+.att p{color:var(--ink-soft);font-size:.77rem;line-height:1.5;margin-top:4px}
+.secl{font-family:var(--mono);font-size:.62rem;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-faint);margin:18px 0 8px}
+
+/* ---------- timeline ---------- */
+.tl{position:relative;padding-left:22px}
+.tl::before{content:"";position:absolute;left:6px;top:6px;bottom:6px;width:2px;background:var(--line)}
+.ev{position:relative;padding:0 0 14px 8px}
+.ev::before{content:"";position:absolute;left:-20px;top:5px;width:8px;height:8px;border-radius:50%;background:var(--surface);border:2px solid var(--line-strong)}
+.ev.k-accept::before{border-color:var(--live);background:var(--live)}
+.ev.k-gate::before{border-color:var(--frontier);background:var(--frontier)}
+.ev.k-warn::before{border-color:var(--run);background:var(--run)}
+.ev.k-fail::before{border-color:var(--fail);background:var(--fail)}
+.ev .et{font-family:var(--mono);font-size:.66rem;color:var(--ink-faint)}
+.ev .em{font-size:.82rem;margin-top:1px}
+.ev .em b{font-weight:600}
+.ev .ed{font-size:.75rem;color:var(--ink-soft);margin-top:2px;line-height:1.5}
+
+/* ---------- evidence / claims ---------- */
+.filters{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px}
+.chip{font-family:var(--mono);font-size:.68rem;padding:4px 11px;border-radius:99px;border:1px solid var(--line-strong);color:var(--ink-soft);background:var(--surface)}
+.chip:hover{border-color:var(--ink-soft)}
+.chip.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+.claim{border:1px solid var(--line);border-radius:var(--r);background:var(--surface);margin-bottom:12px}
+.claim.contested{border-color:#E0BE7E;background:linear-gradient(0deg,var(--surface),var(--surface)),var(--surface)}
+.claim.contested .claim-h{background:var(--run-soft)}
+.claim-h{padding:11px 14px;display:flex;align-items:flex-start;gap:10px;cursor:pointer}
+.claim-h:hover{background:var(--surface-2)}
+.claim-h .cs{font-size:.84rem;font-weight:600;line-height:1.4;flex:1}
+.claim-h .ck{font-family:var(--mono);font-size:.62rem;color:var(--ink-faint);display:block;font-weight:400;margin-top:2px}
+.claim-ev{border-top:1px solid var(--line);padding:4px 14px 10px;display:none}
+.claim.open .claim-ev{display:block}
+.evrow{display:flex;gap:10px;padding:8px 0;border-bottom:1px dashed var(--line);font-size:.78rem}
+.evrow:last-child{border-bottom:none}
+.evrow .eid{font-family:var(--mono);font-size:.66rem;color:var(--ink-faint);min-width:38px;padding-top:1px}
+.evrow .ex{flex:1;line-height:1.5}
+.evrow .ex .src{display:block;font-family:var(--mono);font-size:.64rem;color:var(--ink-faint);margin-top:3px}
+.rel{font-family:var(--mono);font-size:.6rem;padding:1px 7px;border-radius:99px;align-self:flex-start;margin-top:1px}
+.rel.s{background:var(--live-soft);color:var(--live)}
+.rel.c{background:var(--fail-soft);color:var(--fail)}
+.contest-note{margin:8px 0 4px;padding:9px 12px;background:var(--run-soft);border-radius:var(--r);font-size:.77rem;line-height:1.5;color:#6B4A12}
+
+/* ---------- report ---------- */
+.report{max-width:760px}
+.report h1{font-family:var(--serif);font-weight:400;font-size:2rem;line-height:1.2;margin-bottom:6px}
+.report .rmeta{font-family:var(--mono);font-size:.68rem;color:var(--ink-faint);margin-bottom:26px;display:flex;gap:16px;flex-wrap:wrap}
+.report h2{font-family:var(--serif);font-weight:400;font-size:1.3rem;margin:30px 0 10px}
+.report p{font-size:.9rem;line-height:1.75;margin-bottom:12px;color:#232F2A}
+.report table{margin:8px 0 16px;font-size:.8rem}
+.cite{font-family:var(--mono);font-size:.62rem;color:var(--live);background:var(--live-soft);border-radius:4px;padding:0 5px;cursor:pointer;white-space:nowrap;border:none;vertical-align:1px;margin-left:2px}
+.cite:hover{background:var(--live);color:#fff}
+.rec{border:1px solid var(--live);border-left-width:3px;border-radius:var(--r);padding:16px 18px;margin:16px 0;background:var(--live-soft)}
+.rec .rl{font-family:var(--mono);font-size:.62rem;letter-spacing:.1em;text-transform:uppercase;color:var(--live);margin-bottom:5px}
+.rec p{margin-bottom:0}
+.unc{border:1px dashed var(--line-strong);border-radius:var(--r);padding:14px 18px;margin:14px 0;background:var(--surface-2)}
+.unc .rl{font-family:var(--mono);font-size:.62rem;letter-spacing:.1em;text-transform:uppercase;color:#96600F;margin-bottom:6px}
+.unc li{font-size:.82rem;line-height:1.65;margin-left:18px;color:var(--ink-soft)}
+
+
+/* ---------- trace viewer ---------- */
+.tracebtn{margin-top:8px;font-family:var(--mono);font-size:.66rem;color:var(--live);border:1px solid var(--line-strong);border-radius:99px;padding:3px 10px}
+.tracebtn:hover{border-color:var(--live);background:var(--live-soft)}
+.tmodal{position:fixed;inset:3% 4%;background:var(--surface);border:1px solid var(--line);border-radius:8px;box-shadow:0 24px 64px rgba(23,36,31,.22);z-index:80;display:none;flex-direction:column;overflow:hidden}
+.tmodal.open{display:flex}
+.tmodal-h{display:flex;align-items:center;gap:12px;padding:14px 22px;border-bottom:1px solid var(--line);background:var(--surface-2)}
+.tmodal-h h3{font-size:.92rem;font-weight:600}
+.tmodal-h .mono{font-size:.66rem;color:var(--ink-faint)}
+.tmodal-b{overflow-y:auto;padding:20px 22px 34px;flex:1}
+.tstep{border:1px solid var(--line);border-left-width:3px;border-radius:var(--r);margin-bottom:12px;background:var(--surface)}
+.tstep-h{display:flex;align-items:center;gap:9px;padding:8px 13px;cursor:pointer;user-select:none}
+.tstep-h:hover{background:var(--surface-2)}
+.tstep-h .tt2{font-size:.78rem;font-weight:600;flex:1}
+.tstep-h .tw{font-family:var(--mono);font-size:.6rem;letter-spacing:.08em;text-transform:uppercase;padding:2px 8px;border-radius:99px}
+.tstep-h .car{font-family:var(--mono);color:var(--ink-faint);font-size:.7rem;transition:transform .15s}
+.tstep.closed .car{transform:rotate(-90deg)}
+.tstep.closed .tstep-b{display:none}
+.tstep-b{padding:4px 14px 12px}
+.tstep-b pre{font-family:var(--mono);font-size:.7rem;line-height:1.65;white-space:pre-wrap;word-break:break-word;background:var(--surface-2);border:1px solid var(--line);border-radius:var(--r);padding:11px 13px;color:#26332D}
+.tstep-b .prose{font-size:.8rem;line-height:1.7;color:#26332D;padding:4px 1px}
+.tstep.k-ctx{border-left-color:#5B7DA8}.tstep.k-ctx .tw{background:#E7EEF6;color:#3D5F8A}
+.tstep.k-think{border-left-color:var(--frontier)}.tstep.k-think .tw{background:var(--frontier-soft);color:var(--frontier)}
+.tstep.k-think .prose{font-style:italic;color:#4A3E75}
+.tstep.k-tool{border-left-color:#0E8FA8}.tstep.k-tool .tw{background:#DFF2F5;color:#0A6E82}
+.tstep.k-out{border-left-color:var(--live)}.tstep.k-out .tw{background:var(--live-soft);color:var(--live)}
+.tstep.k-sys{border-left-color:var(--run)}.tstep.k-sys .tw{background:var(--run-soft);color:#96600F}
+.tstep.k-sys.rej{border-left-color:var(--fail)}.tstep.k-sys.rej .tw{background:var(--fail-soft);color:var(--fail)}
+.tr-task{margin:26px 0 10px;display:flex;align-items:baseline;gap:10px;border-bottom:1px solid var(--line);padding-bottom:7px}
+.tr-task h3{font-family:var(--serif);font-weight:400;font-size:1.15rem}
+.tr-stage{font-family:var(--mono);font-size:.64rem;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-faint);margin:34px 0 -12px}
+details.tratt{margin-bottom:14px}
+details.tratt>summary{cursor:pointer;font-size:.8rem;padding:9px 13px;border:1px solid var(--line);border-radius:var(--r);background:var(--surface);display:flex;align-items:center;gap:9px;list-style:none}
+details.tratt>summary::-webkit-details-marker{display:none}
+details.tratt>summary:hover{border-color:var(--ink-soft)}
+details.tratt[open]>summary{border-bottom-left-radius:0;border-bottom-right-radius:0;background:var(--surface-2)}
+details.tratt .tratt-b{border:1px solid var(--line);border-top:none;border-radius:0 0 var(--r) var(--r);padding:14px 14px 6px;background:var(--surface-2)}
+
+/* ---------- new run form ---------- */
+.field{margin-bottom:16px}
+.field label{display:block;font-size:.76rem;font-weight:600;margin-bottom:6px}
+.field .fh{font-size:.72rem;color:var(--ink-faint);font-weight:400;margin-left:6px}
+.field textarea,.field input{width:100%;font:inherit;font-size:.85rem;padding:9px 12px;border:1px solid var(--line-strong);border-radius:var(--r);background:var(--surface);color:var(--ink);resize:vertical}
+.field textarea:focus,.field input:focus{outline:2px solid var(--live);outline-offset:-1px;border-color:transparent}
+.constraint-row{display:flex;gap:8px;margin-bottom:8px;align-items:center}
+.constraint-row .mono{font-size:.7rem;color:var(--ink-faint)}
+.toast{position:fixed;bottom:22px;left:50%;transform:translate(-50%,80px);background:var(--ink);color:#fff;padding:10px 18px;border-radius:var(--r);font-size:.82rem;transition:transform .25s;z-index:99}
+.toast.show{transform:translate(-50%,0)}
+.overlay{position:fixed;inset:0;background:rgba(23,36,31,.18);opacity:0;pointer-events:none;transition:opacity .2s;z-index:50}
+.overlay.show{opacity:1;pointer-events:auto}
+.view{display:none}
+.view.on{display:block}
+@media(max-width:900px){.shell{grid-template-columns:1fr}.side{position:static;height:auto;flex-direction:row;flex-wrap:wrap;align-items:center;padding:10px}.brand{border:none;margin:0;padding:4px 12px}.navsec{display:none}.side-foot{display:none}.navbtn{width:auto;border-left:none;border-bottom:2px solid transparent;padding:6px 10px}.navbtn.on{border-left:none;border-bottom-color:var(--live)}.navbtn .k{display:none}}
+</style>
+</head>
+<body>
+<div class="shell">
+
+<!-- ============ SIDEBAR ============ -->
+<aside class="side">
+  <div class="brand">
+    <h1>Research Lab</h1>
+    <div class="sub">run console · v0.2</div>
+  </div>
+  <div class="navsec">Workspace</div>
+  <button class="navbtn on" data-view="runs">Runs <span class="k">1</span></button>
+  <button class="navbtn" data-view="new">New research <span class="k">2</span></button>
+  <div class="navsec">Run #42</div>
+  <button class="navbtn" data-view="overview">Overview <span class="k">3</span></button>
+  <button class="navbtn" data-view="tasks">Task graph <span class="k">4</span></button>
+  <button class="navbtn" data-view="evidence">Claims &amp; evidence <span class="k">5</span></button>
+  <button class="navbtn" data-view="timeline">Timeline <span class="k">6</span></button>
+  <button class="navbtn" data-view="report">Report <span class="k">7</span></button>
+  <button class="navbtn" data-view="transcript">Transcript <span class="k">8</span></button>
+  <div class="side-foot">
+    <div><span class="dot pulse"></span>workers 2/2 idle</div>
+    <div>gpu queue 0 · db ok</div>
+    <div>gateway ai-hub v1.4</div>
+  </div>
+</aside>
+
+<!-- ============ MAIN ============ -->
+<main class="main">
+  <div class="topbar">
+    <span class="crumb" id="crumb">runs</span>
+    <span class="spacer"></span>
+    <span class="badge ghost mono" id="clock"></span>
+  </div>
+
+  <!-- ======== VIEW: RUNS LIST ======== -->
+  <section class="view on" id="v-runs"><div class="wrap">
+    <h2 class="pageh">Research runs</h2>
+    <p class="pagesub">Every run is a durable process — restart-safe, fully evented, cancellable.</p>
+    <div class="card"><table>
+      <thead><tr><th>Run</th><th>Goal</th><th>Status</th><th>Phase</th><th>Cycles</th><th>Evidence</th><th>Frontier $</th><th>Elapsed</th></tr></thead>
+      <tbody>
+        <tr class="rowbtn" onclick="go('overview')">
+          <td class="mono">#42</td>
+          <td><b>Best local coding model for RTX Pro 6000 96GB</b><br><span class="faint" style="font-size:.72rem">coding quality &gt; speed · agentic capability · single GPU</span></td>
+          <td><span class="badge live">COMPLETED</span></td>
+          <td class="mono soft">synthesized</td>
+          <td class="mono">2 / 3</td>
+          <td class="mono">47</td>
+          <td class="mono">$3.84</td>
+          <td class="mono">34m 12s</td>
+        </tr>
+        <tr class="rowbtn" onclick="toast('Run #43 is still researching — console for live runs lands with the P6 dashboard build.')">
+          <td class="mono">#43</td>
+          <td><b>ECC UDIMM compatibility &amp; value for ASUS W680-ACE</b><br><span class="faint" style="font-size:.72rem">must be on QVL or field-verified · 96GB target</span></td>
+          <td><span class="badge run">RESEARCHING</span></td>
+          <td class="mono soft">wave 2 · 3/5 tasks</td>
+          <td class="mono">1 / 3</td>
+          <td class="mono">18</td>
+          <td class="mono">$1.02</td>
+          <td class="mono">11m 40s <span class="dot pulse"></span></td>
+        </tr>
+        <tr class="rowbtn" onclick="toast('Run #41 report viewer not mocked — open #42 for the full experience.')">
+          <td class="mono">#41</td>
+          <td><b>BJJ schools near River Edge — adult fundamentals comparison</b><br><span class="faint" style="font-size:.72rem">schedule fit · trial policy · lineage</span></td>
+          <td><span class="badge live">COMPLETED</span></td>
+          <td class="mono soft">synthesized</td>
+          <td class="mono">1 / 3</td>
+          <td class="mono">29</td>
+          <td class="mono">$2.10</td>
+          <td class="mono">22m 05s</td>
+        </tr>
+        <tr class="rowbtn" onclick="toast('Run #40 stopped at a budget checkpoint — Resume, Extend budget, or Cancel were offered. It was cancelled.')">
+          <td class="mono">#40</td>
+          <td><b>DDR5 RDIMM vs UDIMM market pricing deep scan</b><br><span class="faint" style="font-size:.72rem">cancelled at budget checkpoint</span></td>
+          <td><span class="badge fail">CANCELLED</span></td>
+          <td class="mono soft">researching</td>
+          <td class="mono">1 / 3</td>
+          <td class="mono">11</td>
+          <td class="mono">$5.00</td>
+          <td class="mono">18m 51s</td>
+        </tr>
+      </tbody>
+    </table></div>
+  </div></section>
+
+  <!-- ======== VIEW: NEW RESEARCH ======== -->
+  <section class="view" id="v-new"><div class="wrap" style="max-width:680px">
+    <h2 class="pageh">New research</h2>
+    <p class="pagesub">Describe the goal. The Planner clarifies scope, sets success criteria, and stages the work — it only asks you when inference would be unsafe.</p>
+    <div class="card"><div class="card-b">
+      <div class="field">
+        <label>Research goal</label>
+        <textarea rows="3" placeholder="e.g. Determine the best local coding model for an RTX Pro 6000 96GB system…">Compare Cloudflare R2 vs Backblaze B2 vs self-hosted Garage for homelab artifact storage. Prioritize durability story and egress cost.</textarea>
+      </div>
+      <div class="field">
+        <label>Constraints <span class="fh">one per line — these become part of the spec</span></label>
+        <textarea rows="3">S3-compatible API required
+must work behind Cloudflare Tunnel
+monthly cost matters more than latency</textarea>
+      </div>
+      <div class="field">
+        <label>Budget</label>
+        <div class="constraint-row">
+          <input style="max-width:120px" value="$5.00"> <span class="mono">frontier spend cap</span>
+          <input style="max-width:80px" value="3"> <span class="mono">max evaluation cycles</span>
+          <input style="max-width:100px" value="60 min"> <span class="mono">wall clock</span>
+        </div>
+        <div class="mono faint" style="font-size:.68rem;margin-top:4px">On breach the run pauses at a human checkpoint — never a silent stop.</div>
+      </div>
+      <div style="display:flex;gap:10px;align-items:center;margin-top:6px">
+        <button class="btn primary" onclick="toast('Run #44 created — Plan Stage 1 queued. (mock)')">Start research</button>
+        <span class="mono faint" style="font-size:.7rem">est. 20–45 min · ~7 frontier calls</span>
+      </div>
+    </div></div>
+  </div></section>
+
+  <!-- ======== VIEW: OVERVIEW ======== -->
+  <section class="view" id="v-overview"><div class="wrap">
+    <div style="display:flex;align-items:baseline;gap:12px;flex-wrap:wrap">
+      <h2 class="pageh">Run #42</h2>
+      <span class="badge live">COMPLETED</span>
+      <span class="badge ghost">spec v1</span>
+      <span class="mono faint" style="font-size:.7rem">started 09:41 · finished 10:15 · 2026-08-19</span>
+    </div>
+    <p class="pagesub" style="max-width:720px">Determine the best local coding model for a single RTX Pro 6000 96GB. Coding quality and agentic capability over speed. Compare current Qwen, DeepSeek, Kimi and other credible candidates. Produce a Top 3 and one recommendation with evidence.</p>
+
+    <div class="rail" aria-label="run phases">
+      <div class="ph done"><div class="pn">plan · s1</div><div class="pl">Plan</div><div class="pm">1 frontier call</div></div>
+      <div class="ph done"><div class="pn">wave 1</div><div class="pl">Discover</div><div class="pm">2 tasks · 6 min</div></div>
+      <div class="ph done"><div class="pn">plan · s2</div><div class="pl">Plan deep</div><div class="pm">6 tasks created</div></div>
+      <div class="ph done"><div class="pn">wave 2</div><div class="pl">Research</div><div class="pm">6 tasks · 14 min</div></div>
+      <div class="ph done"><div class="pn">cycle 1</div><div class="pl">Evaluate</div><div class="pm">RESEARCH_MORE</div></div>
+      <div class="ph done"><div class="pn">follow-up</div><div class="pl">Research</div><div class="pm">2 tasks · 6 min</div></div>
+      <div class="ph done"><div class="pn">cycle 2</div><div class="pl">Evaluate</div><div class="pm">ACCEPT</div></div>
+      <div class="ph done"><div class="pn">final</div><div class="pl">Synthesize</div><div class="pm">report + citations</div></div>
+    </div>
+
+    <div class="metrics">
+      <div class="metric"><div class="mv">16<small> tasks</small></div><div class="ml">14 done · 2 superseded</div><div class="md">10 research · 6 control</div></div>
+      <div class="metric"><div class="mv">21<small> attempts</small></div><div class="ml">2 intelligence retries</div><div class="md">1 tier escalation</div></div>
+      <div class="metric"><div class="mv">47<small> evidence</small></div><div class="ml">23 canonical claims</div><div class="md">1 contested → resolved</div></div>
+      <div class="metric"><div class="mv">74<small> calls</small></div><div class="ml">7 frontier · 67 local</div><div class="md">$3.84 frontier spend</div></div>
+      <div class="metric"><div class="mv">34<small> min</small></div><div class="ml">wall clock</div><div class="md">gpu queue peak: 4</div></div>
+      <div class="metric"><div class="mv">2<small> / 3</small></div><div class="ml">evaluation cycles</div><div class="md">cycle guard headroom: 1</div></div>
+    </div>
+
+    <div class="card">
+      <div class="card-h"><h3>Evaluator — cycle 2 verdict</h3><span class="hint">frontier · claude-opus · 10:07</span></div>
+      <div class="card-b" style="font-size:.84rem;line-height:1.65">
+        <div style="display:flex;gap:8px;margin-bottom:10px"><span class="badge live">ACCEPT</span><span class="badge frontier">judge gate</span></div>
+        <p style="margin-bottom:8px">Independent validation now covers both contested benchmark figures. Source mix: 38% independent, 21% official, vendor-affiliated ratio down to 0.23. One uncertainty consciously accepted and carried into the report:</p>
+        <div class="unc" style="margin:8px 0 0"><div class="rl">accepted uncertainty</div>
+          <li style="list-style:none;margin-left:0">Same-hardware (RTX Pro 6000) agentic-throughput comparisons exist for only 2 of 4 candidates; remaining figures are normalized from A6000-class runs.</li>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-h"><h3>Latest events</h3><button class="btn sm" onclick="go('timeline')">Full timeline →</button></div>
+      <div class="card-b"><div class="tl" id="ov-events"></div></div>
+    </div>
+  </div></section>
+
+  <!-- ======== VIEW: TASK GRAPH ======== -->
+  <section class="view" id="v-tasks"><div class="wrap">
+    <h2 class="pageh">Task graph</h2>
+    <p class="pagesub">Staged planning: each column is a wave. Tasks are created only when their inputs are concrete — click any task to inspect its attempts. <span class="mono" style="font-size:.72rem">◼ pass 2 = extraction</span></p>
+    <div class="dag" id="dag"></div>
+  </div></section>
+
+  <!-- ======== VIEW: EVIDENCE ======== -->
+  <section class="view" id="v-evidence"><div class="wrap">
+    <h2 class="pageh">Claims &amp; evidence</h2>
+    <p class="pagesub">Canonical claims after dedup — only live evidence (accepted attempts) is shown. Facts are stored; judgments happen at evaluation time.</p>
+    <div class="filters" id="ev-filters">
+      <button class="chip on" data-f="all">all · 23</button>
+      <button class="chip" data-f="contested">contested · 1</button>
+      <button class="chip" data-f="qwen">qwen3.6-27b</button>
+      <button class="chip" data-f="kimi">kimi-k2.5-coder</button>
+      <button class="chip" data-f="deepseek">deepseek-v4-lite</button>
+      <button class="chip" data-f="glm">glm-5-coder</button>
+    </div>
+    <div id="claims"></div>
+  </div></section>
+
+  <!-- ======== VIEW: TIMELINE ======== -->
+  <section class="view" id="v-timeline"><div class="wrap" style="max-width:820px">
+    <h2 class="pageh">Timeline</h2>
+    <p class="pagesub">Every state change is an event. This is the audit trail that explains the run end-to-end.</p>
+    <div class="card"><div class="card-b"><div class="tl" id="full-events"></div></div></div>
+  </div></section>
+
+  <!-- ======== VIEW: REPORT ======== -->
+  <section class="view" id="v-report"><div class="wrap"><div class="report">
+    <div class="mono faint" style="font-size:.68rem;letter-spacing:.1em;text-transform:uppercase;margin-bottom:10px">Final report · run #42 · spec v1</div>
+    <h1>Best Local Coding Model for a Single RTX Pro 6000 (96 GB)</h1>
+    <div class="rmeta"><span>synthesized 10:15</span><span>23 approved claims</span><span>47 live evidence items</span><span>2 evaluation cycles</span></div>
+
+    <h2>Executive summary</h2>
+    <p>Across four credible candidates, <b>Qwen3.6-27B (FP8)</b> is the strongest practical choice for this hardware and these priorities. It leads or ties on agentic coding benchmarks<button class="cite" data-c="c-agentic">C-07</button>, fits comfortably in 96 GB with headroom for 128K context<button class="cite" data-c="c-vram">C-11</button>, and is the only candidate with independently validated results on both coding-quality metrics in scope<button class="cite" data-c="c-lcb">C-04</button>. Kimi-K2.5-Coder-42B is the quality ceiling but sacrifices context headroom; DeepSeek-V4-Lite-33B is the value pick with a weaker agentic profile.</p>
+
+    <div class="rec"><div class="rl">Recommendation</div>
+      <p><b>Run Qwen3.6-27B FP8</b> as the primary local coding model. Keep Kimi-K2.5-Coder-42B (INT4) available for maximum-quality passes where 32K context suffices.</p>
+    </div>
+
+    <h2>Top 3 comparison</h2>
+    <table>
+      <thead><tr><th></th><th>Qwen3.6-27B FP8</th><th>Kimi-K2.5-Coder 42B</th><th>DeepSeek-V4-Lite 33B</th></tr></thead>
+      <tbody>
+        <tr><td class="mono faint">LiveCodeBench v6</td><td><b>71.4</b> <button class="cite" data-c="c-lcb">C-04</button></td><td><b>73.9</b> <button class="cite" data-c="c-kimi-lcb">C-14</button></td><td>66.2 <button class="cite" data-c="c-ds-lcb">C-17</button></td></tr>
+        <tr><td class="mono faint">SWE-bench Verified (agentic)</td><td><b>48.1%</b> <button class="cite" data-c="c-agentic">C-07</button></td><td>47.3% <button class="cite" data-c="c-agentic">C-07</button></td><td>39.8% <button class="cite" data-c="c-agentic">C-07</button></td></tr>
+        <tr><td class="mono faint">VRAM @ 128K ctx</td><td><b>~61 GB</b> <button class="cite" data-c="c-vram">C-11</button></td><td>~93 GB (32K max practical)</td><td>~68 GB</td></tr>
+        <tr><td class="mono faint">tok/s (RTX Pro 6000, bs=1)</td><td>~58 <button class="cite" data-c="c-speed">C-20</button></td><td>~31 <span class="badge run" style="font-size:.56rem">normalized</span></td><td>~49 <button class="cite" data-c="c-speed">C-20</button></td></tr>
+        <tr><td class="mono faint">Independent validation</td><td><span class="badge live" style="font-size:.56rem">2 sources</span></td><td><span class="badge live" style="font-size:.56rem">1 source</span></td><td><span class="badge live" style="font-size:.56rem">1 source</span></td></tr>
+      </tbody>
+    </table>
+
+    <h2>Why not the others</h2>
+    <p><b>GLM-5-Coder-32B</b> posts a competitive vendor benchmark, but the figure could not be independently reproduced — the community replication came in 6.8 points lower under matched settings<button class="cite" data-c="c-glm">C-09</button>, and the claim remains marked contested in the evidence base. <b>Kimi-K2.5-Coder</b> wins raw quality but its practical 32K context ceiling on this GPU conflicts with the agentic-workflow priority, where long context does real work<button class="cite" data-c="c-vram">C-11</button>.</p>
+
+    <div class="unc"><div class="rl">Accepted uncertainties</div>
+      <li>Same-hardware throughput exists for only 2 of 4 candidates; Kimi and GLM figures are normalized from A6000-class runs (±15%).</li>
+      <li>GLM-5-Coder's vendor benchmark discrepancy is unresolved — treated as contested, not disproven.</li>
+    </div>
+
+    <h2>Method</h2>
+    <p>2 planning stages · 10 research tasks (2 discovery, 6 deep, 2 evaluator-demanded follow-ups) · 47 evidence items across 19 distinct publishers, vendor-affiliation ratio 0.23 · 1 contested claim resolved by independent replication, 1 uncertainty consciously accepted. Every figure above traces: sentence → claim → evidence → source → collecting attempt.</p>
+  </div></div></section>
+
+
+  <!-- ======== VIEW: TRANSCRIPT ======== -->
+  <section class="view" id="v-transcript"><div class="wrap" style="max-width:860px">
+    <h2 class="pageh">Full transcript</h2>
+    <p class="pagesub">The whole run, readable start to finish: what each agent was given, what it thought, which tools it called, what it produced, and what the control plane did with it. Nothing here is reconstructed — every block is a stored record.</p>
+    <div id="transcript"></div>
+  </div></section>
+
+</main>
+</div>
+
+<div class="overlay" id="overlay" onclick="closeDrawer()"></div>
+<aside class="drawer" id="drawer" aria-label="task inspector">
+  <div class="drawer-h">
+    <div style="flex:1"><div class="mono faint" style="font-size:.64rem" id="d-id"></div><h3 id="d-title"></h3></div>
+    <button class="btn sm" onclick="closeDrawer()">Esc ✕</button>
+  </div>
+  <div class="drawer-b" id="d-body"></div>
+</aside>
+<div class="tmodal" id="tmodal" role="dialog" aria-label="attempt trace">
+  <div class="tmodal-h">
+    <div style="flex:1"><h3 id="tm-title"></h3><div class="mono" id="tm-sub"></div></div>
+    <button class="btn sm" onclick="closeTrace()">Esc ✕</button>
+  </div>
+  <div class="tmodal-b" id="tm-body"></div>
+</div>
+<div class="toast" id="toast"></div>
+<script>
+/* ================= mock data ================= */
+const TASKS = {
+ stages: [
+  {label:"Stage 0 · Control", tasks:[
+   {id:"T-001",title:"Plan Stage 1 — clarify + discovery",status:"done",badges:["plan","frontier"],
+    kv:{Agent:"Planner",Model:"claude-opus (frontier)",Duration:"41s",Output:"spec v1 · 2 discovery tasks"},
+    atts:[{n:1,s:"accepted",tier:"frontier",strat:"—",note:"Formalized objective, 6 success criteria, 3 inferred assumptions surfaced in clarificationsAssumed. No human questions needed."}]},
+  ]},
+  {label:"Wave 1 · Discovery", tasks:[
+   {id:"T-010",title:"Candidate model discovery",status:"done",badges:["research","broad_discovery","local"],
+    kv:{Agent:"Researcher",Model:"qwen3.6-27b (strong_local)",Strategy:"broad_discovery","Tool calls":"9 (6 search, 3 fetch)","Pass 2":"T-011 ✓ · 6 claims, 8 evidence"},
+    atts:[{n:1,s:"accepted",tier:"strong_local",strat:"broad_discovery",note:"Research note: 4 credible single-GPU candidates identified — Qwen3.6-27B, Kimi-K2.5-Coder-42B, DeepSeek-V4-Lite-33B, GLM-5-Coder-32B. 2 excluded (multi-GPU only)."}]},
+   {id:"T-012",title:"Benchmark landscape scan",status:"done",badges:["research","broad_discovery","local"],
+    kv:{Agent:"Researcher",Model:"qwen3.6-27b (strong_local)",Strategy:"broad_discovery","Tool calls":"7","Pass 2":"T-013 ✓ · 4 claims, 5 evidence"},
+    atts:[{n:1,s:"accepted",tier:"strong_local",strat:"broad_discovery",note:"Identified LiveCodeBench v6 + SWE-bench Verified as the two coverage-relevant benchmarks; flagged vendor-run vs independent origin distinction."}]},
+  ]},
+  {label:"Stage 2 · Plan deep", tasks:[
+   {id:"T-002",title:"Plan Stage 2 — parameterized deep tasks",status:"done",badges:["plan","frontier"],
+    kv:{Agent:"Planner",Model:"claude-opus (frontier)",Input:"spec v1 + candidate claim digest",Output:"6 deep tasks, fully concrete inputs"},
+    atts:[{n:1,s:"accepted",tier:"frontier",strat:"—",note:"Every deep task input names its candidates explicitly — no templates. Marked all 6 parallelizable; gateway will serialize at GPU (cap 2)."}]},
+  ]},
+  {label:"Wave 2 · Deep research", tasks:[
+   {id:"T-020",title:"Official specs — all 4 candidates",status:"done",badges:["research","primary_sources","local"],
+    kv:{Agent:"Researcher",Model:"qwen3.6-27b",Strategy:"primary_sources","Pass 2":"✓ 5 claims, 7 evidence"},
+    atts:[{n:1,s:"accepted",tier:"strong_local",strat:"primary_sources",note:"Model cards + config.json for all 4. Param counts, context windows, quant releases captured."}]},
+   {id:"T-021",title:"Coding benchmarks — LiveCodeBench v6",status:"done",badges:["research","benchmark_focused","local"],
+    kv:{Agent:"Researcher",Model:"qwen3.6-27b",Strategy:"benchmark_focused","Pass 2":"✓ 4 claims, 6 evidence"},
+    atts:[{n:1,s:"accepted",tier:"strong_local",strat:"benchmark_focused",note:"Scores for all 4 — but GLM figure is vendor-run only. Deterministic check flagged vendor-affiliation ratio."}]},
+   {id:"T-022",title:"Agentic benchmarks — SWE-bench Verified",status:"done",badges:["research","benchmark_focused","local"],
+    kv:{Agent:"Researcher",Model:"qwen3.6-27b",Strategy:"benchmark_focused","Pass 2":"✓ 3 claims, 5 evidence"},
+    atts:[{n:1,s:"accepted",tier:"strong_local",strat:"benchmark_focused",note:"Leaderboard is independent-run — clean origin. Kimi/Qwen within 1pt."}]},
+   {id:"T-023",title:"VRAM & quantization fit @ 96GB",status:"done",badges:["research","comparative","local","retry ×2"],
+    kv:{Agent:"Researcher",Model:"qwen3.6-27b",Strategy:"comparative → primary_sources","Attempts":"2 (1 rejected)","Pass 2":"✓ 4 claims, 6 evidence"},
+    atts:[
+     {n:1,s:"superseded",tier:"strong_local",strat:"comparative",note:"REJECTED by deterministic check: only vendor sizing tables, 0 non-vendor sources on a vendor-product question. Side effects (4 evidence rows) went dark on supersede."},
+     {n:2,s:"accepted",tier:"strong_local",strat:"primary_sources",note:"vLLM memory profiles + two field reports. Qwen FP8 @128K ≈ 61GB; Kimi INT4 practical ceiling 32K ctx on 96GB."}]},
+   {id:"T-024",title:"Inference speed evidence",status:"done",badges:["research","community_evidence","local"],
+    kv:{Agent:"Researcher",Model:"qwen3.6-27b",Strategy:"community_evidence","Pass 2":"✓ 3 claims, 5 evidence"},
+    atts:[{n:1,s:"accepted",tier:"strong_local",strat:"community_evidence",note:"tok/s figures found, but hardware is inconsistent across sources — noted as gap in self-assessment."}]},
+   {id:"T-025",title:"Real-world agentic coding reports",status:"done",badges:["research","community_evidence","local"],
+    kv:{Agent:"Researcher",Model:"qwen3.6-27b",Strategy:"community_evidence","Pass 2":"✓ 4 claims, 5 evidence"},
+    atts:[{n:1,s:"accepted",tier:"strong_local",strat:"community_evidence",note:"12 practitioner reports across 3 forums; tool-calling reliability signals extracted per candidate."}]},
+  ]},
+  {label:"Cycle 1 · Analyze + gate", tasks:[
+   {id:"T-030",title:"Analysis v1",status:"done",badges:["analyze","local"],
+    kv:{Agent:"Analyst",Model:"qwen3.6-27b",Input:"19 live claims · K=3 evidence each",Output:"7 findings, 2 open questions"},
+    atts:[{n:1,s:"accepted",tier:"strong_local",strat:"—",note:"Preliminary ranking Qwen > Kimi > DeepSeek. Flagged: GLM benchmark unverifiable; speed data cross-hardware."}]},
+   {id:"T-031",title:"Evaluation — cycle 1",status:"done",badges:["evaluate","frontier"],
+    kv:{Agent:"Evaluator",Model:"claude-opus (frontier)",Decision:"RESEARCH_MORE","Required actions":"2"},
+    atts:[{n:1,s:"accepted",tier:"frontier",strat:"—",note:"HIGH: GLM LiveCodeBench figure is vendor-only (benchmarkOrigin=vendor). HIGH: no same-hardware speed comparison. → 2 follow-up research questions emitted; Control Plane created T-040/T-041 directly."}]},
+  ]},
+  {label:"Follow-up · Evaluator-demanded", tasks:[
+   {id:"T-040",title:"Independent validation — GLM & Qwen LCB scores",status:"done",badges:["research","independent_validation","escalated","retry ×2"],
+    kv:{Agent:"Researcher",Model:"qwen3.6-27b → claude-opus",Strategy:"independent_validation","Attempts":"2 (tier escalated)","Pass 2":"✓ 3 claims, 4 evidence"},
+    atts:[
+     {n:1,s:"superseded",tier:"strong_local",strat:"independent_validation",note:"Found 1 replication for Qwen, none for GLM. Self-assessment: complete=false, gap=GLM. Intelligence retry → tier escalation per policy ladder."},
+     {n:2,s:"accepted",tier:"frontier",strat:"independent_validation",note:"Located community replication of GLM-5-Coder under matched settings: 61.3 vs vendor 68.1 (−6.8). Contested claim C-09 updated with contradicting evidence."}]},
+   {id:"T-041",title:"Same-hardware (RTX Pro 6000) speed comparisons",status:"done",badges:["research","independent_validation","local"],
+    kv:{Agent:"Researcher",Model:"qwen3.6-27b",Strategy:"independent_validation","Pass 2":"✓ 2 claims, 3 evidence"},
+    atts:[{n:1,s:"accepted",tier:"strong_local",strat:"independent_validation",note:"Same-GPU numbers found for Qwen + DeepSeek only. Kimi/GLM normalized from A6000 runs — flagged for accepted-uncertainty."}]},
+  ]},
+  {label:"Cycle 2 · Final gate", tasks:[
+   {id:"T-050",title:"Analysis v2",status:"done",badges:["analyze","local"],
+    kv:{Agent:"Analyst",Model:"qwen3.6-27b",Input:"23 live claims (incl. resolved contest)",Output:"9 findings, 0 open questions"},
+    atts:[{n:1,s:"accepted",tier:"strong_local",strat:"—",note:"GLM demoted on contested benchmark; ranking stable. Every finding cites ≥1 canonical claim."}]},
+   {id:"T-051",title:"Evaluation — cycle 2",status:"done",badges:["evaluate","frontier"],
+    kv:{Agent:"Evaluator",Model:"claude-opus (frontier)",Decision:"ACCEPT","Accepted uncertainties":"1"},
+    atts:[{n:1,s:"accepted",tier:"frontier",strat:"—",note:"Coverage adequate, vendor ratio 0.23, both key contests addressed. 1 uncertainty accepted → contractually carried into report."}]},
+   {id:"T-060",title:"Synthesize final report",status:"done",badges:["synthesize","frontier"],
+    kv:{Agent:"Synthesizer",Model:"claude-opus (frontier)",Input:"approved claims + live evidence only",Output:"report artifact · 11 citation chips"},
+    atts:[{n:1,s:"accepted",tier:"frontier",strat:"—",note:"Every factual sentence linked to approved canonical claims. Accepted uncertainty section rendered."}]},
+  ]},
+ ]
+};
+
+const CLAIMS = [
+ {id:"c-lcb",code:"C-04",subj:"qwen",key:"model:qwen3.6-27b · livecodebench_v6",st:"supported",
+  stmt:"Qwen3.6-27B FP8 scores 71.4 on LiveCodeBench v6.",
+  ev:[
+   {id:"E-12",rel:"s",tx:"Official model card reports LCB v6 71.4 (pass@1, 2026-06 problem set).",src:"official_docs · qwen.ai · 2026-06-30 · vendor-affiliated ✓ · origin: vendor-run"},
+   {id:"E-31",rel:"s",tx:"Independent replication: 70.9 under matched sampling settings.",src:"independent_benchmark · lmarena-code.org · 2026-07-22 · vendor-affiliated ✗ · origin: independent"},
+  ]},
+ {id:"c-glm",code:"C-09",subj:"glm",key:"model:glm-5-coder-32b · livecodebench_v6",st:"contested",
+  stmt:"GLM-5-Coder-32B LiveCodeBench v6 score is disputed: vendor 68.1 vs independent 61.3.",
+  note:"Vendor figure could not be reproduced under matched settings (−6.8). Evaluator ruling (cycle 2): treat independent figure as primary, keep contest open — contested, not disproven.",
+  ev:[
+   {id:"E-19",rel:"s",tx:"Vendor benchmark table lists LCB v6 = 68.1.",src:"vendor_benchmark · zhipu.ai · 2026-07-04 · vendor-affiliated ✓ · origin: vendor-run"},
+   {id:"E-44",rel:"c",tx:"Community replication under matched sampling: 61.3 ± 0.6 over 3 runs.",src:"independent_benchmark · eval-collective (GitHub) · 2026-08-02 · vendor-affiliated ✗ · origin: independent"},
+  ]},
+ {id:"c-agentic",code:"C-07",subj:"qwen kimi deepseek",key:"cohort · swebench_verified",st:"supported",
+  stmt:"SWE-bench Verified: Qwen3.6-27B 48.1%, Kimi-K2.5-Coder 47.3%, DeepSeek-V4-Lite 39.8%.",
+  ev:[
+   {id:"E-22",rel:"s",tx:"Independent leaderboard, containerized harness, all models run by maintainers.",src:"independent_benchmark · swebench.com · 2026-07-30 · vendor-affiliated ✗ · origin: independent"},
+  ]},
+ {id:"c-vram",code:"C-11",subj:"qwen kimi",key:"model:qwen3.6-27b · vram_fit_128k",st:"supported",
+  stmt:"Qwen3.6-27B FP8 fits 128K context in ~61 GB; Kimi-K2.5-Coder INT4 is practically limited to 32K on 96 GB.",
+  ev:[
+   {id:"E-27",rel:"s",tx:"vLLM memory profile: 60.8 GB peak @128K ctx, FP8 weights + FP8 KV cache.",src:"community · r/LocalLLaMA field report · 2026-08-05 · vendor-affiliated ✗"},
+   {id:"E-28",rel:"s",tx:"Second field report on identical GPU confirms 61±1 GB; Kimi INT4 OOMs beyond 34K ctx.",src:"community · llm-perf discord archive · 2026-08-09 · vendor-affiliated ✗"},
+  ]},
+ {id:"c-kimi-lcb",code:"C-14",subj:"kimi",key:"model:kimi-k2.5-coder · livecodebench_v6",st:"supported",
+  stmt:"Kimi-K2.5-Coder-42B scores 73.9 on LiveCodeBench v6.",
+  ev:[
+   {id:"E-33",rel:"s",tx:"Independent leaderboard entry 73.9 (maintainer-run).",src:"independent_benchmark · lmarena-code.org · 2026-07-22 · vendor-affiliated ✗ · origin: independent"},
+  ]},
+ {id:"c-ds-lcb",code:"C-17",subj:"deepseek",key:"model:deepseek-v4-lite · livecodebench_v6",st:"supported",
+  stmt:"DeepSeek-V4-Lite-33B scores 66.2 on LiveCodeBench v6.",
+  ev:[
+   {id:"E-35",rel:"s",tx:"Independent leaderboard entry 66.2.",src:"independent_benchmark · lmarena-code.org · 2026-07-22 · vendor-affiliated ✗ · origin: independent"},
+  ]},
+ {id:"c-speed",code:"C-20",subj:"qwen deepseek",key:"cohort · toks_rtx_pro_6000_bs1",st:"supported",
+  stmt:"On RTX Pro 6000 (bs=1, vLLM): Qwen3.6-27B FP8 ≈ 58 tok/s, DeepSeek-V4-Lite ≈ 49 tok/s.",
+  ev:[
+   {id:"E-41",rel:"s",tx:"Same-GPU benchmark thread with reproducible launch flags for both models.",src:"community · llm-perf discord archive · 2026-08-11 · vendor-affiliated ✗"},
+  ]},
+ {id:"c-param",code:"C-01",subj:"qwen",key:"model:qwen3.6-27b · param_count",st:"supported",
+  stmt:"Qwen3.6-27B has 27B parameters, 128K native context, official FP8 release.",
+  ev:[
+   {id:"E-02",rel:"s",tx:"Model card + config.json.",src:"official_docs · huggingface.co/Qwen · 2026-06-28 · vendor-affiliated ✓"},
+  ]},
+];
+
+const EVENTS = [
+ ["09:41:02","","Run #42 created","goal + 4 constraints · budget $5.00 / 3 cycles / 60 min"],
+ ["09:41:05","gate","Plan Stage 1 started","Planner · frontier"],
+ ["09:41:46","accept","Spec v1 created","6 success criteria · 3 assumptions inferred, 0 human questions"],
+ ["09:41:47","","2 discovery tasks created","T-010, T-012 · broad_discovery · READY"],
+ ["09:42:01","","Wave 1 running","2 workers · gpu concurrency cap 2"],
+ ["09:46:33","accept","Discovery extracted","10 claims, 13 evidence · 4 candidates canonicalized"],
+ ["09:46:40","gate","Plan Stage 2 started","input: spec + candidate claim digest"],
+ ["09:47:21","accept","6 deep tasks created","all inputs concrete · parallelizable · queued at gateway"],
+ ["09:54:12","warn","T-023 attempt 1 rejected","deterministic check: 0 non-vendor sources on vendor-product question → intelligence retry, strategy primary_sources"],
+ ["09:56:48","accept","T-023 attempt 2 accepted","attempt 1 superseded — 4 evidence rows went dark atomically"],
+ ["10:01:20","accept","Wave 2 complete","6/6 tasks done · 34 live evidence total"],
+ ["10:01:24","","Analysis v1 complete","7 findings · 2 open questions"],
+ ["10:02:10","gate","Evaluator cycle 1: RESEARCH_MORE","2 HIGH issues: vendor-only GLM benchmark · no same-hardware speed data"],
+ ["10:02:11","","2 follow-up tasks created","T-040, T-041 · from requiredActions, no Planner call · priority-jumped GPU queue"],
+ ["10:05:02","warn","T-040 attempt 1 → escalate","self-assessment incomplete (GLM gap) · policy ladder: strong_local → frontier"],
+ ["10:06:31","accept","T-040 attempt 2 accepted","GLM replication found: 61.3 vs vendor 68.1 · claim C-09 → contested"],
+ ["10:06:58","accept","T-041 accepted","same-GPU data for 2/4 candidates · gap flagged"],
+ ["10:07:12","","Analysis v2 complete","9 findings · 0 open questions"],
+ ["10:07:55","gate","Evaluator cycle 2: ACCEPT","vendor ratio 0.23 · 1 uncertainty accepted · cycle guard headroom: 1"],
+ ["10:08:01","gate","Synthesis started","approved claims + live evidence only"],
+ ["10:15:44","accept","Run #42 COMPLETED","report artifact · 11 citations · full provenance"],
+];
+
+/* ================= render ================= */
+const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
+
+function renderDag(){
+  $('#dag').innerHTML = TASKS.stages.map(st=>`
+   <div class="stage">
+    <div class="stage-h"><span>${st.label}</span><span>${st.tasks.length}</span></div>
+    ${st.tasks.map(t=>`
+     <div class="tk ${t.status}" data-task="${t.id}" tabindex="0" role="button" aria-label="Inspect ${t.id}">
+      <div class="tid">${t.id}</div>
+      <div class="tt">${t.title}</div>
+      <div class="tm">${t.badges.map(b=>{
+        const cls = b==='frontier'?'frontier': b==='local'?'ghost': b.startsWith('retry')||b==='escalated'?'run':'ghost';
+        return `<span class="badge ${cls}">${b}</span>`;}).join('')}</div>
+     </div>`).join('')}
+   </div>`).join('');
+}
+function findTask(id){for(const s of TASKS.stages)for(const t of s.tasks)if(t.id===id)return t;}
+function openTask(id){
+  const t=findTask(id); if(!t)return;
+  $$('.tk').forEach(e=>e.classList.toggle('sel',e.dataset.task===id));
+  $('#d-id').textContent=t.id+' · '+t.status.toUpperCase();
+  $('#d-title').textContent=t.title;
+  $('#d-body').innerHTML=`
+    <dl class="kv">${Object.entries(t.kv).map(([k,v])=>`<dt>${k}</dt><dd>${v}</dd>`).join('')}</dl>
+    <div class="secl">Attempts (${t.atts.length})</div>
+    ${t.atts.map(a=>`
+     <div class="att ${a.s==='superseded'?'superseded':''}">
+      <div class="ah"><b>#${a.n}</b>
+       <span class="badge ${a.s==='accepted'?'live':a.s==='superseded'?'ghost':'fail'}">${a.s}</span>
+       <span class="badge ${a.tier==='frontier'?'frontier':'ghost'}">${a.tier}</span>
+       ${a.strat!=='—'?`<span class="badge ghost">${a.strat}</span>`:''}
+      </div><p>${a.note}</p><button class="tracebtn" onclick="openTrace('${t.id}',${a.n})">View full trace →</button>
+     </div>`).join('')}
+    ${t.atts.some(a=>a.s==='superseded')?'<div class="mono faint" style="font-size:.66rem;line-height:1.6">Superseded attempts remain for audit; their claims/evidence are not visible to downstream agents (liveness rule, ADR-014).</div>':''}`;
+  $('#drawer').classList.add('open');$('#overlay').classList.add('show');
+}
+function closeDrawer(){$('#drawer').classList.remove('open');$('#overlay').classList.remove('show');$$('.tk.sel').forEach(e=>e.classList.remove('sel'));}
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){if(document.querySelector('#tmodal').classList.contains('open'))closeTrace();else closeDrawer();}});
+
+function renderClaims(filter='all'){
+  $('#claims').innerHTML = CLAIMS
+   .filter(c=>filter==='all'||(filter==='contested'?c.st==='contested':c.subj.includes(filter)))
+   .map(c=>`
+    <div class="claim ${c.st==='contested'?'contested':''}" id="${c.id}">
+     <div class="claim-h" onclick="this.parentElement.classList.toggle('open')">
+      <span class="mono faint" style="font-size:.68rem;padding-top:2px">${c.code}</span>
+      <span class="cs">${c.stmt}<span class="ck">${c.key}</span></span>
+      <span class="badge ${c.st==='contested'?'run':'live'}">${c.st}</span>
+     </div>
+     <div class="claim-ev">
+      ${c.note?`<div class="contest-note">${c.note}</div>`:''}
+      ${c.ev.map(e=>`
+       <div class="evrow"><span class="eid">${e.id}</span>
+        <span class="ex">${e.tx}<span class="src">${e.src}</span></span>
+        <span class="rel ${e.rel}">${e.rel==='s'?'supports':'contradicts'}</span>
+       </div>`).join('')}
+     </div>
+    </div>`).join('');
+}
+function renderEvents(el,list){
+  el.innerHTML=list.map(([t,k,m,d])=>`
+   <div class="ev ${k?'k-'+k:''}"><div class="et">${t}</div><div class="em"><b>${m}</b></div><div class="ed">${d}</div></div>`).join('');
+}
+
+/* ================= nav ================= */
+const crumbs={runs:'runs',new:'runs / new',overview:'runs / <b>#42</b> / overview',tasks:'runs / <b>#42</b> / task graph',evidence:'runs / <b>#42</b> / claims & evidence',timeline:'runs / <b>#42</b> / timeline',report:'runs / <b>#42</b> / report',transcript:'runs / <b>#42</b> / transcript'};
+function go(v){
+  $$('.view').forEach(e=>e.classList.toggle('on',e.id==='v-'+v));
+  $$('.navbtn').forEach(b=>b.classList.toggle('on',b.dataset.view===v));
+  $('#crumb').innerHTML=crumbs[v]||'runs';
+  closeDrawer(); window.scrollTo({top:0});
+}
+$$('.navbtn').forEach(b=>b.addEventListener('click',()=>go(b.dataset.view)));
+document.addEventListener('keydown',e=>{
+  if(e.target.matches('input,textarea'))return;
+  const map={'1':'runs','2':'new','3':'overview','4':'tasks','5':'evidence','6':'timeline','7':'report','8':'transcript'};
+  if(map[e.key])go(map[e.key]);
+});
+document.addEventListener('click',e=>{
+  const tk=e.target.closest('.tk'); if(tk){openTask(tk.dataset.task);return;}
+  const ct=e.target.closest('.cite');
+  if(ct){go('evidence');const el=$('#'+ct.dataset.c);
+    if(el){el.classList.add('open');el.scrollIntoView({block:'center'});el.style.outline='2px solid var(--live)';setTimeout(()=>el.style.outline='',1600);}return;}
+});
+document.addEventListener('keydown',e=>{const tk=e.target.closest?.('.tk');if(tk&&(e.key==='Enter'||e.key===' ')){e.preventDefault();openTask(tk.dataset.task);}});
+$$('#ev-filters .chip').forEach(ch=>ch.addEventListener('click',()=>{
+  $$('#ev-filters .chip').forEach(c=>c.classList.remove('on'));ch.classList.add('on');renderClaims(ch.dataset.f);
+}));
+
+let toastT;function toast(m){const t=$('#toast');t.textContent=m;t.classList.add('show');clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove('show'),3200);}
+function tick(){$('#clock').textContent=new Date().toLocaleTimeString('en-US',{hour12:false});}
+setInterval(tick,1000);tick();
+
+
+/* ================= attempt traces (stored records) ================= */
+const TRACES = {
+"T-001:1":[
+ {k:"ctx",t:"Input — PlannerInput (built by Context Builder)",pre:`{
+  "userRequest": "Determine the best local coding model for RTX Pro 6000 96GB. Prioritize coding quality and agentic capability over speed. Compare current Qwen, DeepSeek, Kimi, and other credible candidates. Produce a Top 3 and recommend one model.",
+  "suppliedConstraints": ["coding quality > speed", "inference only", "must fit one 96GB GPU", "agentic coding performance matters"],
+  "planStage": 1,
+  "availableCapabilities": ["web_search","web_fetch","artifact_write","evidence_query"],
+  "budget": {"maxUsd": 5.0, "maxEvaluationCycles": 3, "maxDurationMs": 3600000}
+}`},
+ {k:"think",t:"Model reasoning (frontier · claude-opus)",p:`"Best" is ambiguous between highest benchmark quality and best practical quality on this hardware. The constraints (single 96GB GPU, agentic priority) let me resolve this safely as *practical*: a model that benchmarks higher but can't hold agentic-scale context on this card doesn't satisfy the user's stated priorities. I'll record that as an inferred assumption rather than ask. Candidate set should not be frozen now — a discovery wave first, then parameterized deep tasks, keeps stage-2 inputs concrete. Success criteria must be checkable by the Evaluator: independent validation, capacity proof, same-hardware evidence where possible.`},
+ {k:"out",t:"Output — PlannerOutput (schema-validated)",pre:`{
+  "specification": {
+    "objective": "Identify the strongest practical single-GPU local coding model for RTX Pro 6000 96GB given coding-quality + agentic priorities",
+    "successCriteria": [
+      ">=3 credible candidates with capacity validation",
+      "coding benchmark with independent origin for finalists",
+      "agentic benchmark coverage",
+      ">=1 non-vendor source per vendor-product claim",
+      "same-hardware inference evidence where obtainable",
+      "Top 3 + one recommendation with uncertainties"
+    ],
+    "exclusions": ["training", "multi-GPU deployment"]
+  },
+  "clarificationsAssumed": [
+    "'best' = practical quality on this hardware, not leaderboard max",
+    "current = released or updated within ~9 months",
+    "quantized official releases are in scope"
+  ],
+  "humanQuestions": [],
+  "planDelta": {
+    "addTasks": [
+      {"localId":"d1","type":"research","title":"Candidate model discovery","strategy":"broad_discovery","priority":90},
+      {"localId":"d2","type":"research","title":"Benchmark landscape scan","strategy":"broad_discovery","priority":85}
+    ],
+    "rationale": "Discovery-first; deep tasks created at stage 2 when candidate set is concrete."
+  }
+}`},
+ {k:"sys",t:"Control plane",p:`Spec v1 stored. planDelta interpreted → T-010, T-012 created (READY). Event: RUN_STATUS_CHANGED → RESEARCHING. 0 human questions → no checkpoint.`}
+],
+
+"T-010:1":[
+ {k:"ctx",t:"Input — ResearcherInput",pre:`{
+  "question": "Which currently-available open-weight coding models are credible candidates for a single RTX Pro 6000 (96GB), given coding-quality + agentic priorities?",
+  "strategy": "broad_discovery",
+  "successCriteria": [">=3 credible candidates", "each plausibly fits 96GB at useful context", "note official quantized releases"],
+  "timeContext": "2026-08-19; prefer sources <9 months old",
+  "excludedSources": []
+}`},
+ {k:"think",t:"Model reasoning (strong_local · qwen3.6-27b)",p:`Broad discovery: start with recent roundups and release announcements, then verify each candidate actually has downloadable weights and a single-GPU story. I should capture why excluded models were excluded — that's evidence too.`},
+ {k:"tool",t:'web_search — "best local coding LLM single GPU 96GB 2026"',pre:`[1] "Local coding models mid-2026 roundup" — r/LocalLLaMA (2026-07)
+    "...on 96GB cards the conversation is Qwen3.6-27B FP8, Kimi-K2.5-Coder-42B, DeepSeek-V4-Lite-33B..."
+[2] "GLM-5-Coder-32B release notes" — zhipu.ai blog (2026-07)
+[3] "Coder-Next-72B announced" — requires 2x GPUs at useful context ⟶ likely excluded`},
+ {k:"tool",t:'web_search — "open weight coding model release 2026 agentic swe-bench"',pre:`[1] SWE-bench Verified leaderboard — swebench.com (updated 2026-07-30)
+[2] "Kimi-K2.5-Coder technical report" — moonshot.ai
+[3] "Qwen3.6 family model cards" — huggingface.co/Qwen`},
+ {k:"tool",t:'web_fetch — huggingface.co/collections/Qwen/qwen3-6',pre:`Fetched 2026-08-19 09:44:07 · snapshot → artifact A-1007
+"Qwen3.6-27B ... 128K context ... official FP8 release ... Apache-2.0 ..."`},
+ {k:"out",t:"Output — Research note (artifact A-1010, pass 1)",pre:`# Candidate discovery — single-GPU coding models (96GB)
+
+## Findings
+Credible candidates (weights available, single-GPU plausible):
+1. **Qwen3.6-27B** — official FP8, 128K ctx, strong agentic signals
+2. **Kimi-K2.5-Coder-42B** — quality leader claims; INT4 needed on 96GB
+3. **DeepSeek-V4-Lite-33B** — efficient, wide adoption
+4. **GLM-5-Coder-32B** — new entrant, vendor claims strong LCB score
+
+Excluded: Coder-Next-72B (multi-GPU at useful ctx), Nemotron-Code-51B (no official quant, 96GB marginal at 8-bit).
+
+## Gaps
+- No capacity numbers verified yet (deep task material)
+- GLM claims are vendor-only so far`},
+ {k:"sys",t:"Control plane — mechanical logs + checks",pre:`sourcesVisited (tool-layer log, not model memory): 7 URLs, 6 distinct publishers
+selfAssessment: { complete: true, confidence: "high", gaps: ["capacity unverified","GLM vendor-only"] }
+Deterministic checks: PASS (>=3 candidates, sources present)
+→ status EVALUATING → ACCEPTED · extraction task T-011 created`},
+ {k:"out",t:"Pass 2 — ExtractorOutput (T-011 · fast_local · guided decoding)",pre:`{
+  "claims": [
+    {"subjectKey":"model:qwen3.6-27b","predicateKey":"candidate","statement":"Qwen3.6-27B is a credible single-GPU coding candidate (official FP8, 128K ctx)","type":"fact","sourceRefs":["A-1007"]},
+    {"subjectKey":"model:kimi-k2.5-coder","predicateKey":"candidate","statement":"Kimi-K2.5-Coder-42B is a credible candidate; INT4 required on 96GB","type":"fact"},
+    {"subjectKey":"model:deepseek-v4-lite","predicateKey":"candidate","statement":"DeepSeek-V4-Lite-33B is a credible candidate","type":"fact"},
+    {"subjectKey":"model:glm-5-coder","predicateKey":"candidate","statement":"GLM-5-Coder-32B is a credible candidate; performance claims vendor-only so far","type":"fact"},
+    {"subjectKey":"model:coder-next-72b","predicateKey":"excluded","statement":"Coder-Next-72B excluded: multi-GPU at useful context","type":"fact"},
+    {"subjectKey":"model:nemotron-code-51b","predicateKey":"excluded","statement":"Nemotron-Code-51B excluded: no official quant, marginal fit","type":"fact"}
+  ],
+  "evidence": [ "...8 items with sourceClass / publisher / vendorAffiliated / retrievedAt..." ],
+  "unanswered": ["capacity verification","independent GLM validation"]
+}
+schema: VALID (guided decoding) · canonicalization: 6 new canonical claims`}
+],
+
+"T-023:1":[
+ {k:"ctx",t:"Input — ResearcherInput",pre:`{
+  "question": "For each candidate, what VRAM does it need on a 96GB RTX Pro 6000, and at what context length, per quantization?",
+  "strategy": "comparative",
+  "successCriteria": ["per-candidate fit numbers","context ceiling at 96GB",">=1 non-vendor source (vendor-product question)"]
+}`},
+ {k:"think",t:"Model reasoning (strong_local)",p:`Vendor sizing tables are the fastest comparable source — each model card publishes memory-by-context tables. I'll collect those for all four and compare directly.`},
+ {k:"tool",t:'web_fetch — qwen.ai sizing table · moonshot.ai deploy guide · deepseek docs · zhipu docs',pre:`4 fetches, all sourceClass=official_docs, all vendorAffiliated=true`},
+ {k:"out",t:"Output — Research note (artifact A-1023a)",pre:`Vendor tables collected for all 4 candidates. Qwen FP8@128K: "~60GB (vendor)".
+Kimi INT4@32K: "~88GB (vendor)". [full table in note]`},
+ {k:"sys rej",t:"Deterministic check — REJECTED",pre:`RULE: vendor-product question requires >=1 non-vendor source.
+FOUND: 4/4 sources vendorAffiliated=true → QUALITY_FAILURE
+RetryCoordinator: intelligence retry · ladder step 1 = same tier, new strategy
+  comparative → primary_sources (independent measurement focus)
+Attempt #1 → SUPERSEDED on next accept · 4 evidence rows will go dark (ADR-014)`}
+],
+"T-023:2":[
+ {k:"ctx",t:"Input — ResearcherInput (amended by retry policy)",pre:`{
+  "question": "(same)",
+  "strategy": "primary_sources",
+  "excludedSources": ["qwen.ai/sizing","moonshot.ai/deploy","deepseek.com/docs","zhipu.ai/docs"],
+  "priorAttemptGap": "vendor-only sourcing rejected; need independent measurements"
+}`},
+ {k:"tool",t:'web_search — "vLLM memory profile qwen3.6 27b fp8 128k context 96GB"',pre:`[1] r/LocalLLaMA: "Qwen3.6-27B FP8 on RTX Pro 6000 — full 128K, 60.8GB peak" (2026-08-05)
+[2] llm-perf discord archive: independent confirmation thread (2026-08-09)`},
+ {k:"tool",t:"web_fetch — both field reports",pre:`Snapshots → artifacts A-1023b, A-1023c · launch flags + nvidia-smi captures included`},
+ {k:"out",t:"Output — Research note (artifact A-1023d)",pre:`## Findings (independent measurements)
+- Qwen3.6-27B FP8: 60.8GB peak @128K (vLLM, FP8 KV) — confirmed by 2nd report (61±1GB)
+- Kimi-K2.5-Coder INT4: OOM beyond ~34K ctx on 96GB → practical ceiling 32K
+- DeepSeek-V4-Lite FP8: ~68GB @128K
+- GLM-5-Coder: only vendor numbers exist; noted as gap (not repeated as fact)`},
+ {k:"sys",t:"Control plane",pre:`Deterministic checks: PASS (2 non-vendor sources)
+ACCEPTED → attempt #1 SUPERSEDED (atomic) · extraction: 4 claims, 6 evidence · C-11 canonicalized`}
+],
+
+"T-031:1":[
+ {k:"ctx",t:"Input — EvaluatorInput (incl. deterministic CoverageSummary)",pre:`{
+  "analysis": "AnalysisOutput v1 (7 findings, 2 open questions)",
+  "coverage": {
+    "byKeyQuestion": {
+      "coding_quality":   {"evidence": 11, "independentOrigins": 1, "vendorRatio": 0.45},
+      "agentic":          {"evidence": 5,  "independentOrigins": 1, "vendorRatio": 0.0},
+      "capacity":         {"evidence": 6,  "independentOrigins": 2, "vendorRatio": 0.0},
+      "speed":            {"evidence": 5,  "sameHardware": false, "vendorRatio": 0.2}
+    },
+    "overallVendorRatio": 0.41,
+    "distinctPublishers": 14,
+    "contestedClaims": 0
+  },
+  "runMetrics": {"cycle": 1, "cycleGuard": 3, "frontierSpend": 2.31}
+}`},
+ {k:"think",t:"Model reasoning (frontier · judge gate)",p:`Two problems the coverage facts make undeniable. (1) GLM's LiveCodeBench figure has benchmarkOrigin=vendor with zero independent replication — a Top-3 ranking would rest on an unverifiable number. (2) Speed evidence is cross-hardware; the user's question is hardware-specific. Neither requires replanning — both are answerable within scope, so RESEARCH_MORE, not REPLAN. Capacity and agentic coverage are already adequate.`},
+ {k:"out",t:"Output — EvaluatorOutput (schema-validated)",pre:`{
+  "issues": [
+    {"severity":"high","category":"benchmark_validity","description":"GLM-5-Coder LCB v6 figure is vendor-run only; no independent replication","suggestedResearchQuestion":"Find independent replication of GLM-5-Coder-32B and Qwen3.6-27B LiveCodeBench v6 scores under matched settings"},
+    {"severity":"high","category":"missing_evidence","description":"No same-hardware (RTX Pro 6000) throughput comparison","suggestedResearchQuestion":"Find same-GPU tok/s comparisons for the four candidates"}
+  ],
+  "decision": "RESEARCH_MORE",
+  "requiredActions": [
+    {"type":"research","question":"Independent LCB v6 replications for GLM & Qwen","strategyHint":"independent_validation"},
+    {"type":"research","question":"Same-hardware speed comparisons (RTX Pro 6000)","strategyHint":"independent_validation"}
+  ],
+  "acceptedUncertainties": []
+}`},
+ {k:"sys",t:"Control plane",pre:`decision interpreted → T-040, T-041 created directly from requiredActions (no Planner call)
+priority 95 → jumped GPU queue · cycle counter 1/3 · run → RESEARCHING`}
+],
+
+"T-040:1":[
+ {k:"ctx",t:"Input — ResearcherInput",pre:`{"question":"Independent LCB v6 replications for GLM-5-Coder-32B and Qwen3.6-27B under matched settings","strategy":"independent_validation"}`},
+ {k:"tool",t:'web_search — "LiveCodeBench v6 independent replication qwen3.6 glm-5-coder"',pre:`Found: lmarena-code.org entry for Qwen (70.9). Nothing for GLM in 6 searches.`},
+ {k:"out",t:"Output — Research note",pre:`Qwen replication located and captured. GLM: no independent run found via search-engine-visible sources.`},
+ {k:"sys rej",t:"Self-assessment → intelligence retry",pre:`selfAssessment: { complete: false, gaps: ["GLM replication"] }
+Ladder step 2: tier escalation strong_local → frontier (same strategy)`}
+],
+"T-040:2":[
+ {k:"ctx",t:"Input — ResearcherInput (frontier, prior gap attached)",pre:`{"question":"(same)","strategy":"independent_validation","priorAttemptGap":"GLM replication not found via standard search"}`},
+ {k:"think",t:"Model reasoning (frontier)",p:`Replications for new models often live in eval-harness repos and issue threads before they're indexed as articles. Search GitHub-side: eval-collective, code-eval harness issues, matched-settings runs.`},
+ {k:"tool",t:'web_search — "eval-collective glm-5-coder livecodebench matched sampling github"',pre:`[1] github.com/eval-collective/lcb-v6-runs — "GLM-5-Coder-32B: 61.3 ± 0.6 (3 runs, matched sampling)" (2026-08-02)`},
+ {k:"tool",t:"web_fetch — eval-collective results table",pre:`Snapshot → artifact A-1040 · includes harness commit, sampling params, per-run scores`},
+ {k:"out",t:"Output — Research note",pre:`GLM-5-Coder independent replication: 61.3 vs vendor 68.1 (−6.8) under matched settings.
+Methodology reviewed: harness pinned, 3 seeds, params match vendor card. Credible contradiction.`},
+ {k:"sys",t:"Control plane",pre:`ACCEPTED · attempt #1 superseded · extraction adds contradicting evidence E-44
+canonicalization: C-09 value conflict → status CONTESTED + contest note · event CLAIM_CONTESTED`}
+],
+
+"T-050:1":[
+ {k:"ctx",t:"Input — AnalystInput (Context Builder: claim digest, K=3)",pre:`23 live canonical claims · contested: C-09 (full disagreement attached)
+Per-claim: up to 3 strongest evidence (prefer distinct benchmarkOrigin, non-vendor, recent)
+Superseded attempts' rows: excluded (liveness rule)`},
+ {k:"out",t:"Output — AnalysisOutput v2 (every finding cites claims)",pre:`{
+  "findings": [
+    {"text":"Qwen3.6-27B leads the practical composite: near-top coding quality with full-128K capacity headroom","cites":["C-04","C-11"]},
+    {"text":"Kimi-K2.5-Coder is the quality ceiling but its 32K practical ceiling conflicts with the agentic priority","cites":["C-14","C-11"]},
+    {"text":"GLM-5-Coder demoted: its headline benchmark is contested (−6.8 on independent replication)","cites":["C-09"]},
+    {"text":"Same-hardware speed confirms Qwen ~58 tok/s, DeepSeek ~49; Kimi/GLM normalized only","cites":["C-20"]}
+  ],
+  "unresolvedQuestions": [],
+  "confidenceNote": "Ranking is stable under both resolutions of C-09; the contest affects GLM's position only."
+}`}
+],
+
+"T-051:1":[
+ {k:"ctx",t:"Input — EvaluatorInput (coverage v2)",pre:`overallVendorRatio: 0.23 (was 0.41) · independentOrigins per key question: all >=1
+contestedClaims: 1 (C-09, addressed in analysis) · sameHardware: partial (2/4)`},
+ {k:"think",t:"Model reasoning (frontier · judge gate)",p:`Both cycle-1 issues are addressed: C-09 is contested with a credible independent figure and the analysis handles both branches; speed now has same-GPU data for the two finalists. The remaining gap — same-hardware numbers for Kimi/GLM — would cost another cycle for a fact that cannot change the recommendation (Kimi is capacity-limited regardless; GLM is benchmark-contested regardless). Accept, and carry that gap as an explicit uncertainty. Cycle guard at 2/3 — headroom exists, but spending it must change the answer, and it wouldn't.`},
+ {k:"out",t:"Output — EvaluatorOutput",pre:`{
+  "decision": "ACCEPT",
+  "reasons": ["coverage adequate on all key questions","vendor ratio 0.23","contest C-09 addressed under both branches"],
+  "acceptedUncertainties": [
+    "Same-hardware throughput exists for only 2/4 candidates; Kimi/GLM figures normalized from A6000-class runs (±15%)",
+    "GLM vendor benchmark discrepancy unresolved — contested, not disproven"
+  ],
+  "requiredActions": []
+}`},
+ {k:"sys",t:"Control plane",pre:`run → SYNTHESIZING · T-060 created · acceptedUncertainties attached to Synthesizer contract (must appear in report)`}
+],
+
+"T-060:1":[
+ {k:"ctx",t:"Input — SynthesizerInput (approved material only)",pre:`approvedAnalysis: v2 · approvedClaims: 23 (C-09 included as CONTESTED)
+live evidence: 47 · acceptedUncertainties: 2 (rendering mandatory)
+tools: artifact_read, claim/evidence read · web: DENIED (cannot import uncited facts)`},
+ {k:"think",t:"Model reasoning (frontier)",p:`Structure: answer first, then the comparison the user asked for, then why-not-the-others — the contested GLM claim must be presented as contested, never as settled. Every number gets a citation chip to its canonical claim. The two accepted uncertainties go in their own block, verbatim in meaning.`},
+ {k:"out",t:"Output — Final report (artifact A-1060) · excerpt",pre:`# Best Local Coding Model for a Single RTX Pro 6000 (96 GB)
+Across four credible candidates, **Qwen3.6-27B (FP8)** is the strongest practical
+choice... [C-07][C-11][C-04]
+citationMap: 11 chips → 8 canonical claims → 47 live evidence items
+uncitedFactualSentences: 0 (validator pass)`},
+ {k:"sys",t:"Control plane",pre:`Citation validator: PASS · report artifact stored · RUN_COMPLETED · total 74 model calls · $3.84 frontier`}
+]
+};
+
+/* short generic traces for remaining tasks */
+const GENERIC = (t)=>[
+ {k:"ctx",t:"Input — ResearcherInput / task input",pre:`question: "${t.title}"\nstrategy: ${(t.badges.find(b=>b.includes('_'))||'—')}\nsuccessCriteria: from Plan Stage ${t.id<'T-020'?1:2}`},
+ {k:"out",t:"Output — see attempt summary",p:t.atts[t.atts.length-1].note},
+ {k:"sys",t:"Control plane",p:`Deterministic checks passed · extraction (pass 2) ran on fast_local with guided decoding · claims canonicalized · status DONE.`}
+];
+function getTrace(taskId,n){ return TRACES[taskId+":"+n] || GENERIC(findTask(taskId)); }
+
+function traceHTML(steps){
+ return steps.map(s=>`
+  <div class="tstep k-${s.k.split(' ')[0]} ${s.k.includes('rej')?'rej':''}">
+   <div class="tstep-h" onclick="this.parentElement.classList.toggle('closed')">
+    <span class="tw">${({ctx:'context in',think:'thinking',tool:'tool call',out:'output',sys:'control plane'})[s.k.split(' ')[0]]}</span>
+    <span class="tt2">${s.t}</span><span class="car">▾</span>
+   </div>
+   <div class="tstep-b">${s.pre?`<pre>${s.pre.replace(/&/g,'&amp;').replace(/</g,'&lt;')}</pre>`:`<div class="prose">${s.p}</div>`}</div>
+  </div>`).join('');
+}
+function openTrace(taskId,n){
+ const t=findTask(taskId);
+ document.querySelector('#tm-title').textContent=`${taskId} · attempt #${n} — ${t.title}`;
+ const a=t.atts.find(x=>x.n===n);
+ document.querySelector('#tm-sub').textContent=`${a.tier} · ${a.strat} · ${a.s}`;
+ document.querySelector('#tm-body').innerHTML=traceHTML(getTrace(taskId,n));
+ document.querySelector('#tmodal').classList.add('open');document.querySelector('#overlay').classList.add('show');
+}
+function closeTrace(){document.querySelector('#tmodal').classList.remove('open');
+ if(!document.querySelector('#drawer').classList.contains('open'))document.querySelector('#overlay').classList.remove('show');}
+
+function renderTranscript(){
+ document.querySelector('#transcript').innerHTML = TASKS.stages.map(st=>`
+  <div class="tr-stage">${st.label}</div>
+  ${st.tasks.map(t=>`
+   <div class="tr-task"><span class="mono faint" style="font-size:.68rem">${t.id}</span><h3>${t.title}</h3>
+    <span class="badge ${t.status==='done'?'live':'ghost'}" style="margin-left:auto">${t.status}</span></div>
+   ${t.atts.map(a=>`
+    <details class="tratt" ${a.s==='accepted'&&TRACES[t.id+':'+a.n]?'open':''}>
+     <summary><span class="mono" style="font-size:.7rem">attempt #${a.n}</span>
+      <span class="badge ${a.s==='accepted'?'live':a.s==='superseded'?'ghost':'fail'}">${a.s}</span>
+      <span class="badge ${a.tier==='frontier'?'frontier':'ghost'}">${a.tier}</span>
+      <span class="faint" style="font-size:.72rem;margin-left:auto">click to ${TRACES[t.id+':'+a.n]?'read full trace':'expand'}</span></summary>
+     <div class="tratt-b">${traceHTML(getTrace(t.id,a.n))}</div>
+    </details>`).join('')}`).join('')}`).join('');
+}
+
+renderDag();renderClaims();renderTranscript();
+renderEvents($('#full-events'),EVENTS);
+renderEvents($('#ov-events'),EVENTS.slice(-6));
+</script>
+</body>
+</html>
