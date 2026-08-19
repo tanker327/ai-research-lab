@@ -4,4 +4,5 @@ export * from "./config";
 export * from "./events";
 export * from "./logger";
 export * from "./retry";
+export * from "./scheduler";
 export * from "./state";

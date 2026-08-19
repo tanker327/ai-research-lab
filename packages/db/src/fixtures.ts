@@ -50,3 +50,13 @@ export async function insertFakeEvidence(
     INSERT INTO evidence (id, run_id, task_id, attempt_id, source_class, excerpt)
     VALUES (${e.id}, ${e.runId}, ${e.taskId}, ${e.attemptId}, 'community', ${e.excerpt})`);
 }
+
+export async function seedDependency(
+  tx: SqlExecutor,
+  taskId: string,
+  dependsOnTaskId: string,
+): Promise<void> {
+  await tx.execute(sql`
+    INSERT INTO task_dependencies (task_id, depends_on_task_id)
+    VALUES (${taskId}, ${dependsOnTaskId})`);
+}
