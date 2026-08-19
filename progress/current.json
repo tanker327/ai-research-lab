@@ -1,85 +1,49 @@
 {
-  "current_phase": "Phase 1 \u2014 Deterministic Task Engine",
-  "plan": "docs/plans/phase-1-plan.md (approved 2026-08-19); tickets from docs/implementation-plan.md \u00a76 Phase 1",
-  "gate": "bun run gate:p1 green twice in a row; bun run check green; zero LLM code in execution path",
+  "current_phase": "Phase 2 \u2014 Model Gateway + Tools",
+  "plan": "docs/implementation-plan.md \u00a76 Phase 2; draft docs/plans/phase-2-plan.md before starting (per-phase planning cadence)",
+  "gate": "test agent runs generateStructured vs frontier AND strong_local through ai-hub; guided decoding vs fast_local with a nasty schema; tool calls persist ordered with snapshots",
   "tasks": [
     {
-      "id": "1.1",
-      "title": "Task/attempt/run state machines + assertTransition (\u00a75.1) \u2014 pure fns, exhaustive tests",
-      "status": "completed",
+      "id": "2.0",
+      "title": "Pre-flight (~30 min): ai-hub reachability + vLLM response_format json_schema support from this machine; then draft docs/plans/phase-2-plan.md",
+      "status": "pending",
       "priority": 1,
-      "depends_on": [],
-      "completed_at": "2026-08-19",
-      "commit": "bb56847"
+      "depends_on": []
     },
     {
-      "id": "1.5",
-      "title": "Retry ladder decideRetry (\u00a75.4) + ResearchStrategy/QualityVerdict/DecisionRecord shapes in @lab/schemas",
-      "status": "completed",
+      "id": "2.1",
+      "title": "packages/model: ModelClient via AI SDK \u2192 ai-hub (\u00a75.6) + usage/reasoning persistence",
+      "status": "pending",
       "priority": 2,
-      "depends_on": ["1.1"],
-      "completed_at": "2026-08-19",
-      "commit": "4d791b6"
+      "depends_on": ["2.0"]
     },
     {
-      "id": "1.2",
-      "title": "Atomic claim (\u00a75.2, raw SQL in packages/db/src/raw per D1) + worker loop with fake handler registry",
-      "status": "completed",
+      "id": "2.2",
+      "title": "Router policy table + gateway-side GPU_CONCURRENCY_STRONG_LOCAL semaphore",
+      "status": "pending",
       "priority": 3,
-      "depends_on": ["1.1"],
-      "completed_at": "2026-08-19",
-      "commit": "aa2287f"
+      "depends_on": ["2.1"]
     },
     {
-      "id": "1.3",
-      "title": "Readiness sweep + stale-claim release (scheduler; \u00a79.2/\u00a79.3 queries)",
-      "status": "completed",
+      "id": "2.3",
+      "title": "packages/tools: web_search + web_fetch (snapshot \u2192 content-addressed artifact) + registry with per-role allowlists + seq logging",
+      "status": "pending",
       "priority": 4,
-      "depends_on": ["1.2"],
-      "completed_at": "2026-08-19",
-      "commit": "5e9acd5"
+      "depends_on": ["2.4"]
     },
     {
-      "id": "1.4",
-      "title": "Accept/supersede liveness transaction (\u00a75.3) over raw fns; canonicalization no-op stub",
-      "status": "completed",
-      "priority": 5,
-      "depends_on": ["1.2"],
-      "completed_at": "2026-08-19",
-      "commit": "9d3fb06"
-    },
-    {
-      "id": "1.6",
-      "title": "emitEvent (same-tx write + NOTIFY per D2) + api LISTEN + SSE stream with Last-Event-ID cursor",
-      "status": "completed",
-      "priority": 6,
-      "depends_on": ["1.4"],
-      "completed_at": "2026-08-19",
-      "commit": "f7842b3"
-    },
-    {
-      "id": "1.7",
-      "title": "Run coordinator: phase transitions, cancellation, cycle-guard counter, budget warn stubs",
+      "id": "2.4",
+      "title": "Artifact store: local fs, sha256 content addressing",
       "status": "pending",
-      "priority": 7,
-      "depends_on": ["1.3", "1.6"]
-    },
-    {
-      "id": "1.8",
-      "title": "API surface: POST /runs (explicit task list), GET run/tasks/events, cancel + scripts/gates/p1.ts",
-      "status": "pending",
-      "priority": 8,
-      "depends_on": ["1.7"]
+      "priority": 3,
+      "depends_on": []
     }
   ],
   "known_issues": [],
   "notes": [
-    "Phase 0 archived to progress/archive/phase-0.json (gate passed 2026-08-19).",
-    "Session grouping per phase-1-plan: A=1.1+1.5 (pure), B=1.2+1.3 (concurrency), C=1.4+1.6 (liveness+events), D=1.7+1.8+gate.",
-    "Decisions D1 (raw SQL in packages/db/src/raw, core orchestrates) and D2 (LISTEN/NOTIFY + 2s poll fallback) are settled \u2014 see plan doc.",
-    "Late-phase pre-flight (~30 min): ai-hub reachability + vLLM response_format json_schema check before Phase 2 starts.",
-    "Session A (1.1+1.5) completed 2026-08-19 \u2014 310 tests green. Next: Session B ticket 1.2 (atomic claim + worker loop, needs Postgres).",
-    "Session B (1.2+1.3) completed 2026-08-19 \u2014 323 tests green; vitest now serial across files (shared Postgres). Next: Session C ticket 1.4 (accept/supersede liveness).",
-    "Session C (1.4+1.6) completed 2026-08-19 \u2014 336 tests green. Next: Session D (1.7 run coordinator, 1.8 API + gate:p1)."
+    "Phase 1 archived to progress/archive/phase-1.json 2026-08-19 \u2014 gate green twice + pg-restart variant; 355 tests.",
+    "Phase 1 carry-over: RUNNING\u2192READY task transition retained per \u00a75.1 but currently unused (stale release now routes through EVALUATING per rule 10 \u2014 see phase-1-plan amendment).",
+    "2.0 pre-flight was deferred from late Phase 1 (phase-1-plan risk item) \u2014 do it first.",
+    "Per-phase planning cadence (user-approved 2026-08-19): draft docs/plans/phase-2-plan.md with decisions + acceptance criteria before coding, mirror of phase-1-plan.md."
   ]
 }

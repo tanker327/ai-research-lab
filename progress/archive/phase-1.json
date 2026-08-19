@@ -1,0 +1,90 @@
+{
+  "current_phase": "Phase 1 \u2014 Deterministic Task Engine",
+  "plan": "docs/plans/phase-1-plan.md (approved 2026-08-19); tickets from docs/implementation-plan.md \u00a76 Phase 1",
+  "gate": "bun run gate:p1 green twice in a row; bun run check green; zero LLM code in execution path",
+  "tasks": [
+    {
+      "id": "1.1",
+      "title": "Task/attempt/run state machines + assertTransition (\u00a75.1) \u2014 pure fns, exhaustive tests",
+      "status": "completed",
+      "priority": 1,
+      "depends_on": [],
+      "completed_at": "2026-08-19",
+      "commit": "bb56847"
+    },
+    {
+      "id": "1.5",
+      "title": "Retry ladder decideRetry (\u00a75.4) + ResearchStrategy/QualityVerdict/DecisionRecord shapes in @lab/schemas",
+      "status": "completed",
+      "priority": 2,
+      "depends_on": ["1.1"],
+      "completed_at": "2026-08-19",
+      "commit": "4d791b6"
+    },
+    {
+      "id": "1.2",
+      "title": "Atomic claim (\u00a75.2, raw SQL in packages/db/src/raw per D1) + worker loop with fake handler registry",
+      "status": "completed",
+      "priority": 3,
+      "depends_on": ["1.1"],
+      "completed_at": "2026-08-19",
+      "commit": "aa2287f"
+    },
+    {
+      "id": "1.3",
+      "title": "Readiness sweep + stale-claim release (scheduler; \u00a79.2/\u00a79.3 queries)",
+      "status": "completed",
+      "priority": 4,
+      "depends_on": ["1.2"],
+      "completed_at": "2026-08-19",
+      "commit": "5e9acd5"
+    },
+    {
+      "id": "1.4",
+      "title": "Accept/supersede liveness transaction (\u00a75.3) over raw fns; canonicalization no-op stub",
+      "status": "completed",
+      "priority": 5,
+      "depends_on": ["1.2"],
+      "completed_at": "2026-08-19",
+      "commit": "9d3fb06"
+    },
+    {
+      "id": "1.6",
+      "title": "emitEvent (same-tx write + NOTIFY per D2) + api LISTEN + SSE stream with Last-Event-ID cursor",
+      "status": "completed",
+      "priority": 6,
+      "depends_on": ["1.4"],
+      "completed_at": "2026-08-19",
+      "commit": "f7842b3"
+    },
+    {
+      "id": "1.7",
+      "title": "Run coordinator: phase transitions, cancellation, cycle-guard counter, budget warn stubs",
+      "status": "completed",
+      "priority": 7,
+      "depends_on": ["1.3", "1.6"],
+      "completed_at": "2026-08-19",
+      "commit": "5a35a8e"
+    },
+    {
+      "id": "1.8",
+      "title": "API surface: POST /runs (explicit task list), GET run/tasks/events, cancel + scripts/gates/p1.ts",
+      "status": "completed",
+      "priority": 8,
+      "depends_on": ["1.7"],
+      "completed_at": "2026-08-19",
+      "commit": "444d316"
+    }
+  ],
+  "known_issues": [],
+  "notes": [
+    "Phase 0 archived to progress/archive/phase-0.json (gate passed 2026-08-19).",
+    "Session grouping per phase-1-plan: A=1.1+1.5 (pure), B=1.2+1.3 (concurrency), C=1.4+1.6 (liveness+events), D=1.7+1.8+gate.",
+    "Decisions D1 (raw SQL in packages/db/src/raw, core orchestrates) and D2 (LISTEN/NOTIFY + 2s poll fallback) are settled \u2014 see plan doc.",
+    "Late-phase pre-flight (~30 min): ai-hub reachability + vLLM response_format json_schema check before Phase 2 starts.",
+    "Session A (1.1+1.5) completed 2026-08-19 \u2014 310 tests green. Next: Session B ticket 1.2 (atomic claim + worker loop, needs Postgres).",
+    "Session B (1.2+1.3) completed 2026-08-19 \u2014 323 tests green; vitest now serial across files (shared Postgres). Next: Session C ticket 1.4 (accept/supersede liveness).",
+    "Session C (1.4+1.6) completed 2026-08-19 \u2014 336 tests green. Next: Session D (1.7 run coordinator, 1.8 API + gate:p1).",
+    "Phase 1 gate (bun run gate:p1) passed twice consecutively + GATE_PG_RESTART variant 2026-08-19. Gate finding fixed in 5c7932e: stale-claim re-runs now go through the retry ladder (rule 10)."
+  ]
+}
