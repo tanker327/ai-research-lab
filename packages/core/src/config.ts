@@ -21,6 +21,7 @@ export const ConfigSchema = z.object({
   GPU_CONCURRENCY_STRONG_LOCAL: intFromEnv(2),
   TASK_CLAIM_TIMEOUT_S: intFromEnv(900),
   POLL_INTERVAL_MS: intFromEnv(500),
+  STALE_SWEEP_INTERVAL_MS: intFromEnv(30_000),
   DEFAULT_MAX_ATTEMPTS: intFromEnv(3),
   DEFAULT_MAX_EVAL_CYCLES: intFromEnv(3),
 });

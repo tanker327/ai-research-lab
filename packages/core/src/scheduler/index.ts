@@ -4,11 +4,15 @@
 import type { Db } from "@lab/db";
 import type { Logger } from "pino";
 import type { Config } from "../config";
+import { sweepEvaluations } from "./evaluate";
+import { sweepRunCompletion } from "./run";
 import { sweepReadiness, sweepStaleClaims } from "./sweeps";
 
+export * from "./budget";
+export * from "./evaluate";
+export * from "./guards";
+export * from "./run";
 export * from "./sweeps";
-
-const STALE_SWEEP_INTERVAL_MS = 30_000;
 
 export function startScheduler(db: Db, config: Config, log: Logger): { stop: () => void } {
   const guard = (name: string, fn: () => Promise<unknown>) => async () => {
@@ -19,10 +23,25 @@ export function startScheduler(db: Db, config: Config, log: Logger): { stop: () 
     }
   };
 
+  // One control tick: evaluation verdicts, readiness promotion, run phase
+  // walk. Ordered so a task accepted this tick can unblock dependents and
+  // complete its run in the same tick.
   const readiness = setInterval(
-    guard("readiness", async () => {
+    guard("control", async () => {
+      const evaluated = await sweepEvaluations(db);
       const { ready, blocked } = await sweepReadiness(db);
-      if (ready.length || blocked.length) log.info({ ready, blocked }, "readiness sweep");
+      const runs = await sweepRunCompletion(db);
+      if (
+        ready.length ||
+        blocked.length ||
+        evaluated.accepted.length ||
+        evaluated.retried.length ||
+        evaluated.failed.length ||
+        runs.completed.length ||
+        runs.failed.length
+      ) {
+        log.info({ evaluated, ready, blocked, runs }, "control sweep");
+      }
     }),
     config.POLL_INTERVAL_MS,
   );
@@ -32,7 +51,7 @@ export function startScheduler(db: Db, config: Config, log: Logger): { stop: () 
       const released = await sweepStaleClaims(db, config.TASK_CLAIM_TIMEOUT_S);
       if (released.length) log.warn({ released }, "stale claims released");
     }),
-    STALE_SWEEP_INTERVAL_MS,
+    config.STALE_SWEEP_INTERVAL_MS,
   );
 
   return {

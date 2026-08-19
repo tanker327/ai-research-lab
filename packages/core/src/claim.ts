@@ -4,6 +4,8 @@
 import {
   type ClaimableTaskRow,
   type Db,
+  getAttemptForUpdate,
+  getTaskForUpdate,
   insertRunningAttempt,
   markAttemptFinished,
   markTaskClaimed,
@@ -58,13 +60,18 @@ export type AttemptOutcome = { ok: true } | { ok: false; error: CategorizedError
 // After the handler returns/throws: attempt → SUCCEEDED/FAILED and the task
 // parks in EVALUATING (§8.3). What EVALUATING means — accept, retry ladder,
 // fail — is decided by the coordinator (tickets 1.4/1.7), not here.
+// Returns false when the claim was lost mid-flight (run cancelled, stale
+// release) — the worker's result is then discarded, never written (row 10).
 export async function finishAttempt(
   db: Db,
   work: ClaimedWork,
   outcome: AttemptOutcome,
-): Promise<void> {
+): Promise<boolean> {
   const status = outcome.ok ? "SUCCEEDED" : "FAILED";
-  await db.transaction(async (tx) => {
+  return db.transaction(async (tx) => {
+    const task = await getTaskForUpdate(tx, work.task.id);
+    const attempt = await getAttemptForUpdate(tx, work.attempt.id);
+    if (task?.status !== "RUNNING" || attempt?.status !== "RUNNING") return false;
     assertAttemptTransition("RUNNING", status);
     assertTaskTransition("RUNNING", "EVALUATING");
     await markAttemptFinished(
@@ -83,5 +90,6 @@ export async function finishAttempt(
       actor: "worker",
       payload: outcome.ok ? {} : { error: outcome.error.toAttemptError() },
     });
+    return true;
   });
 }

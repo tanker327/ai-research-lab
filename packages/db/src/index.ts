@@ -1,7 +1,10 @@
 export { createDb, type Db, type SqlExecutor, type Tx } from "./client";
 export * from "./fixtures";
 export * from "./raw/claim";
+export * from "./raw/decisions";
+export * from "./raw/evaluation";
 export * from "./raw/events";
 export * from "./raw/liveness";
+export * from "./raw/runs";
 export * from "./raw/sweeps";
 export * from "./schema";
