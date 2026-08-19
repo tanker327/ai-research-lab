@@ -91,7 +91,7 @@ function makeCtx(model: ModelClient, opts: CtxOpts = {}) {
 
 const FINISH: ResearcherStep = {
   action: "finish",
-  note: `# Question\n...\n# Findings\nlong enough note body to clear the fifty character schema minimum.`,
+  note: `# Question\n...\n# Findings\n${"PostgreSQL supports transactional DDL per the official documentation; quoted excerpt follows. ".repeat(8)}`,
   selfAssessment: { complete: true, confidence: "high", gaps: [] },
 };
 

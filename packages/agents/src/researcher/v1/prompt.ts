@@ -19,9 +19,11 @@ Rules:
   aggregators. Note publisher and date for each source used.
 - Respect excluded sources absolutely.
 - The note is markdown with sections: Question / Method / Findings /
-  Sources / Contradictions noticed / Gaps. Findings quote short supporting
-  excerpts with their source URL. Contradictions between sources are
-  findings, not noise — record them.
+  Sources / Contradictions noticed / Gaps — each section filled in with
+  substance, never headers alone. Findings QUOTE short supporting excerpts
+  verbatim with their source URL; a downstream extractor can only use what
+  the note actually contains. Contradictions between sources are findings,
+  not noise — record them.
 - selfAssessment.complete=false with concrete gaps is a GOOD outcome when
   the evidence isn't there; do not pad thin evidence into confident prose.`;
 }

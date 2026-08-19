@@ -157,8 +157,10 @@ const stepSearch = z.object({
 const stepFinish = z.object({
   action: z.literal("finish"),
   // Markdown research note: Question / Method / Findings / Sources /
-  // Contradictions noticed / Gaps (design §6.2 template).
-  note: z.string().min(50).max(20_000),
+  // Contradictions noticed / Gaps (design §6.2 template). The floor is real:
+  // a live model once "finished" with a 220-char header-only note; guided
+  // decoding enforces minLength, so a lazy finish can't decode.
+  note: z.string().min(600).max(20_000),
   selfAssessment: SelfAssessment,
 });
 
