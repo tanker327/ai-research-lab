@@ -60,6 +60,19 @@ export type EventKind = z.infer<typeof EventKind>;
 export const ModelTier = z.enum(["frontier", "strong_local", "fast_local", "cheap_remote"]);
 export type ModelTier = z.infer<typeof ModelTier>;
 
+// design §6.2 — research tasks only ("experimental" deferred to V0.2). Stored
+// in research_tasks.strategy / attempts.strategy (TEXT, no CHECK — additive
+// vocabulary), so this enum is the sole validator.
+export const ResearchStrategy = z.enum([
+  "broad_discovery",
+  "primary_sources",
+  "benchmark_focused",
+  "community_evidence",
+  "independent_validation",
+  "comparative",
+]);
+export type ResearchStrategy = z.infer<typeof ResearchStrategy>;
+
 export const ArtifactType = z.enum([
   "research_note",
   "reasoning",
