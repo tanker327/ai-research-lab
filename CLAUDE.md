@@ -41,6 +41,7 @@ If a ticket seems to require deviating from these, **stop and flag it** — do n
 ## Conventions
 
 - **Runtime:** Bun everywhere. TypeScript strict. No `any` in `packages/core` or `packages/schemas`.
+- **Formatter/linter:** Biome (`biome.json`; `bun run lint` / `bun run format`). A PostToolUse hook auto-formats agent edits.
 - **IDs:** UUIDv7 via the shared helper in `packages/schemas` — never `crypto.randomUUID()` directly.
 - **Errors:** typed `CategorizedError` with the taxonomy from `packages/schemas` (TRANSIENT_INFRA, SCHEMA_FAILURE, QUALITY_FAILURE, …). No bare `throw new Error`.
 - **Logging:** pino child loggers scoped `{ runId, taskId, attemptId }`. No `console.log` outside scripts.
@@ -62,7 +63,8 @@ docker compose -f infra/docker-compose.yml up -d postgres
 bun run migrate            # drizzle-kit migrate
 bun run dev:api            # Hono API + scheduler
 bun run dev:worker         # one worker (run twice for two)
-bun test                   # vitest, requires postgres up
+bun run test               # vitest, requires postgres up
+bun run check              # biome lint + import-lint + typecheck + tests (run before commit)
 bun run gate:p1            # phase gate scripts
 bun run golden G2          # golden research task (live models, spends budget)
 ```

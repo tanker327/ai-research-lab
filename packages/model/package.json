@@ -1,0 +1,12 @@
+{
+  "name": "@lab/model",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@ai-sdk/openai-compatible": "^3.0.31",
+    "ai": "^7.0.68"
+  }
+}

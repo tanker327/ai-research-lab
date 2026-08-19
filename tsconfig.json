@@ -1,0 +1,9 @@
+{
+  "extends": "./tsconfig.base.json",
+  "include": [
+    "apps/*/src/**/*.ts",
+    "packages/*/src/**/*.ts",
+    "scripts/**/*.ts",
+    ".claude/hooks/**/*.ts"
+  ]
+}

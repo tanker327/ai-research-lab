@@ -1,0 +1,11 @@
+{
+  "name": "@lab/worker",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "pino": "^10.3.1"
+  }
+}

@@ -37,7 +37,7 @@ describe("block-no-verify", () => {
 });
 
 describe("block-protected-bash", () => {
-  const blocked: Array<[string, string]> = [
+  const blocked: Array<[string, ".env" | "bun.lock"]> = [
     ["echo FOO=1 >> .env", ".env"],
     ["sed -i '' 's/a/b/' .env", ".env"],
     ["rm .env.production", ".env"],

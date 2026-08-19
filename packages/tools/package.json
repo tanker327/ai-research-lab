@@ -1,0 +1,8 @@
+{
+  "name": "@lab/tools",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  }
+}
