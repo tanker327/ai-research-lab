@@ -1,0 +1,26 @@
+name: ai-research-lab
+
+# V0.05: only postgres runs in compose; api/worker/web run via bun on the host
+# (implementation-plan §2 deploy row adds them when containerization matters).
+# Host port 5434: 5432/5433/5435 are taken by other local stacks on this machine.
+services:
+  postgres:
+    image: postgres:16
+    container_name: lab-postgres
+    environment:
+      POSTGRES_USER: lab
+      POSTGRES_PASSWORD: lab
+      POSTGRES_DB: research_lab
+    ports:
+      - "5434:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U lab -d research_lab"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  pgdata:
