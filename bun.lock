@@ -15,6 +15,8 @@
     "apps/api": {
       "name": "@lab/api",
       "dependencies": {
+        "@lab/core": "workspace:*",
+        "@lab/db": "workspace:*",
         "hono": "^4.13.3",
       },
     },
@@ -24,6 +26,8 @@
     "apps/worker": {
       "name": "@lab/worker",
       "dependencies": {
+        "@lab/core": "workspace:*",
+        "@lab/db": "workspace:*",
         "pino": "^10.3.1",
       },
     },
@@ -36,12 +40,15 @@
     "packages/core": {
       "name": "@lab/core",
       "dependencies": {
+        "@lab/schemas": "workspace:*",
         "pino": "^10.3.1",
+        "zod": "^4.1.13",
       },
     },
     "packages/db": {
       "name": "@lab/db",
       "dependencies": {
+        "@lab/schemas": "workspace:*",
         "drizzle-orm": "^0.45.2",
         "postgres": "^3.4.9",
       },

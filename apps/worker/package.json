@@ -6,6 +6,8 @@
     ".": "./src/index.ts"
   },
   "dependencies": {
-    "pino": "^10.3.1"
+    "pino": "^10.3.1",
+    "@lab/core": "workspace:*",
+    "@lab/db": "workspace:*"
   }
 }

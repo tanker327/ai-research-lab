@@ -6,6 +6,8 @@
     ".": "./src/index.ts"
   },
   "dependencies": {
-    "hono": "^4.13.3"
+    "hono": "^4.13.3",
+    "@lab/core": "workspace:*",
+    "@lab/db": "workspace:*"
   }
 }

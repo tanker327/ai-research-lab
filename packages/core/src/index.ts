@@ -1,2 +1,3 @@
-// @lab/core — see docs/implementation-plan.md §3. Populated by its phase tickets.
-export {};
+// @lab/core — control plane. Deterministic; imports no agent/model/tool code (rule 1).
+export * from "./config";
+export * from "./logger";
