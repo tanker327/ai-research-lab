@@ -133,3 +133,54 @@ describe("web_fetch", () => {
     expect(htmlToText("<div>a<script>x</script>  <b>b</b>\n c&amp;d</div>")).toBe("a b c&d");
   });
 });
+
+// ---- web_search (ticket 3.3, D4: SearXNG) ----
+import { createWebSearchTool } from "./web-search";
+
+describe("web_search (searxng)", () => {
+  it("queries the JSON API, bounds results, persists an ordered tool_call", async () => {
+    const seen: string[] = [];
+    const fetchImpl = (async (input: Parameters<typeof globalThis.fetch>[0]) => {
+      seen.push(String(input));
+      return new Response(
+        JSON.stringify({
+          results: Array.from({ length: 20 }, (_, i) => ({
+            title: `r${i}`,
+            url: `https://example.com/${i}`,
+            content: "snippet",
+          })),
+        }),
+        { status: 200, headers: { "content-type": "application/json" } },
+      );
+    }) as unknown as typeof globalThis.fetch;
+
+    const registry = createToolRegistry({ db, store, fetchImpl }, [
+      createWebSearchTool("http://searx.local:8888"),
+    ]);
+    const scoped = registry.forAttempt(ctx);
+    const out = (await scoped.invoke("web_search", { query: "qwen quantization" })) as {
+      results: unknown[];
+    };
+    expect(out.results).toHaveLength(8); // default maxResults bound
+    expect(seen[0]).toContain("http://searx.local:8888/search?q=qwen");
+    expect(seen[0]).toContain("format=json");
+
+    const rows = await raw`SELECT tool_name, error FROM tool_calls
+                           WHERE attempt_id = ${ctx.attemptId}`;
+    expect(rows[0]).toMatchObject({ tool_name: "web_search", error: null });
+  });
+
+  it("non-200 from searxng is a TOOL_FAILURE with the failure persisted", async () => {
+    const fetchImpl = (async () =>
+      new Response("busy", { status: 503 })) as unknown as typeof globalThis.fetch;
+    const registry = createToolRegistry({ db, store, fetchImpl }, [
+      createWebSearchTool("http://searx.local:8888"),
+    ]);
+    const scoped = registry.forAttempt(ctx);
+    await expect(scoped.invoke("web_search", { query: "anything" })).rejects.toMatchObject({
+      category: "TOOL_FAILURE",
+    });
+    const rows = await raw`SELECT error FROM tool_calls WHERE attempt_id = ${ctx.attemptId}`;
+    expect(rows[0]?.error).not.toBeNull();
+  });
+});

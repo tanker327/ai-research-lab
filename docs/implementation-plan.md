@@ -115,6 +115,8 @@ MODEL_FRONTIER=best                             # openai/gpt-5.6-sol (needs vali
 MODEL_STRONG_LOCAL=default                      # local model; json_schema + tools verified
 MODEL_FAST_LOCAL=cheapest                       # deepseek; json_object mode (D2)
 PLANNER_TIER=strong_local                       # TEMPORARY (phase-3-plan D3): frontier once hub keys work
+# SEARXNG_BASE_URL=...                          # D4: web_search registers only when set (SearXNG)
+RESEARCHER_MAX_TOOL_CALLS=8                     # deterministic researcher loop cap (ADR-016)
 
 WORKER_CONCURRENCY=2
 GPU_CONCURRENCY_STRONG_LOCAL=2                  # gateway-side cap

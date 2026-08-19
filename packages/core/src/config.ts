@@ -25,6 +25,10 @@ export const ConfigSchema = z.object({
   // 'frontier' the day the keys work.
   PLANNER_TIER: z.enum(["frontier", "strong_local", "fast_local"]).default("strong_local"),
 
+  // D4: self-hosted SearXNG. web_search is registered only when this is set.
+  SEARXNG_BASE_URL: z.string().url().optional(),
+  RESEARCHER_MAX_TOOL_CALLS: intFromEnv(8), // deterministic loop cap (ADR-016)
+
   API_PORT: intFromEnv(8787),
   WORKER_CONCURRENCY: intFromEnv(2),
   GPU_CONCURRENCY_STRONG_LOCAL: intFromEnv(2),

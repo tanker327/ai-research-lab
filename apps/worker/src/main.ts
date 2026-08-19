@@ -12,7 +12,7 @@ import {
 import { createArtifactStore, createDb, type Db } from "@lab/db";
 import { createArtifactReasoningSink, createModelClient } from "@lab/model";
 import { CategorizedError } from "@lab/schemas";
-import { createToolRegistry, webFetchTool } from "@lab/tools";
+import { createToolRegistry, createWebSearchTool, webFetchTool } from "@lab/tools";
 import { createHandlerRegistry, type TaskHandler } from "./handlers";
 
 export async function runWorker({ once = false } = {}): Promise<void> {
@@ -35,7 +35,11 @@ export async function runWorker({ once = false } = {}): Promise<void> {
       reasoningSink: createArtifactReasoningSink(artifacts, db),
       concurrency: { strong_local: config.GPU_CONCURRENCY_STRONG_LOCAL },
     }),
-    tools: createToolRegistry({ db, store: artifacts, fetchImpl: fetch }, [webFetchTool]),
+    tools: createToolRegistry({ db, store: artifacts, fetchImpl: fetch }, [
+      webFetchTool,
+      // D4: web_search only exists once the SearXNG endpoint is configured.
+      ...(config.SEARXNG_BASE_URL ? [createWebSearchTool(config.SEARXNG_BASE_URL)] : []),
+    ]),
     artifacts,
     context: createContextBuilder({
       db,

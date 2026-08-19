@@ -3,18 +3,26 @@
 // dispatch (implementation-plan §5.5) starts with the Planner (ticket 3.2) —
 // Researcher/Extractor land with 3.3/3.4. A handler either returns (attempt
 // SUCCEEDED) or throws a CategorizedError (attempt FAILED with that category).
-import { plannerV1 } from "@lab/agents";
+import { plannerV1, researcherV1 } from "@lab/agents";
 import type { ContextBuilder } from "@lab/context";
 import { type ClaimedWork, type Config, emitEvent } from "@lab/core";
 import {
   type ArtifactStore,
   type Db,
   insertFakeEvidence,
+  selectToolCallsByAttempt,
   updateAttemptInput,
   updateAttemptOutput,
 } from "@lab/db";
 import { type ModelClient, resolveRoute } from "@lab/model";
-import { CategorizedError, FakeTaskInput, newId, type TaskType } from "@lab/schemas";
+import {
+  CategorizedError,
+  FakeTaskInput,
+  newId,
+  ResearcherOutput,
+  type SourceVisit,
+  type TaskType,
+} from "@lab/schemas";
 import type { createToolRegistry } from "@lab/tools";
 
 export type TaskHandler = (db: Db, work: ClaimedWork) => Promise<void>;
@@ -57,21 +65,62 @@ export interface AgentDeps {
   context: ContextBuilder;
 }
 
+function tierModels(config: Config) {
+  return {
+    frontier: config.MODEL_FRONTIER,
+    strong_local: config.MODEL_STRONG_LOCAL,
+    fast_local: config.MODEL_FAST_LOCAL,
+  };
+}
+
+// The per-attempt AgentContext (§5.5): tools scoped to the role, artifact
+// saves bound to the attempt — agents never hold a db handle (ADR-003).
+function agentContext(
+  deps: AgentDeps,
+  db: Db,
+  work: ClaimedWork,
+  role: "planner" | "researcher" | "extractor",
+  route: ReturnType<typeof resolveRoute>,
+) {
+  return {
+    runId: work.task.runId,
+    taskId: work.task.id,
+    attemptId: work.attempt.id,
+    attemptNumber: work.attempt.attemptNumber,
+    model: deps.model,
+    route,
+    tools: deps.tools.forAttempt({
+      runId: work.task.runId,
+      taskId: work.task.id,
+      attemptId: work.attempt.id,
+      role,
+    }),
+    saveArtifact: (
+      a: Omit<Parameters<ArtifactStore["save"]>[1], "id" | "runId" | "taskId" | "attemptId">,
+    ) =>
+      deps.artifacts.save(db, {
+        ...a,
+        id: newId(),
+        runId: work.task.runId,
+        taskId: work.task.id,
+        attemptId: work.attempt.id,
+      }),
+    searchAvailable: deps.config.SEARXNG_BASE_URL !== undefined,
+    limits: { maxToolCalls: deps.config.RESEARCHER_MAX_TOOL_CALLS },
+    signal: new AbortController().signal,
+  };
+}
+
 function plannerHandler(deps: AgentDeps): TaskHandler {
   return async (db, work) => {
     const stage = Number((work.task.input as Record<string, unknown>)?.planStage ?? 1);
     const input = await deps.context.forPlanner(work.task.runId, stage);
     await updateAttemptInput(db, work.attempt.id, input); // R12: verbatim
 
-    const models = {
-      frontier: deps.config.MODEL_FRONTIER,
-      strong_local: deps.config.MODEL_STRONG_LOCAL,
-      fast_local: deps.config.MODEL_FAST_LOCAL,
-    };
     const route = resolveRoute(
       "planner",
       work.attempt.attemptNumber,
-      models,
+      tierModels(deps.config),
       deps.config.PLANNER_TIER,
     );
     if (route.tier !== "frontier") {
@@ -87,22 +136,7 @@ function plannerHandler(deps: AgentDeps): TaskHandler {
       });
     }
 
-    const output = await plannerV1.run(input, {
-      runId: work.task.runId,
-      taskId: work.task.id,
-      attemptId: work.attempt.id,
-      attemptNumber: work.attempt.attemptNumber,
-      model: deps.model,
-      route,
-      tools: deps.tools.forAttempt({
-        runId: work.task.runId,
-        taskId: work.task.id,
-        attemptId: work.attempt.id,
-        role: "planner",
-      }),
-      artifacts: deps.artifacts,
-      signal: new AbortController().signal,
-    });
+    const output = await plannerV1.run(input, agentContext(deps, db, work, "planner", route));
     const valid = plannerV1.outputSchema.safeParse(output);
     if (!valid.success) {
       throw new CategorizedError("SCHEMA_FAILURE", "planner output failed schema validation", {
@@ -110,6 +144,36 @@ function plannerHandler(deps: AgentDeps): TaskHandler {
       });
     }
     await updateAttemptOutput(db, work.attempt.id, valid.data);
+  };
+}
+
+function researcherHandler(deps: AgentDeps): TaskHandler {
+  return async (db, work) => {
+    const input = await deps.context.forResearcher(work.task.id);
+    await updateAttemptInput(db, work.attempt.id, input); // R12: verbatim
+
+    const route = resolveRoute("researcher", work.attempt.attemptNumber, tierModels(deps.config));
+    const result = await researcherV1.run(input, agentContext(deps, db, work, "researcher", route));
+
+    // sourcesVisited is MECHANICAL: the tool layer's own log (§6.2) — the
+    // model cannot forget or invent a URL it fetched.
+    const toolCalls = await selectToolCallsByAttempt(db, work.attempt.id);
+    const sourcesVisited: SourceVisit[] = toolCalls
+      .filter((t) => t.toolName === "web_fetch" && t.error === null)
+      .map((t) => ({
+        url: String((t.request.input as Record<string, unknown> | undefined)?.url ?? ""),
+        retrievedAt: t.createdAt,
+        snapshotArtifactId: t.responseArtifactId,
+      }))
+      .filter((s) => s.url.length > 0)
+      .slice(0, 100);
+
+    const output = ResearcherOutput.parse({
+      noteArtifactId: result.noteArtifactId,
+      sourcesVisited,
+      selfAssessment: result.selfAssessment,
+    });
+    await updateAttemptOutput(db, work.attempt.id, output);
   };
 }
 
@@ -147,7 +211,7 @@ export function createHandlerRegistry(deps?: AgentDeps): Record<TaskType, TaskHa
   }
   return {
     plan: withFakeEscape(plannerHandler(deps)),
-    research: withFakeEscape(notYetImplemented("research", "3.3")),
+    research: withFakeEscape(researcherHandler(deps)),
     extract: withFakeEscape(notYetImplemented("extract", "3.4")),
     analyze: withFakeEscape(notYetImplemented("analyze", "4.x")),
     evaluate: withFakeEscape(notYetImplemented("evaluate", "4.x")),

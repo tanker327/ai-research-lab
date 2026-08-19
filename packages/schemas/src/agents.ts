@@ -120,6 +120,51 @@ export const PlannerOutput = z.object({
 });
 export type PlannerOutput = z.infer<typeof PlannerOutput>;
 
+// ---- Researcher (design §6.2, ticket 3.3) ----
+
+export const SelfAssessment = z.object({
+  complete: z.boolean(),
+  confidence: z.enum(["low", "medium", "high"]),
+  gaps: z.array(shortText).max(10),
+});
+export type SelfAssessment = z.infer<typeof SelfAssessment>;
+
+// One structured decision per loop iteration — the loop itself is code with a
+// deterministic cap (ADR-016), never a model-terminated tool loop.
+const stepFetch = z.object({
+  action: z.literal("fetch"),
+  url: z.string().max(2000),
+  why: z.string().max(300),
+});
+const stepSearch = z.object({
+  action: z.literal("search"),
+  query: z.string().min(2).max(400),
+  why: z.string().max(300),
+});
+const stepFinish = z.object({
+  action: z.literal("finish"),
+  // Markdown research note: Question / Method / Findings / Sources /
+  // Contradictions noticed / Gaps (design §6.2 template).
+  note: z.string().min(50).max(20_000),
+  selfAssessment: SelfAssessment,
+});
+
+export function researcherStepSchema(hasSearch: boolean) {
+  return hasSearch
+    ? z.discriminatedUnion("action", [stepFetch, stepSearch, stepFinish])
+    : z.discriminatedUnion("action", [stepFetch, stepFinish]);
+}
+export type ResearcherStep = z.infer<ReturnType<typeof researcherStepSchema>>;
+
+// Persisted attempt output. sourcesVisited is assembled MECHANICALLY by the
+// worker from the attempt's tool_calls rows — never from model memory.
+export const ResearcherOutput = z.object({
+  noteArtifactId: z.string().max(40),
+  sourcesVisited: z.array(SourceVisit).max(100),
+  selfAssessment: SelfAssessment,
+});
+export type ResearcherOutput = z.infer<typeof ResearcherOutput>;
+
 // The extract task's `input` column IS this shape, written fully concrete by
 // the Control Plane when the research attempt is accepted (ADR-011, plan D5) —
 // so the builder is a validation pass, not a query.

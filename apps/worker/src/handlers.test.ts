@@ -98,7 +98,7 @@ import { loadConfig } from "@lab/core";
 import { createArtifactStore } from "@lab/db";
 import { createModelClient } from "@lab/model";
 import { type PlannerOutput, PlannerOutput as PlannerOutputSchema } from "@lab/schemas";
-import { createToolRegistry } from "@lab/tools";
+import { createToolRegistry, webFetchTool } from "@lab/tools";
 
 const PLAN: PlannerOutput = {
   specification: {
@@ -150,7 +150,7 @@ function agentDeps(fetchImpl: typeof globalThis.fetch) {
       db,
       fetch: fetchImpl,
     }),
-    tools: createToolRegistry({ db, store: artifacts, fetchImpl }, []),
+    tools: createToolRegistry({ db, store: artifacts, fetchImpl }, [webFetchTool]),
     artifacts,
     context: createContextBuilder({
       db,
@@ -192,5 +192,71 @@ describe("planner dispatch (3.2)", () => {
     await registry3.plan(db, { ...work, task: { ...work.task, type: "plan" } });
     const attempt = await sql`SELECT output FROM attempts WHERE id = ${work.attempt.id}`;
     expect(attempt[0]?.output).toBeNull(); // fake path — no model call, no output
+  });
+});
+
+// ---- Researcher dispatch (ticket 3.3): stubbed hub + stubbed pages ----
+describe("researcher dispatch (3.3)", () => {
+  it("runs the loop, saves the note, assembles sourcesVisited from tool_calls (mechanical)", async () => {
+    // The one fetch stub serves both the hub (chat completions) and pages.
+    let modelCall = 0;
+    const steps = [
+      { action: "fetch", url: "https://docs.example.com/q", why: "official docs" },
+      {
+        action: "finish",
+        note: "# Question\nq\n# Findings\na sufficiently long research note body for the schema minimum.",
+        selfAssessment: { complete: true, confidence: "medium", gaps: ["no benchmarks"] },
+      },
+    ];
+    const fetchImpl = (async (input: Parameters<typeof globalThis.fetch>[0]) => {
+      const target = String(input);
+      if (target.includes("chat/completions")) {
+        const step = steps[Math.min(modelCall, steps.length - 1)];
+        modelCall++;
+        return new Response(
+          JSON.stringify({
+            id: "c1",
+            object: "chat.completion",
+            created: 1,
+            model: "local-llm/resolved",
+            choices: [
+              {
+                index: 0,
+                message: { role: "assistant", content: JSON.stringify(step) },
+                finish_reason: "stop",
+              },
+            ],
+            usage: { prompt_tokens: 10, completion_tokens: 5 },
+          }),
+          { status: 200, headers: { "content-type": "application/json" } },
+        );
+      }
+      return new Response("<p>Official quantization docs</p>", {
+        status: 200,
+        headers: { "content-type": "text/html" },
+      });
+    }) as unknown as typeof globalThis.fetch;
+
+    const registry3 = createHandlerRegistry(agentDeps(fetchImpl));
+    const work = await seedWork({ researchQuestion: "What quantizations exist?" });
+    await sql`UPDATE research_tasks SET agent_role = 'researcher', strategy = 'primary_sources'
+              WHERE id = ${work.task.id}`;
+
+    await registry3.research(db, work);
+
+    const attempt = await sql`SELECT input, output FROM attempts WHERE id = ${work.attempt.id}`;
+    const input = attempt[0]?.input as Record<string, unknown>;
+    expect(input.question).toBe("What quantizations exist?"); // R12: built ResearcherInput
+    const output = attempt[0]?.output as {
+      noteArtifactId: string;
+      sourcesVisited: Array<{ url: string; snapshotArtifactId: string | null }>;
+    };
+    expect(output.noteArtifactId).toBeTruthy();
+    expect(output.sourcesVisited).toHaveLength(1);
+    expect(output.sourcesVisited[0]?.url).toBe("https://docs.example.com/q");
+    expect(output.sourcesVisited[0]?.snapshotArtifactId).not.toBeNull();
+
+    const note = await sql`SELECT type FROM artifacts WHERE id = ${output.noteArtifactId}`;
+    expect(note[0]?.type).toBe("research_note");
   });
 });
