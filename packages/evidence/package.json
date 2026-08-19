@@ -4,5 +4,14 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@lab/db": "workspace:*",
+    "@lab/model": "workspace:*",
+    "@lab/schemas": "workspace:*",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "drizzle-orm": "^0.45.2"
   }
 }

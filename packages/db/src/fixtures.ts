@@ -145,14 +145,15 @@ export async function seedEvidence(
     sourceUrl?: string | null;
     vendorAffiliated?: boolean | null;
     benchmarkOrigin?: string | null;
+    metadata?: Record<string, unknown>;
   },
 ): Promise<void> {
   await tx.execute(sql`
     INSERT INTO evidence (id, run_id, task_id, attempt_id, source_class, source_url,
-                          vendor_affiliated, benchmark_origin, excerpt)
+                          vendor_affiliated, benchmark_origin, excerpt, metadata)
     VALUES (${e.id}, ${e.runId}, ${e.taskId}, ${e.attemptId}, ${e.sourceClass ?? "community"},
             ${e.sourceUrl ?? null}, ${e.vendorAffiliated ?? null},
-            ${e.benchmarkOrigin ?? null}, ${e.excerpt})`);
+            ${e.benchmarkOrigin ?? null}, ${e.excerpt}, ${JSON.stringify(e.metadata ?? {})}::jsonb)`);
 }
 
 export async function seedClaimEvidenceLink(

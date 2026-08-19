@@ -1,2 +1,4 @@
-// @lab/evidence — see docs/implementation-plan.md §3. Populated by its phase tickets.
-export {};
+// @lab/evidence — canonicalization pipeline (design §10). May import
+// @lab/model (it is not core); the *invocation* stays scheduler-side.
+export * from "./canonicalize";
+export * from "./confirm";

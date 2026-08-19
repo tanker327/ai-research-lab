@@ -11,6 +11,8 @@
     "@lab/db": "workspace:*",
     "pino": "^10.3.1",
     "postgres": "^3.4.9",
-    "@lab/schemas": "workspace:*"
+    "@lab/schemas": "workspace:*",
+    "@lab/evidence": "workspace:*",
+    "@lab/model": "workspace:*"
   }
 }

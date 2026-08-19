@@ -24,6 +24,9 @@ export interface EvaluationSweepResult {
   accepted: string[];
   retried: string[];
   failed: string[];
+  // Last accepted attempt per run this tick — the canonicalization trigger,
+  // and the attempt that owns its merge-confirm model calls.
+  acceptedRuns: Array<{ runId: string; attemptId: string }>;
 }
 
 export async function sweepEvaluations(
@@ -31,7 +34,7 @@ export async function sweepEvaluations(
   now = () => new Date(),
   maxAttemptsDefault = 3,
 ): Promise<EvaluationSweepResult> {
-  const result: EvaluationSweepResult = { accepted: [], retried: [], failed: [] };
+  const result: EvaluationSweepResult = { accepted: [], retried: [], failed: [], acceptedRuns: [] };
   const candidates = await selectEvaluationCandidates(db);
 
   for (const c of candidates) {
@@ -42,6 +45,7 @@ export async function sweepEvaluations(
       if (c.taskType === "plan") {
         const applied = await applyAcceptedPlan(db, c, maxAttemptsDefault);
         (applied.outcome === "applied" ? result.accepted : result.retried).push(c.taskId);
+        if (applied.outcome === "applied") recordAcceptedRun(result, c);
         continue;
       }
       // Two-pass research (ADR-012): accepting a research attempt creates its
@@ -49,10 +53,12 @@ export async function sweepEvaluations(
       if (c.taskType === "research") {
         await acceptResearchAttempt(db, c, maxAttemptsDefault);
         result.accepted.push(c.taskId);
+        recordAcceptedRun(result, c);
         continue;
       }
       await acceptAttempt(db, c.attemptId, ACTOR);
       result.accepted.push(c.taskId);
+      recordAcceptedRun(result, c);
       continue;
     }
     if (c.attemptStatus !== "FAILED") continue; // e.g. CANCELLED mid-sweep — not ours
@@ -96,6 +102,12 @@ export async function sweepEvaluations(
     (verdict.kind === "task_failed" ? result.failed : result.retried).push(c.taskId);
   }
   return result;
+}
+
+function recordAcceptedRun(result: EvaluationSweepResult, c: EvaluationCandidate): void {
+  const existing = result.acceptedRuns.find((r) => r.runId === c.runId);
+  if (existing) existing.attemptId = c.attemptId;
+  else result.acceptedRuns.push({ runId: c.runId, attemptId: c.attemptId });
 }
 
 function resolveVerdict(c: EvaluationCandidate): RetryVerdict {

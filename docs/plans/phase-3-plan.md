@@ -18,6 +18,7 @@
 
 ## Findings during the phase (append-only)
 
+- **Merge direction must be deterministic (3.5):** naive trigram merging ping-pongs two near-dup subjects across re-runs (each folds into the other). Rule: only merge INTO a subject that sorts lexicographically earlier — re-runs converge on one row, keeping canonical rows a pure function of the live set.
 - **ai v7 forbids system-role rows in `messages` (3.2):** `AI_InvalidPromptError` at runtime — the system prompt must go through `generateText`'s separate `system` option. ModelClient already exposes it; agents pass `system: SYSTEM`, never a system message.
 
 ## Design decisions (settled before coding; D3/D4 need user input)

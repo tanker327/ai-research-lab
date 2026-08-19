@@ -14,7 +14,19 @@ export * from "./guards";
 export * from "./run";
 export * from "./sweeps";
 
-export function startScheduler(db: Db, config: Config, log: Logger): { stop: () => void } {
+export interface SchedulerHooks {
+  // Called after a control tick that accepted attempts, once per affected
+  // run. Composed by the api process — e.g. canonicalization (@lab/evidence),
+  // which core must not import (rule 1: it pulls in @lab/model).
+  onAccepted?: (accepts: Array<{ runId: string; attemptId: string }>) => Promise<void>;
+}
+
+export function startScheduler(
+  db: Db,
+  config: Config,
+  log: Logger,
+  hooks: SchedulerHooks = {},
+): { stop: () => void } {
   const guard = (name: string, fn: () => Promise<unknown>) => async () => {
     try {
       await fn();
@@ -41,6 +53,9 @@ export function startScheduler(db: Db, config: Config, log: Logger): { stop: () 
         runs.failed.length
       ) {
         log.info({ evaluated, ready, blocked, runs }, "control sweep");
+      }
+      if (evaluated.acceptedRuns.length > 0 && hooks.onAccepted) {
+        await hooks.onAccepted(evaluated.acceptedRuns);
       }
     }),
     config.POLL_INTERVAL_MS,

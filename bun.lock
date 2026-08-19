@@ -19,6 +19,8 @@
       "dependencies": {
         "@lab/core": "workspace:*",
         "@lab/db": "workspace:*",
+        "@lab/evidence": "workspace:*",
+        "@lab/model": "workspace:*",
         "@lab/schemas": "workspace:*",
         "hono": "^4.13.3",
         "pino": "^10.3.1",
@@ -108,6 +110,15 @@
     },
     "packages/evidence": {
       "name": "@lab/evidence",
+      "dependencies": {
+        "@lab/db": "workspace:*",
+        "@lab/model": "workspace:*",
+        "@lab/schemas": "workspace:*",
+        "zod": "^4.4.3",
+      },
+      "devDependencies": {
+        "drizzle-orm": "^0.45.2",
+      },
     },
     "packages/model": {
       "name": "@lab/model",

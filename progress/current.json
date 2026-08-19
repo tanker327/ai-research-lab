@@ -52,9 +52,11 @@
     {
       "id": "3.5",
       "title": "packages/evidence: canonicalization (normalize \u2192 trgm candidates \u2192 batch-confirm \u2192 upsert)",
-      "status": "pending",
+      "status": "completed",
       "priority": 6,
-      "depends_on": ["3.4"]
+      "depends_on": ["3.4"],
+      "started_at": "2026-08-19",
+      "completed_at": "2026-08-19"
     },
     {
       "id": "3.6",

@@ -3,6 +3,7 @@ export { createDb, type Db, type SqlExecutor, type Tx } from "./client";
 export * from "./fixtures";
 export * from "./raw/attempts";
 export * from "./raw/calls";
+export * from "./raw/canonical";
 export * from "./raw/claim";
 export * from "./raw/context";
 export * from "./raw/decisions";

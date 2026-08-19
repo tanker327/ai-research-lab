@@ -72,9 +72,10 @@ export async function acceptAttemptInTx(
   }
 }
 
-// Phase-1 stub (phase-1-plan 1.4): canonicalization re-runs over the changed
-// live set from Phase 3 on. Until then the enqueue is an event so traces
-// already show where it will happen.
+// Since 3.5 the enqueue is real: the scheduler's onAccepted hook (composed in
+// apps/api — core cannot import @lab/evidence) runs canonicalizeRun over the
+// changed live set after this transaction commits. The event marks the spot
+// in the trace.
 async function enqueueCanonicalization(
   tx: Parameters<typeof emitEvent>[0],
   runId: string,
