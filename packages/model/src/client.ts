@@ -5,7 +5,13 @@
 // only the object/text). Hub auth is the x-service-name header (pre-flight).
 import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
 import { type Db, insertModelCall } from "@lab/db";
-import { type ModelCallContext, type ModelMessage, newId, type StructuredMode } from "@lab/schemas";
+import {
+  CategorizedError,
+  type ModelCallContext,
+  type ModelMessage,
+  newId,
+  type StructuredMode,
+} from "@lab/schemas";
 import { generateText, Output } from "ai";
 import { z } from "zod";
 import { mapModelError } from "./errors";
@@ -71,7 +77,7 @@ export function createModelClient(opts: ModelClientOptions): ModelClient {
 
   async function run<T>(
     args: GenerateBaseArgs,
-    output: { schema: z.ZodType<T>; name?: string; mode: StructuredMode } | null,
+    output: { schema: z.ZodType<T>; name?: string; mode: StructuredMode; parse?: "self" } | null,
   ): Promise<{ object?: T; text: string } & ModelCallMeta> {
     const t0 = Date.now();
     // json_schema → the backend constrains decoding (ADR-012); json_object →
@@ -101,7 +107,7 @@ export function createModelClient(opts: ModelClientOptions): ModelClient {
           messages: args.messages,
           temperature: args.temperature,
           maxOutputTokens: args.maxOutputTokens,
-          ...(output
+          ...(output && output.parse !== "self"
             ? { output: Output.object({ schema: output.schema, name: output.name }) }
             : {}),
         }),
@@ -117,10 +123,30 @@ export function createModelClient(opts: ModelClientOptions): ModelClient {
         finishReason: res.finishReason,
         reasoning: res.reasoningText ?? null,
       });
-      return { object: output ? (res.output as T) : undefined, text: res.text, ...meta };
+      return {
+        object: output && output.parse !== "self" ? (res.output as T) : undefined,
+        text: res.text,
+        ...meta,
+      };
     } catch (err) {
       throw mapModelError(err, args.model);
     }
+  }
+
+  // json_object mode: the SDK DROPS response_format for providers without
+  // structuredOutputs (its warning "responseFormat is not supported"), so the
+  // model may fence or preface the JSON. We parse robustly ourselves: strip
+  // fences, take the outermost object, Zod-validate (rule 7 — a real mismatch
+  // is still SCHEMA_FAILURE).
+  function extractJsonObject(text: string): unknown {
+    const stripped = text
+      .replace(/^[\s\S]*?```(?:json)?\s*\n?/, (m) => (m.includes("```") ? "" : m))
+      .replace(/```[\s\S]*$/, "");
+    const candidate = stripped.includes("{") ? stripped : text;
+    const start = candidate.indexOf("{");
+    const end = candidate.lastIndexOf("}");
+    if (start === -1 || end <= start) throw new Error("no JSON object in model output");
+    return JSON.parse(candidate.slice(start, end + 1));
   }
 
   async function persistCall(p: {
@@ -166,6 +192,21 @@ export function createModelClient(opts: ModelClientOptions): ModelClient {
   return {
     async generateStructured(args) {
       const { schema, schemaName, mode = "json_schema", ...base } = args;
+      if (mode === "json_object") {
+        // Schema goes into the prompt; parsing is ours (see extractJsonObject).
+        const res = await run(base, { schema, name: schemaName, mode, parse: "self" });
+        try {
+          const object = schema.parse(extractJsonObject(res.text));
+          const { text: _text, object: _o, ...meta } = res;
+          return { object, ...meta };
+        } catch (err) {
+          throw new CategorizedError(
+            "SCHEMA_FAILURE",
+            `model output failed schema validation (${args.model})`,
+            { cause: err },
+          );
+        }
+      }
       const res = await run(base, { schema, name: schemaName, mode });
       if (res.object === undefined) {
         // Output.object guarantees an object on success; belt for the types.

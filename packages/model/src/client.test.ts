@@ -178,6 +178,24 @@ describe("generateStructured", () => {
     expect(system?.content).toContain("confidence");
   });
 
+  it("json_object mode survives fenced/prefaced JSON (SDK drops response_format — we parse)", async () => {
+    const { fetch } = stubFetch(() => ({
+      status: 200,
+      json: completion(
+        'Here is the JSON you asked for:\n```json\n{"category": "database", "confidence": "high"}\n```\nHope that helps!',
+      ),
+    }));
+    const client = makeClient(fetch);
+    const res = await client.generateStructured({
+      ctx,
+      model: "cheapest",
+      schema: Classification,
+      mode: "json_object",
+      messages,
+    });
+    expect(res.object).toEqual({ category: "database", confidence: "high" });
+  });
+
   it("schema-invalid output → SCHEMA_FAILURE (never best-effort, rule 7)", async () => {
     const { fetch } = stubFetch(() => ({
       status: 200,
