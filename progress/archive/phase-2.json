@@ -1,0 +1,81 @@
+{
+  "current_phase": "Phase 2 \u2014 Model Gateway + Tools",
+  "plan": "docs/implementation-plan.md \u00a76 Phase 2; draft docs/plans/phase-2-plan.md before starting (per-phase planning cadence)",
+  "gate": "test agent runs generateStructured vs frontier AND strong_local through ai-hub; guided decoding vs fast_local with a nasty schema; tool calls persist ordered with snapshots",
+  "tasks": [
+    {
+      "id": "ui-0",
+      "title": "Console v0 (pulled forward from Phase 6, user decision): apps/web shell + runs/new/overview/tasks/timeline on real APIs; evidence/report/transcript placeholders",
+      "status": "completed",
+      "priority": 0,
+      "depends_on": [],
+      "completed_at": "2026-08-19"
+    },
+    {
+      "id": "2.0",
+      "title": "Pre-flight (~30 min): ai-hub reachability + vLLM response_format json_schema support from this machine; then draft docs/plans/phase-2-plan.md",
+      "status": "completed",
+      "priority": 1,
+      "depends_on": [],
+      "completed_at": "2026-08-19"
+    },
+    {
+      "id": "2.1",
+      "title": "packages/model: ModelClient via AI SDK \u2192 ai-hub (\u00a75.6) + usage/reasoning persistence",
+      "status": "completed",
+      "priority": 2,
+      "depends_on": ["2.0"],
+      "started_at": "2026-08-19",
+      "completed_at": "2026-08-19",
+      "commit": "2722256"
+    },
+    {
+      "id": "2.2",
+      "title": "Router policy table + gateway-side GPU_CONCURRENCY_STRONG_LOCAL semaphore",
+      "status": "completed",
+      "priority": 3,
+      "depends_on": ["2.1"],
+      "completed_at": "2026-08-19",
+      "commit": "9220706"
+    },
+    {
+      "id": "2.3",
+      "title": "packages/tools: web_search + web_fetch (snapshot \u2192 content-addressed artifact) + registry with per-role allowlists + seq logging",
+      "status": "completed",
+      "priority": 4,
+      "depends_on": ["2.4"],
+      "completed_at": "2026-08-19",
+      "commit": "bac0357"
+    },
+    {
+      "id": "2.4",
+      "title": "Artifact store: local fs, sha256 content addressing",
+      "status": "completed",
+      "priority": 3,
+      "depends_on": [],
+      "completed_at": "2026-08-19",
+      "commit": "bac0357"
+    },
+    {
+      "id": "2.5",
+      "title": "Console wiring for Phase 2: model-call + tool-call panels in the run inspector (standing rule: every phase DoD wires its capabilities into the UI)",
+      "status": "completed",
+      "priority": 5,
+      "depends_on": ["2.1", "2.3"],
+      "completed_at": "2026-08-19",
+      "commit": "3186e67"
+    }
+  ],
+  "known_issues": [],
+  "notes": [
+    "Phase 1 archived to progress/archive/phase-1.json 2026-08-19 \u2014 gate green twice + pg-restart variant; 361 tests after audit commit 344c4c2.",
+    "Phase 1 carry-over: RUNNING\u2192READY task transition retained per \u00a75.1 but currently unused (stale release now routes through EVALUATING per rule 10 \u2014 see phase-1-plan amendment).",
+    "2.0 pre-flight was deferred from late Phase 1 (phase-1-plan risk item) \u2014 do it first.",
+    "Per-phase planning cadence (user-approved 2026-08-19): draft docs/plans/phase-2-plan.md with decisions + acceptance criteria before coding, mirror of phase-1-plan.md.",
+    "Post-phase audit 2026-08-19 (344c4c2): doc-sync gaps closed (design \u00a78.2/\u00a78.3 amended, D2 OPEN-QUESTION comment, .env.example) + handler unit tests added. Phase 2 plan template should include a doc-sync checklist in its DoD.",
+    "PLAN CHANGE 2026-08-19 (user): UI-first \u2014 console built incrementally from now on, placeholders OK; every phase's DoD includes wiring new capabilities into apps/web. implementation-plan Phase 6 carries the amendment note. Console v0 shipped: bun run dev:web (:5173, proxies /api \u2192 :8787).",
+    "2.0 pre-flight done 2026-08-19: deployed ai-hub at http://192.168.10.114/v1 (x-service-name auth); local model passes json_schema + tool calls; deepseek no json_schema; openai/xai keys invalid on hub (USER ACTION for frontier tier). Phase 2 plan drafted: docs/plans/phase-2-plan.md \u2014 awaiting user review. Open: D4 web_search provider choice.",
+    "Lesson 2026-08-19: a running dev stack (api scheduler + workers) and the test suite share one DB and interfere \u2014 stop dev processes before bun run check. Real fix (separate test database) is a candidate Phase 2/3 chore; do NOT create the task without approval.",
+    "Phase 2 gate (bun run gate:p2) passed twice 2026-08-19. Pending user actions carried to Phase 3 notes: frontier keys on hub (needed by Phase 4), D4 web_search provider choice."
+  ]
+}
