@@ -117,6 +117,40 @@ function agentContext(
   };
 }
 
+// D3 extension (phase-3-plan finding): while the frontier is dark, any route
+// that resolves there is downgraded to strong_local with a warn event —
+// loud, never silent (routing policy itself stays untouched).
+async function guardDarkFrontier(
+  deps: AgentDeps,
+  db: Db,
+  work: ClaimedWork,
+  role: "planner" | "researcher" | "extractor",
+  route: ReturnType<typeof resolveRoute>,
+): Promise<ReturnType<typeof resolveRoute>> {
+  if (route.tier !== "frontier" || deps.config.FRONTIER_ENABLED === 1) return route;
+  const downgraded = resolveRoute(
+    role,
+    work.attempt.attemptNumber,
+    tierModels(deps.config),
+    "strong_local",
+  );
+  await emitEvent(db, {
+    runId: work.task.runId,
+    taskId: work.task.id,
+    attemptId: work.attempt.id,
+    type: "TIER_DOWNGRADED",
+    kind: "warn",
+    actor: "worker",
+    payload: {
+      role,
+      from: "frontier",
+      to: downgraded.tier,
+      reason: "FRONTIER_ENABLED=0 (hub keys pending)",
+    },
+  });
+  return downgraded;
+}
+
 function plannerHandler(deps: AgentDeps): TaskHandler {
   return async (db, work) => {
     const stage = Number((work.task.input as Record<string, unknown>)?.planStage ?? 1);
@@ -158,7 +192,13 @@ function researcherHandler(deps: AgentDeps): TaskHandler {
     const input = await deps.context.forResearcher(work.task.id);
     await updateAttemptInput(db, work.attempt.id, input); // R12: verbatim
 
-    const route = resolveRoute("researcher", work.attempt.attemptNumber, tierModels(deps.config));
+    const route = await guardDarkFrontier(
+      deps,
+      db,
+      work,
+      "researcher",
+      resolveRoute("researcher", work.attempt.attemptNumber, tierModels(deps.config)),
+    );
     const result = await researcherV1.run(input, agentContext(deps, db, work, "researcher", route));
 
     // sourcesVisited is MECHANICAL: the tool layer's own log (§6.2) — the

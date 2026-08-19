@@ -24,6 +24,10 @@ export const ConfigSchema = z.object({
   // and every off-frontier planner attempt emits a warn event. Flip back to
   // 'frontier' the day the keys work.
   PLANNER_TIER: z.enum(["frontier", "strong_local", "fast_local"]).default("strong_local"),
+  // 0 while the hub's frontier keys are invalid: ANY route that resolves to
+  // the frontier (e.g. researcher attempt-3 escalation) is loudly downgraded
+  // to strong_local instead of hard-failing on 401. Set to 1 when keys work.
+  FRONTIER_ENABLED: z.coerce.number().int().min(0).max(1).default(0),
 
   // D4: self-hosted SearXNG. web_search is registered only when this is set.
   SEARXNG_BASE_URL: z.string().url().optional(),
