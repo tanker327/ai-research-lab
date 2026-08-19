@@ -146,3 +146,17 @@ describe("researcher v1 loop", () => {
     expect(calls.length).toBe(3); // cap + the forced-finish turn
   });
 });
+
+describe("looksDegenerate", () => {
+  it("flags phrase-loop notes and passes real prose", async () => {
+    const { looksDegenerate } = await import("./index");
+    expect(looksDegenerate("(PostgreSQL 18 / docs current) ".repeat(600))).toBe(true);
+    const prose = Array.from(
+      { length: 80 },
+      (_, i) =>
+        `Finding ${i}: PostgreSQL handles DDL case ${i} differently, per docs section ${i}.`,
+    ).join("\n");
+    expect(looksDegenerate(prose)).toBe(false);
+    expect(looksDegenerate("short note")).toBe(false);
+  });
+});

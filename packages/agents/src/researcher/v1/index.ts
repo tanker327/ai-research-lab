@@ -29,6 +29,21 @@ const AgentResult = z.object({
   }),
 });
 
+// Deterministic degeneracy guard (P3 gate finding): under constrained
+// decoding a local model filled a note with one phrase repeated to the max
+// length. Non-overlapping 40-char shingles; a low unique ratio means the
+// text is a loop, not prose — SCHEMA_FAILURE (cheap retry), never accepted.
+export function looksDegenerate(text: string): boolean {
+  if (text.length < 800) return false;
+  const shingles = new Set<string>();
+  let total = 0;
+  for (let i = 0; i + 40 <= text.length; i += 40) {
+    shingles.add(text.slice(i, i + 40));
+    total += 1;
+  }
+  return total >= 10 && shingles.size / total < 0.5;
+}
+
 export const researcherV1: Agent<ResearcherInput, ResearcherAgentResult> = {
   name: "researcher",
   version: "v1",
@@ -73,6 +88,12 @@ export const researcherV1: Agent<ResearcherInput, ResearcherAgentResult> = {
       const decision = Step.parse(res.object);
 
       if (decision.action === "finish") {
+        if (looksDegenerate(decision.note)) {
+          throw new CategorizedError(
+            "SCHEMA_FAILURE",
+            "research note is degenerate repetition (constrained-decoding loop) — rejecting before extraction",
+          );
+        }
         const saved = await ctx.saveArtifact({
           type: "research_note",
           name: `research-note ${input.question.slice(0, 80)}`,
