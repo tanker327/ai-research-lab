@@ -1,13 +1,11 @@
 // Smoke tests for migration 0001 against real Postgres (CLAUDE.md testing rules:
 // correctness IS SQL semantics — partial unique indexes, views, CHECKs).
 import { randomUUID } from "node:crypto";
-import { afterAll, describe, expect, it } from "vitest";
 import postgres from "postgres";
+import { afterAll, describe, expect, it } from "vitest";
 
 // UUIDv7 helper arrives with ticket 0.4 (@lab/schemas); random v4 ids are fine for tests.
-const sql = postgres(
-  process.env.DATABASE_URL ?? "postgres://lab:lab@localhost:5434/research_lab",
-);
+const sql = postgres(process.env.DATABASE_URL ?? "postgres://lab:lab@localhost:5434/research_lab");
 
 const runId = randomUUID();
 const taskId = randomUUID();
@@ -24,17 +22,33 @@ describe("migration 0001", () => {
       WHERE table_schema = 'public' AND table_type = 'BASE TABLE'`;
     const names = tables.map((r) => r.table_name);
     for (const t of [
-      "research_runs", "research_specs", "plan_stages", "research_tasks",
-      "task_dependencies", "attempts", "artifacts", "evidence", "raw_claims",
-      "canonical_claims", "claim_evidence_links", "evaluations",
-      "decision_records", "events", "model_calls", "tool_calls", "human_checkpoints",
+      "research_runs",
+      "research_specs",
+      "plan_stages",
+      "research_tasks",
+      "task_dependencies",
+      "attempts",
+      "artifacts",
+      "evidence",
+      "raw_claims",
+      "canonical_claims",
+      "claim_evidence_links",
+      "evaluations",
+      "decision_records",
+      "events",
+      "model_calls",
+      "tool_calls",
+      "human_checkpoints",
     ]) {
       expect(names).toContain(t);
     }
     const views = await sql`
       SELECT table_name FROM information_schema.views WHERE table_schema = 'public'`;
     expect(views.map((r) => r.table_name).sort()).toEqual([
-      "live_canonical_claims", "live_claim_evidence", "live_evidence", "live_raw_claims",
+      "live_canonical_claims",
+      "live_claim_evidence",
+      "live_evidence",
+      "live_raw_claims",
     ]);
   });
 

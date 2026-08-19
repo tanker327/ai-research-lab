@@ -1,7 +1,7 @@
 // Mirrors docs/database-schema.md §5.
 import { bigint, jsonb, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
-import { attempts, researchTasks } from "./tasks";
 import { researchRuns } from "./runs";
+import { attempts, researchTasks } from "./tasks";
 
 export const artifacts = pgTable("artifacts", {
   id: uuid("id").primaryKey(),

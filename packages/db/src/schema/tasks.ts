@@ -1,4 +1,6 @@
 // Mirrors docs/database-schema.md §3–4.
+
+import { sql } from "drizzle-orm";
 import {
   check,
   integer,
@@ -10,7 +12,6 @@ import {
   unique,
   uuid,
 } from "drizzle-orm/pg-core";
-import { sql } from "drizzle-orm";
 import { researchRuns } from "./runs";
 
 export const researchTasks = pgTable("research_tasks", {
