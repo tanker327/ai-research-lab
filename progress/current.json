@@ -1,40 +1,43 @@
 {
-  "current_phase": "Phase 1 — Deterministic Task Engine",
-  "plan": "docs/plans/phase-1-plan.md (approved 2026-08-19); tickets from docs/implementation-plan.md §6 Phase 1",
+  "current_phase": "Phase 1 \u2014 Deterministic Task Engine",
+  "plan": "docs/plans/phase-1-plan.md (approved 2026-08-19); tickets from docs/implementation-plan.md \u00a76 Phase 1",
   "gate": "bun run gate:p1 green twice in a row; bun run check green; zero LLM code in execution path",
   "tasks": [
     {
       "id": "1.1",
-      "title": "Task/attempt/run state machines + assertTransition (§5.1) — pure fns, exhaustive tests",
-      "status": "in_progress",
+      "title": "Task/attempt/run state machines + assertTransition (\u00a75.1) \u2014 pure fns, exhaustive tests",
+      "status": "completed",
       "priority": 1,
       "depends_on": [],
-      "started_at": "2026-08-19"
+      "completed_at": "2026-08-19",
+      "commit": "bb56847"
     },
     {
       "id": "1.5",
-      "title": "Retry ladder decideRetry (§5.4) + ResearchStrategy/QualityVerdict/DecisionRecord shapes in @lab/schemas",
-      "status": "pending",
+      "title": "Retry ladder decideRetry (\u00a75.4) + ResearchStrategy/QualityVerdict/DecisionRecord shapes in @lab/schemas",
+      "status": "completed",
       "priority": 2,
-      "depends_on": ["1.1"]
+      "depends_on": ["1.1"],
+      "completed_at": "2026-08-19",
+      "commit": "4d791b6"
     },
     {
       "id": "1.2",
-      "title": "Atomic claim (§5.2, raw SQL in packages/db/src/raw per D1) + worker loop with fake handler registry",
+      "title": "Atomic claim (\u00a75.2, raw SQL in packages/db/src/raw per D1) + worker loop with fake handler registry",
       "status": "pending",
       "priority": 3,
       "depends_on": ["1.1"]
     },
     {
       "id": "1.3",
-      "title": "Readiness sweep + stale-claim release (scheduler; §9.2/§9.3 queries)",
+      "title": "Readiness sweep + stale-claim release (scheduler; \u00a79.2/\u00a79.3 queries)",
       "status": "pending",
       "priority": 4,
       "depends_on": ["1.2"]
     },
     {
       "id": "1.4",
-      "title": "Accept/supersede liveness transaction (§5.3) over raw fns; canonicalization no-op stub",
+      "title": "Accept/supersede liveness transaction (\u00a75.3) over raw fns; canonicalization no-op stub",
       "status": "pending",
       "priority": 5,
       "depends_on": ["1.2"]
@@ -65,7 +68,8 @@
   "notes": [
     "Phase 0 archived to progress/archive/phase-0.json (gate passed 2026-08-19).",
     "Session grouping per phase-1-plan: A=1.1+1.5 (pure), B=1.2+1.3 (concurrency), C=1.4+1.6 (liveness+events), D=1.7+1.8+gate.",
-    "Decisions D1 (raw SQL in packages/db/src/raw, core orchestrates) and D2 (LISTEN/NOTIFY + 2s poll fallback) are settled — see plan doc.",
-    "Late-phase pre-flight (~30 min): ai-hub reachability + vLLM response_format json_schema check before Phase 2 starts."
+    "Decisions D1 (raw SQL in packages/db/src/raw, core orchestrates) and D2 (LISTEN/NOTIFY + 2s poll fallback) are settled \u2014 see plan doc.",
+    "Late-phase pre-flight (~30 min): ai-hub reachability + vLLM response_format json_schema check before Phase 2 starts.",
+    "Session A (1.1+1.5) completed 2026-08-19 \u2014 310 tests green. Next: Session B ticket 1.2 (atomic claim + worker loop, needs Postgres)."
   ]
 }
