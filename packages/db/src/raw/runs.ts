@@ -11,6 +11,7 @@ export interface RunRow {
   status: RunStatus;
   budget: Record<string, unknown>;
   evalCycleCount: number;
+  specVersion: number;
   createdAt: string;
   completedAt: string | null;
   cancelledAt: string | null;
@@ -24,6 +25,7 @@ function mapRun(r: Record<string, unknown>): RunRow {
     status: r.status as RunStatus,
     budget: (r.budget as Record<string, unknown>) ?? {},
     evalCycleCount: r.eval_cycle_count as number,
+    specVersion: (r.spec_version as number) ?? 0,
     createdAt: String(r.created_at),
     completedAt: r.completed_at ? String(r.completed_at) : null,
     cancelledAt: r.cancelled_at ? String(r.cancelled_at) : null,

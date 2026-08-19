@@ -128,3 +128,30 @@ export async function selectAttemptOutput(
   const rows = await tx.execute(sql`SELECT output FROM attempts WHERE id = ${attemptId}`);
   return [...rows][0]?.output ?? null;
 }
+
+// Staged-planning driver reads (3.7): is another plan stage due?
+export async function selectMaxPlanStage(tx: SqlExecutor, runId: string): Promise<number> {
+  const rows = await tx.execute(
+    sql`SELECT coalesce(max(stage), 0)::int AS s FROM plan_stages WHERE run_id = ${runId}`,
+  );
+  return ([...rows][0]?.s as number) ?? 0;
+}
+
+export async function existsPlanTaskForStage(
+  tx: SqlExecutor,
+  runId: string,
+  stage: number,
+): Promise<boolean> {
+  const rows = await tx.execute(sql`
+    SELECT 1 FROM research_tasks
+    WHERE run_id = ${runId} AND type = 'plan' AND (input->>'planStage')::int = ${stage}
+    LIMIT 1`);
+  return [...rows].length > 0;
+}
+
+export async function countLiveClaims(tx: SqlExecutor, runId: string): Promise<number> {
+  const rows = await tx.execute(
+    sql`SELECT count(*)::int AS n FROM live_canonical_claims WHERE run_id = ${runId}`,
+  );
+  return ([...rows][0]?.n as number) ?? 0;
+}

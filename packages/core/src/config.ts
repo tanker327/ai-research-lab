@@ -29,6 +29,7 @@ export const ConfigSchema = z.object({
   SEARXNG_BASE_URL: z.string().url().optional(),
   RESEARCHER_MAX_TOOL_CALLS: intFromEnv(8), // deterministic loop cap (ADR-016)
   MIN_EVIDENCE_PER_TASK: intFromEnv(3), // deterministic min-evidence check (3.6)
+  MAX_PLAN_STAGES: intFromEnv(2), // staged-planning cap: discovery + deep wave (3.7; Evaluator drives more in P4)
 
   API_PORT: intFromEnv(8787),
   WORKER_CONCURRENCY: intFromEnv(2),

@@ -4,12 +4,16 @@
 import {
   cancelAttemptsForRun,
   cancelTasksForRun,
+  countLiveClaims,
   type Db,
+  existsPlanTaskForStage,
   getRunForUpdate,
+  insertPlannedTaskRow,
   insertRun,
   insertTask,
   insertTaskDependency,
   selectActiveRuns,
+  selectMaxPlanStage,
   taskStatusCounts,
   updateRunStatus,
 } from "@lab/db";
@@ -136,7 +140,10 @@ export interface RunCompletionSweepResult {
   failed: string[];
 }
 
-export async function sweepRunCompletion(db: Db): Promise<RunCompletionSweepResult> {
+export async function sweepRunCompletion(
+  db: Db,
+  maxPlanStages = 2, // V0.05: discovery + one deep wave; the Evaluator drives more in P4
+): Promise<RunCompletionSweepResult> {
   const result: RunCompletionSweepResult = { completed: [], failed: [] };
   const active = await selectActiveRuns(db);
 
@@ -149,6 +156,48 @@ export async function sweepRunCompletion(db: Db): Promise<RunCompletionSweepResu
       if (total === 0) return; // nothing seeded yet
       const terminal = (counts.DONE ?? 0) + (counts.FAILED ?? 0) + (counts.CANCELLED ?? 0);
       if (terminal < total) return; // work still in flight
+
+      // Staged-planning driver (3.7, ADR-011): all work is done, the last
+      // plan stage produced live claims, and stages remain → enqueue the
+      // next plan task instead of completing. The Planner reads the claim
+      // digest and writes the deep wave with concrete inputs (design §7).
+      if ((counts.FAILED ?? 0) === 0 && (counts.CANCELLED ?? 0) === 0) {
+        const lastStage = await selectMaxPlanStage(tx, run.id);
+        if (
+          lastStage > 0 &&
+          lastStage < maxPlanStages &&
+          !(await existsPlanTaskForStage(tx, run.id, lastStage + 1)) &&
+          (await countLiveClaims(tx, run.id)) > 0
+        ) {
+          const nextStage = lastStage + 1;
+          const planTaskId = newId();
+          await insertPlannedTaskRow(tx, {
+            id: planTaskId,
+            runId: run.id,
+            planStage: nextStage,
+            specVersion: locked.specVersion,
+            type: "plan",
+            title: `Plan · stage ${nextStage}`,
+            description: "",
+            priority: 90,
+            agentRole: "planner",
+            modelTier: null,
+            strategy: null,
+            input: { planStage: nextStage },
+            successCriteria: [],
+            maxAttempts: 3,
+          });
+          await emitEvent(tx, {
+            runId: run.id,
+            taskId: planTaskId,
+            type: "PLAN_STAGE_ENQUEUED",
+            kind: "info",
+            actor: ACTOR,
+            payload: { stage: nextStage },
+          });
+          return; // run stays active; readiness sweep picks the plan task up
+        }
+      }
 
       if ((counts.FAILED ?? 0) > 0 || (counts.CANCELLED ?? 0) > 0) {
         assertRunTransition(locked.status, "FAILED");

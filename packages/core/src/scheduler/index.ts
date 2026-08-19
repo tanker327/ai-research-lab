@@ -47,7 +47,7 @@ export function startScheduler(
         config.MIN_EVIDENCE_PER_TASK,
       );
       const { ready, blocked } = await sweepReadiness(db);
-      const runs = await sweepRunCompletion(db);
+      const runs = await sweepRunCompletion(db, config.MAX_PLAN_STAGES);
       if (
         ready.length ||
         blocked.length ||
