@@ -15,21 +15,24 @@
     {
       "id": "0.2",
       "title": "infra/docker-compose.yml: postgres16 + volumes",
-      "status": "pending",
+      "status": "completed",
       "priority": 2,
       "depends_on": [
         "0.1"
-      ]
+      ],
+      "completed_at": "2026-08-19",
+      "commit": "1019f71"
     },
     {
       "id": "0.3",
       "title": "packages/db: drizzle schema for all v0.2.1 tables + migration 0001 (schema from design §17/§24.7)",
-      "status": "pending",
+      "status": "in_progress",
       "priority": 3,
       "depends_on": [
         "0.1",
         "0.2"
-      ]
+      ],
+      "started_at": "2026-08-19"
     },
     {
       "id": "0.4",
