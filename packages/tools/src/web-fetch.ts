@@ -5,7 +5,9 @@
 import { CategorizedError, newId, WebFetchInput, type WebFetchResult } from "@lab/schemas";
 import type { ToolDef } from "./registry";
 
-const EXCERPT_CHARS = 4000;
+// 16k chars ≈ 4k tokens: long reference pages (e.g. postgresql.org synopsis
+// pages) truncated at 4k starved the researcher (P3 gate finding).
+const EXCERPT_CHARS = 16_000;
 
 // Naive HTML → text: good enough for excerpts; the full capture is the truth.
 export function htmlToText(html: string): string {

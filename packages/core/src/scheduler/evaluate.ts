@@ -7,6 +7,7 @@ import {
   type Db,
   type EvaluationCandidate,
   insertDecisionRecord,
+  insertEvaluation,
   selectAttemptOutput,
   selectEvaluationCandidates,
   selectEvidenceStatsByAttempt,
@@ -55,15 +56,40 @@ export async function sweepEvaluations(
       // parses as the real agent contract (fake-handler attempts skip), and
       // rejections ride the ordinary retry ladder (rule 10).
       const failures = await preAcceptChecks(db, c, minEvidence);
-      if (failures.length > 0) {
+      const rejects = failures.filter((f) => f.severity === "reject");
+      if (rejects.length > 0) {
         const rejection = await db.transaction((tx) =>
-          rejectSucceededAttempt(tx, c, failures, {
+          rejectSucceededAttempt(tx, c, rejects, {
             decisionType: "deterministic_check",
             actor: "check_runner",
           }),
         );
         (rejection.verdictKind === "task_failed" ? result.failed : result.retried).push(c.taskId);
         continue;
+      }
+      // Advisory checks (e.g. the vendor rule in V0.05): visible in the
+      // trace, never blocking — the Evaluator weighs them in P4.
+      for (const w of failures.filter((f) => f.severity === "warn")) {
+        await insertEvaluation(db, {
+          id: newId(),
+          runId: c.runId,
+          targetType: "attempt",
+          targetId: c.attemptId,
+          evaluatorType: "rule",
+          evaluatorName: w.check,
+          decision: "WARN",
+          reasons: [w.reason],
+          metadata: {},
+        });
+        await emitEvent(db, {
+          runId: c.runId,
+          taskId: c.taskId,
+          attemptId: c.attemptId,
+          type: "CHECK_WARNING",
+          kind: "warn",
+          actor: "check_runner",
+          payload: { check: w.check, reason: w.reason },
+        });
       }
       // Plan tasks: acceptance and PlanDelta interpretation are one
       // transaction (ticket 3.2, ADR-003/011) — a rejected delta rides the

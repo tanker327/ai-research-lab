@@ -247,7 +247,7 @@ async function rejectPlan(
   const rejection = await rejectSucceededAttempt(
     tx,
     c,
-    [{ check: "check:plan_interpreter", reason }],
+    [{ check: "check:plan_interpreter", reason, severity: "reject" as const }],
     { decisionType: "plan_rejection", actor: ACTOR },
   );
   return { outcome: "rejected", createdTaskIds: [], rationale: rejection.rationale };

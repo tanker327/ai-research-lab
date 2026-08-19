@@ -7,6 +7,12 @@ import type { ExtractorOutput, ResearcherOutput } from "@lab/schemas";
 export interface CheckFailure {
   check: string; // 'check:min_evidence' — evaluations.evaluator_name
   reason: string; // human-readable; trace control-blocks render verbatim (§24.2)
+  // 'reject' fails the attempt onto the ladder; 'warn' records an advisory
+  // evaluations row + warn event and lets the accept proceed. The vendor rule
+  // is advisory in V0.05 (P3 gate finding): a question about PostgreSQL makes
+  // postgresql.org "vendor" — applicability needs the Evaluator's judgment
+  // (P4), not a blanket deterministic reject.
+  severity: "reject" | "warn";
 }
 
 export interface EvidenceStats {
@@ -23,6 +29,7 @@ export function researcherPreAcceptChecks(output: ResearcherOutput): CheckFailur
     failures.push({
       check: "check:self_assessment",
       reason: `researcher self-assessed incomplete with low confidence; gaps: ${sa.gaps.join("; ") || "(none listed)"}`,
+      severity: "reject",
     });
   }
   return failures;
@@ -38,6 +45,7 @@ export function extractorPreAcceptChecks(
     failures.push({
       check: "check:min_evidence",
       reason: `research task requires ≥${minEvidence} live evidence items; found ${stats.evidenceCount}`,
+      severity: "reject",
     });
   }
   // Vendor rule: when everything supporting the extraction is
@@ -46,13 +54,15 @@ export function extractorPreAcceptChecks(
   if (stats.evidenceCount > 0 && stats.nonVendorCount === 0) {
     failures.push({
       check: "check:non_vendor",
-      reason: `vendor-product coverage requires ≥1 non-vendor-affiliated source; found 0/${stats.evidenceCount}`,
+      reason: `all ${stats.evidenceCount} evidence items are vendor-affiliated — an independent source would strengthen this`,
+      severity: "warn",
     });
   }
   if (output.claims.length === 0) {
     failures.push({
       check: "check:min_claims",
       reason: "extraction produced zero claims — the note does not support the question",
+      severity: "reject",
     });
   }
   return failures;

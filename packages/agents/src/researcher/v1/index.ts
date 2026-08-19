@@ -110,7 +110,7 @@ export const researcherV1: Agent<ResearcherInput, ResearcherAgentResult> = {
         // the failure as a tool_calls row.)
         observation = `TOOL ERROR: ${CategorizedError.from(err).message}`;
       }
-      messages.push({ role: "user", content: observation.slice(0, 8000) });
+      messages.push({ role: "user", content: observation.slice(0, 17_000) });
     }
     // Unreachable: the last iteration forces finish; a model that still won't
     // finish exhausts the schema into... this.

@@ -62,7 +62,8 @@ describe("check functions (pure)", () => {
       "check:min_evidence",
       "check:non_vendor",
     ]);
-    expect(failures.find((f) => f.check === "check:non_vendor")?.reason).toContain("found 0/2");
+    expect(failures.find((f) => f.check === "check:non_vendor")?.severity).toBe("warn");
+    expect(failures.filter((f) => f.severity === "reject")).toHaveLength(2);
     const ok = extractorPreAcceptChecks(
       GOOD_EXTRACTION,
       { evidenceCount: 3, nonVendorCount: 1 },
@@ -114,13 +115,33 @@ describe("checks in the evaluation sweep", () => {
       ...(await db.execute(sql`
       SELECT evaluator_name, decision FROM evaluations WHERE run_id = ${runId} ORDER BY evaluator_name`)),
     ];
-    expect(evals.map((e) => e.evaluator_name)).toEqual(["check:min_evidence", "check:non_vendor"]);
+    expect(evals.map((e) => e.evaluator_name)).toEqual(["check:min_evidence"]);
     const decisions = [
       ...(await db.execute(sql`
       SELECT type, rationale FROM decision_records WHERE task_id = ${taskId}`)),
     ];
     expect(decisions[0]?.type).toBe("deterministic_check");
     expect(String(decisions[0]?.rationale)).toContain("≥3 live evidence");
+  });
+
+  it("all-vendor evidence is advisory: WARN evaluation + event, attempt still accepted", async () => {
+    const { runId, taskId } = await seedExtractCandidate([
+      { vendor: true },
+      { vendor: true },
+      { vendor: null },
+    ]);
+    const result = await sweepEvaluations(db);
+    expect(result.accepted).toContain(taskId);
+    const evals = [
+      ...(await db.execute(sql`
+      SELECT evaluator_name, decision FROM evaluations WHERE run_id = ${runId}`)),
+    ];
+    expect(evals[0]).toMatchObject({ evaluator_name: "check:non_vendor", decision: "WARN" });
+    const events = [
+      ...(await db.execute(sql`
+      SELECT kind FROM events WHERE run_id = ${runId} AND type = 'CHECK_WARNING'`)),
+    ];
+    expect(events[0]?.kind).toBe("warn");
   });
 
   it("healthy extraction passes the checks and is accepted", async () => {

@@ -65,9 +65,9 @@ try {
       title: "phase-3 gate",
       userRequest:
         "Does PostgreSQL support transactional DDL, and what are the practical limits? " +
-        "Use the official PostgreSQL documentation as the primary source, e.g. " +
-        "https://www.postgresql.org/docs/current/ddl.html and " +
-        "https://www.postgresql.org/docs/current/mvcc.html",
+        "Primary sources (content pages, not chapter TOCs): " +
+        "https://wiki.postgresql.org/wiki/Transactional_DDL_in_PostgreSQL:_A_Competitive_Analysis " +
+        "and https://www.postgresql.org/docs/current/sql-createtable.html",
     }),
   });
   if (res.status !== 201) fail(`POST /runs → ${res.status}`);
