@@ -1,0 +1,47 @@
+{
+  "current_phase": "Phase 0 — Foundation",
+  "plan": "docs/implementation-plan.md §6",
+  "gate": "bun run migrate && bun test green; api/worker boot and connect",
+  "tasks": [
+    {
+      "id": "0.1",
+      "title": "Monorepo scaffold: bun workspaces, tsconfig, Biome, import-lint (core isolation rule)",
+      "status": "pending",
+      "priority": 1,
+      "depends_on": []
+    },
+    {
+      "id": "0.2",
+      "title": "infra/docker-compose.yml: postgres16 + volumes",
+      "status": "pending",
+      "priority": 2,
+      "depends_on": ["0.1"]
+    },
+    {
+      "id": "0.3",
+      "title": "packages/db: drizzle schema for all v0.2.1 tables + migration 0001 (schema from design §17/§24.7)",
+      "status": "pending",
+      "priority": 3,
+      "depends_on": ["0.1", "0.2"]
+    },
+    {
+      "id": "0.4",
+      "title": "packages/schemas: TaskStatus/AttemptStatus/EventKind enums + error taxonomy",
+      "status": "pending",
+      "priority": 4,
+      "depends_on": ["0.1"]
+    },
+    {
+      "id": "0.5",
+      "title": "Typed config + pino setup + uuidv7 helper",
+      "status": "pending",
+      "priority": 5,
+      "depends_on": ["0.1"]
+    }
+  ],
+  "known_issues": [],
+  "notes": [
+    "Docs foundation done pre-0.1: git init, docs/adr/ extracted (001-020), harness hooks/rules adopted from skills-management 2026-08-19.",
+    "Biome adopted as formatter/linter (user decision 2026-08-19) — wire into ticket 0.1 scaffold (biome.json + bun run lint/format)."
+  ]
+}
