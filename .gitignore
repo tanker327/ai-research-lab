@@ -4,3 +4,6 @@ node_modules/
 .env.*
 !.env.example
 dist/
+
+# runtime artifact store (ARTIFACT_ROOT) — content-addressed blobs, never source
+data/
