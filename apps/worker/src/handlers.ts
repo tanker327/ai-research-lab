@@ -30,6 +30,7 @@ async function fakeHandler(db: Db, work: ClaimedWork): Promise<void> {
         attemptId: work.attempt.id,
         excerpt: fake.excerpt,
       });
+      if (fake.sleepMs > 0) await Bun.sleep(fake.sleepMs);
       return;
   }
 }

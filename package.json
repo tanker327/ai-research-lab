@@ -16,7 +16,8 @@
     "dev:api": "bun --watch apps/api/src/index.ts",
     "dev:worker": "bun --watch apps/worker/src/main.ts",
     "test:hooks": "bun test ./.claude/hooks/hooks.test.ts",
-    "gate:p0": "bash scripts/gates/p0.sh"
+    "gate:p0": "bash scripts/gates/p0.sh",
+    "gate:p1": "bun scripts/gates/p1.ts"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.5.9",

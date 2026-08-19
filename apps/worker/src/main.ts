@@ -30,7 +30,16 @@ export async function runWorker({ once = false } = {}): Promise<void> {
   process.on("SIGTERM", () => stop("SIGTERM"));
 
   while (running) {
-    const work = await claimNextReadyTask(db, workerId);
+    // A claim failure (e.g. Postgres restarting — matrix row 7) is a pause,
+    // not a crash: idempotency lives in the DB, the worker just reconnects.
+    let work: ClaimedWork | null = null;
+    try {
+      work = await claimNextReadyTask(db, workerId);
+    } catch (err) {
+      log.error({ err }, "claim failed; backing off");
+      await Bun.sleep(config.POLL_INTERVAL_MS * 4);
+      continue;
+    }
     if (!work) {
       if (once) break;
       await Bun.sleep(config.POLL_INTERVAL_MS);
@@ -60,7 +69,13 @@ async function executeClaimed(
     scoped.info("attempt succeeded");
   } catch (err) {
     const error = CategorizedError.from(err);
-    await finishAttempt(db, work, { ok: false, error });
+    try {
+      await finishAttempt(db, work, { ok: false, error });
+    } catch (finishErr) {
+      // DB unreachable: the stale-claim sweep will fail this attempt for us.
+      scoped.error({ err: finishErr }, "could not record failure; leaving to stale sweep");
+      return;
+    }
     scoped.warn({ category: error.category, err: error.message }, "attempt failed");
   }
 }

@@ -18,6 +18,9 @@ export const FakeTaskInput = z.object({
       z.object({
         behavior: z.literal("side_effect"),
         excerpt: z.string().default("fake evidence"),
+        // sleep AFTER writing — the gate SIGKILLs a worker inside this window
+        // to prove a dead attempt's rows never go live.
+        sleepMs: z.number().int().nonnegative().default(0),
       }),
     ])
     .default({ behavior: "sleep", ms: 10 }),

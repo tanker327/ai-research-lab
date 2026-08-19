@@ -12,6 +12,11 @@
     "skipLibCheck": true,
     "noEmit": true,
     "resolveJsonModule": true,
-    "isolatedModules": true
+    "isolatedModules": true,
+    "paths": {
+      "@lab/core": ["./packages/core/src/index.ts"],
+      "@lab/db": ["./packages/db/src/index.ts"],
+      "@lab/schemas": ["./packages/schemas/src/index.ts"]
+    }
   }
 }

@@ -83,9 +83,12 @@ export async function startRun(db: Db, req: StartRunInput): Promise<string> {
     });
     await emitEvent(tx, { runId, type: "RUN_CREATED", kind: "info", actor: ACTOR });
 
-    for (const t of req.tasks) {
+    // Resolve ids first: a task may omit its id, but a dependsOn target must
+    // name a real (explicit) id from this list.
+    const withIds = req.tasks.map((t) => ({ ...t, id: t.id ?? newId() }));
+    for (const t of withIds) {
       await insertTask(tx, {
-        id: t.id ?? newId(),
+        id: t.id,
         runId,
         type: t.type,
         title: t.title,
@@ -96,12 +99,12 @@ export async function startRun(db: Db, req: StartRunInput): Promise<string> {
         agentRole: "fake", // Phase 2 wires real agent resolution
       });
     }
-    for (const t of req.tasks) {
+    for (const t of withIds) {
       for (const dep of t.dependsOn ?? []) {
-        if (!t.id) {
+        if (!withIds.some((o) => o.id === dep)) {
           throw new CategorizedError(
             "PERMANENT_INFRA",
-            "tasks with dependencies must carry explicit ids",
+            `dependsOn ${dep} does not name a task in this run`,
           );
         }
         await insertTaskDependency(tx, t.id, dep);
