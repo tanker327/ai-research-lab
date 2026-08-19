@@ -17,5 +17,5 @@ bun run check
 echo "→ api boot"
 bun apps/api/src/index.ts
 echo "→ worker boot"
-bun apps/worker/src/main.ts
+WORKER_RUN_ONCE=1 bun apps/worker/src/main.ts
 echo "✓ Phase 0 gate passed"
