@@ -12,6 +12,7 @@ import {
 } from "@lab/db";
 import { CategorizedError, newId, ResearchStrategy, TaskType } from "@lab/schemas";
 import { emitEvent } from "../events";
+import { acceptResearchAttempt } from "../extract";
 import { acceptAttempt } from "../liveness";
 import { applyAcceptedPlan } from "../plan";
 import { decideRetry, enforceAttemptCap, type RetryVerdict } from "../retry";
@@ -41,6 +42,13 @@ export async function sweepEvaluations(
       if (c.taskType === "plan") {
         const applied = await applyAcceptedPlan(db, c, maxAttemptsDefault);
         (applied.outcome === "applied" ? result.accepted : result.retried).push(c.taskId);
+        continue;
+      }
+      // Two-pass research (ADR-012): accepting a research attempt creates its
+      // extract task in the same transaction.
+      if (c.taskType === "research") {
+        await acceptResearchAttempt(db, c, maxAttemptsDefault);
+        result.accepted.push(c.taskId);
         continue;
       }
       await acceptAttempt(db, c.attemptId, ACTOR);

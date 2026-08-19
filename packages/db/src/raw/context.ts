@@ -149,6 +149,9 @@ export interface TaskContextRow {
   strategy: string | null;
   input: Record<string, unknown>;
   successCriteria: string[];
+  planStage: number;
+  specVersion: number;
+  priority: number;
 }
 
 export async function selectTaskForContext(
@@ -156,7 +159,8 @@ export async function selectTaskForContext(
   taskId: string,
 ): Promise<TaskContextRow | null> {
   const rows = await tx.execute(sql`
-    SELECT id, run_id, type, title, strategy, input, success_criteria
+    SELECT id, run_id, type, title, strategy, input, success_criteria,
+           plan_stage, spec_version, priority
     FROM research_tasks WHERE id = ${taskId}`);
   const r = [...rows][0];
   if (!r) return null;
@@ -168,5 +172,8 @@ export async function selectTaskForContext(
     strategy: (r.strategy as string | null) ?? null,
     input: (r.input as Record<string, unknown>) ?? {},
     successCriteria: (r.success_criteria as string[]) ?? [],
+    planStage: r.plan_stage as number,
+    specVersion: r.spec_version as number,
+    priority: r.priority as number,
   };
 }

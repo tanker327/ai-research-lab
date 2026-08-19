@@ -8,6 +8,7 @@ export * from "./raw/context";
 export * from "./raw/decisions";
 export * from "./raw/evaluation";
 export * from "./raw/events";
+export * from "./raw/extraction";
 export * from "./raw/liveness";
 export * from "./raw/plan";
 export * from "./raw/runs";

@@ -43,9 +43,11 @@
     {
       "id": "3.4",
       "title": "Extractor v1: guided decoding, auto-created extract task after research accept",
-      "status": "pending",
+      "status": "completed",
       "priority": 5,
-      "depends_on": ["3.3"]
+      "depends_on": ["3.3"],
+      "started_at": "2026-08-19",
+      "completed_at": "2026-08-19"
     },
     {
       "id": "3.5",

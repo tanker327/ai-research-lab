@@ -19,6 +19,9 @@ export interface AgentContext {
   saveArtifact(
     a: Omit<SaveArtifact, "id" | "runId" | "taskId" | "attemptId">,
   ): Promise<SavedArtifact>;
+  // Text content of an artifact referenced by the built input. Inputs never
+  // reference type='reasoning' artifacts (ADR-018) — enforced in @lab/context.
+  readArtifact(artifactId: string): Promise<string>;
   searchAvailable: boolean; // D4: web_search registered only when SEARXNG is configured
   limits: { maxToolCalls: number }; // ADR-016: loop caps are code, not prompt
   signal: AbortSignal;

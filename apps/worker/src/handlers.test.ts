@@ -260,3 +260,90 @@ describe("researcher dispatch (3.3)", () => {
     expect(note[0]?.type).toBe("research_note");
   });
 });
+
+// ---- Extractor dispatch (ticket 3.4): stubbed hub, real side-effect rows ----
+describe("extractor dispatch (3.4)", () => {
+  async function seedExtractWork(deps: ReturnType<typeof agentDeps>) {
+    const work = await seedWork({});
+    // A real note artifact the handler's readArtifact can load.
+    const saved = await deps.artifacts.save(db, {
+      id: newId(),
+      runId: work.task.runId,
+      taskId: work.task.id,
+      attemptId: work.attempt.id,
+      type: "research_note",
+      name: "note",
+      content: "# Findings\nQwen3.6-27B supports FP8 per official docs.",
+      createdBy: "test",
+    });
+    const input = {
+      noteArtifactId: saved.id,
+      sourcesVisited: [{ url: "https://docs.example.com", retrievedAt: "2026-08-19T00:00:00Z" }],
+      question: "quantizations?",
+    };
+    await sql`UPDATE research_tasks SET type = 'extract', agent_role = 'extractor',
+              input = ${JSON.stringify(input)}::jsonb WHERE id = ${work.task.id}`;
+    return { ...work, task: { ...work.task, type: "extract" as const, input } };
+  }
+
+  const EXTRACTION = {
+    claims: [
+      {
+        statement: "Qwen3.6-27B supports FP8 quantization",
+        subjectKey: "model:qwen3.6-27b",
+        predicateKey: "quantization_fp8",
+        valueText: "supported",
+        type: "fact",
+        confidence: "high",
+        evidenceRefs: [0],
+      },
+    ],
+    evidence: [
+      {
+        excerpt: "Qwen3.6-27B supports FP8 per official docs.",
+        sourceUrl: "https://docs.example.com",
+        sourceClass: "official_docs",
+        publisher: null,
+        publishedAt: null,
+        vendorAffiliated: true,
+        benchmarkOrigin: null,
+      },
+    ],
+    contradictionsNoticed: [],
+    unanswered: [],
+  };
+
+  it("writes attempt-owned evidence + raw_claims with the ref mapping preserved", async () => {
+    const deps = agentDeps(stubHubFetch(EXTRACTION));
+    const registry3 = createHandlerRegistry(deps);
+    const work = await seedExtractWork(deps);
+
+    await registry3.extract(db, work);
+
+    const claims = await sql`SELECT id, subject_key, attempt_id FROM raw_claims
+                             WHERE attempt_id = ${work.attempt.id}`;
+    expect(claims).toHaveLength(1);
+    expect(claims[0]?.subject_key).toBe("model:qwen3.6-27b");
+    const evidence = await sql`SELECT metadata, source_class FROM evidence
+                               WHERE attempt_id = ${work.attempt.id}`;
+    expect(evidence).toHaveLength(1);
+    const meta = evidence[0]?.metadata as { rawClaimIds: string[] } | undefined;
+    expect(meta?.rawClaimIds).toEqual([claims[0]?.id]);
+    const attempt = await sql`SELECT output FROM attempts WHERE id = ${work.attempt.id}`;
+    const out = attempt[0]?.output as { claims: unknown[] } | undefined;
+    expect(out?.claims).toHaveLength(1);
+  });
+
+  it("an invented sourceUrl is a SCHEMA_FAILURE (re-extract, never re-research)", async () => {
+    const bad = structuredClone(EXTRACTION);
+    if (bad.evidence[0]) bad.evidence[0].sourceUrl = "https://invented.example.com";
+    const deps = agentDeps(stubHubFetch(bad));
+    const registry3 = createHandlerRegistry(deps);
+    const work = await seedExtractWork(deps);
+    await expect(registry3.extract(db, work)).rejects.toMatchObject({
+      category: "SCHEMA_FAILURE",
+    });
+    const claims = await sql`SELECT id FROM raw_claims WHERE attempt_id = ${work.attempt.id}`;
+    expect(claims).toHaveLength(0); // nothing persisted on failure
+  });
+});

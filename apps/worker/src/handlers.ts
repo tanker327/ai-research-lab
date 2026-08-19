@@ -3,13 +3,15 @@
 // dispatch (implementation-plan §5.5) starts with the Planner (ticket 3.2) —
 // Researcher/Extractor land with 3.3/3.4. A handler either returns (attempt
 // SUCCEEDED) or throws a CategorizedError (attempt FAILED with that category).
-import { plannerV1, researcherV1 } from "@lab/agents";
+import { extractorV1, plannerV1, researcherV1 } from "@lab/agents";
 import type { ContextBuilder } from "@lab/context";
 import { type ClaimedWork, type Config, emitEvent } from "@lab/core";
 import {
   type ArtifactStore,
   type Db,
+  insertEvidenceRow,
   insertFakeEvidence,
+  insertRawClaimRow,
   selectToolCallsByAttempt,
   updateAttemptInput,
   updateAttemptOutput,
@@ -105,6 +107,10 @@ function agentContext(
         taskId: work.task.id,
         attemptId: work.attempt.id,
       }),
+    readArtifact: async (artifactId: string) => {
+      const { content } = await deps.artifacts.read(artifactId, db);
+      return content.toString("utf8");
+    },
     searchAvailable: deps.config.SEARXNG_BASE_URL !== undefined,
     limits: { maxToolCalls: deps.config.RESEARCHER_MAX_TOOL_CALLS },
     signal: new AbortController().signal,
@@ -177,6 +183,74 @@ function researcherHandler(deps: AgentDeps): TaskHandler {
   };
 }
 
+function extractorHandler(deps: AgentDeps): TaskHandler {
+  return async (db, work) => {
+    const input = await deps.context.forExtractor(work.task.id);
+    await updateAttemptInput(db, work.attempt.id, input); // R12: verbatim
+
+    const route = resolveRoute("extractor", work.attempt.attemptNumber, tierModels(deps.config));
+    const output = extractorV1.outputSchema.parse(
+      await extractorV1.run(input, agentContext(deps, db, work, "extractor", route)),
+    );
+
+    // Attempt-owned side-effect rows (rule 5, ADR-014) in one transaction:
+    // evidence.metadata.rawClaimIds preserves the claim↔evidence mapping for
+    // canonicalization's LINK step (3.5) without a schema change.
+    await db.transaction(async (tx) => {
+      const evidenceIds = output.evidence.map(() => newId());
+      const claimIds = output.claims.map(() => newId());
+      const claimsByEvidence = new Map<number, string[]>();
+      output.claims.forEach((claim, ci) => {
+        for (const ref of claim.evidenceRefs) {
+          const claimId = claimIds[ci];
+          if (claimId === undefined) continue;
+          claimsByEvidence.set(ref, [...(claimsByEvidence.get(ref) ?? []), claimId]);
+        }
+      });
+      const snapshotByUrl = new Map(
+        input.sourcesVisited.map((s) => [s.url, s.snapshotArtifactId ?? null]),
+      );
+      for (const [i, e] of output.evidence.entries()) {
+        const id = evidenceIds[i];
+        if (id === undefined) continue;
+        await insertEvidenceRow(tx, {
+          id,
+          runId: work.task.runId,
+          taskId: work.task.id,
+          attemptId: work.attempt.id,
+          sourceClass: e.sourceClass,
+          sourceUrl: e.sourceUrl,
+          publisher: e.publisher,
+          publishedAt: e.publishedAt,
+          vendorAffiliated: e.vendorAffiliated,
+          benchmarkOrigin: e.benchmarkOrigin,
+          excerpt: e.excerpt,
+          artifactId: e.sourceUrl ? (snapshotByUrl.get(e.sourceUrl) ?? null) : null,
+          metadata: { rawClaimIds: claimsByEvidence.get(i) ?? [] },
+        });
+      }
+      for (const [i, c] of output.claims.entries()) {
+        const id = claimIds[i];
+        if (id === undefined) continue;
+        await insertRawClaimRow(tx, {
+          id,
+          runId: work.task.runId,
+          taskId: work.task.id,
+          attemptId: work.attempt.id,
+          statement: c.statement,
+          subjectKey: c.subjectKey,
+          predicateKey: c.predicateKey,
+          valueText: c.valueText,
+          type: c.type,
+          confidence: c.confidence,
+          createdByAgent: "extractor/v1",
+        });
+      }
+      await updateAttemptOutput(tx, work.attempt.id, output);
+    });
+  };
+}
+
 function notYetImplemented(type: string, ticket: string): TaskHandler {
   return async () => {
     throw new CategorizedError(
@@ -212,7 +286,7 @@ export function createHandlerRegistry(deps?: AgentDeps): Record<TaskType, TaskHa
   return {
     plan: withFakeEscape(plannerHandler(deps)),
     research: withFakeEscape(researcherHandler(deps)),
-    extract: withFakeEscape(notYetImplemented("extract", "3.4")),
+    extract: withFakeEscape(extractorHandler(deps)),
     analyze: withFakeEscape(notYetImplemented("analyze", "4.x")),
     evaluate: withFakeEscape(notYetImplemented("evaluate", "4.x")),
     synthesize: withFakeEscape(notYetImplemented("synthesize", "5.x")),

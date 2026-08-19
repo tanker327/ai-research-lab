@@ -79,6 +79,9 @@ function makeCtx(model: ModelClient, opts: CtxOpts = {}) {
         deduped: false,
       };
     },
+    async readArtifact() {
+      return "note";
+    },
     searchAvailable: opts.searchAvailable ?? false,
     limits: { maxToolCalls: opts.maxToolCalls ?? 3 },
     signal: new AbortController().signal,

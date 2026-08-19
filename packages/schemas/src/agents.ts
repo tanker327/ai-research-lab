@@ -165,6 +165,57 @@ export const ResearcherOutput = z.object({
 });
 export type ResearcherOutput = z.infer<typeof ResearcherOutput>;
 
+// ---- Extractor (design §6.3, ticket 3.4) ----
+// Pass 2: guided decoding on the fast tier. Claims/evidence are PROPOSALS —
+// the worker writes them as attempt-owned rows; they become live only when
+// the attempt is accepted (ADR-014), and canonicalization (3.5) dedupes them.
+
+export const ProposedClaim = z.object({
+  statement: z.string().min(1).max(1000),
+  subjectKey: z.string().min(1).max(200), // 'model:qwen3.6-27b'
+  predicateKey: z.string().min(1).max(200), // 'param_count'
+  valueText: z.string().max(500).nullable(), // normalized value for conflict detection
+  type: z.enum(["fact", "comparison", "inference", "recommendation", "uncertainty"]),
+  confidence: z.enum(["low", "medium", "high"]),
+  // Indexes into ExtractorOutput.evidence supporting this claim.
+  evidenceRefs: z.array(z.number().int().min(0).max(99)).max(10),
+});
+export type ProposedClaim = z.infer<typeof ProposedClaim>;
+
+export const ProposedEvidence = z.object({
+  excerpt: z.string().min(1).max(2000), // the actual supporting text from the note
+  sourceUrl: z.string().max(2000).nullable(), // must come from sourcesVisited
+  sourceClass: z.enum([
+    "official_docs",
+    "paper",
+    "independent_benchmark",
+    "vendor_benchmark",
+    "news",
+    "community",
+    "user_supplied",
+  ]),
+  publisher: z.string().max(300).nullable(),
+  publishedAt: z.string().max(40).nullable(), // ISO date if the source shows one
+  vendorAffiliated: z.boolean().nullable(), // null = unknown (checks treat as vendor)
+  benchmarkOrigin: z.string().max(200).nullable(), // underlying benchmark identity (§9)
+});
+export type ProposedEvidence = z.infer<typeof ProposedEvidence>;
+
+export const ExtractorOutput = z.object({
+  claims: z.array(ProposedClaim).max(50),
+  evidence: z.array(ProposedEvidence).max(100),
+  contradictionsNoticed: z
+    .array(
+      z.object({
+        subject: z.string().max(200),
+        detail: z.string().max(1000),
+      }),
+    )
+    .max(20),
+  unanswered: z.array(shortText).max(20),
+});
+export type ExtractorOutput = z.infer<typeof ExtractorOutput>;
+
 // The extract task's `input` column IS this shape, written fully concrete by
 // the Control Plane when the research attempt is accepted (ADR-011, plan D5) —
 // so the builder is a validation pass, not a query.
