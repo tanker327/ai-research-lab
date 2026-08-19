@@ -1,69 +1,71 @@
 {
-  "current_phase": "Phase 0 — Foundation",
-  "plan": "docs/implementation-plan.md §6",
-  "gate": "bun run migrate && bun test green; api/worker boot and connect",
+  "current_phase": "Phase 1 — Deterministic Task Engine",
+  "plan": "docs/plans/phase-1-plan.md (approved 2026-08-19); tickets from docs/implementation-plan.md §6 Phase 1",
+  "gate": "bun run gate:p1 green twice in a row; bun run check green; zero LLM code in execution path",
   "tasks": [
     {
-      "id": "0.1",
-      "title": "Monorepo scaffold: bun workspaces, tsconfig, Biome, import-lint (core isolation rule)",
-      "status": "completed",
+      "id": "1.1",
+      "title": "Task/attempt/run state machines + assertTransition (§5.1) — pure fns, exhaustive tests",
+      "status": "in_progress",
       "priority": 1,
       "depends_on": [],
-      "completed_at": "2026-08-19",
-      "commit": "befa63a"
+      "started_at": "2026-08-19"
     },
     {
-      "id": "0.2",
-      "title": "infra/docker-compose.yml: postgres16 + volumes",
-      "status": "completed",
+      "id": "1.5",
+      "title": "Retry ladder decideRetry (§5.4) + ResearchStrategy/QualityVerdict/DecisionRecord shapes in @lab/schemas",
+      "status": "pending",
       "priority": 2,
-      "depends_on": [
-        "0.1"
-      ],
-      "completed_at": "2026-08-19",
-      "commit": "1019f71"
+      "depends_on": ["1.1"]
     },
     {
-      "id": "0.3",
-      "title": "packages/db: drizzle schema for all v0.2.1 tables + migration 0001 (schema from design §17/§24.7)",
-      "status": "completed",
+      "id": "1.2",
+      "title": "Atomic claim (§5.2, raw SQL in packages/db/src/raw per D1) + worker loop with fake handler registry",
+      "status": "pending",
       "priority": 3,
-      "depends_on": [
-        "0.1",
-        "0.2"
-      ],
-      "completed_at": "2026-08-19",
-      "commit": "0cf33d6"
+      "depends_on": ["1.1"]
     },
     {
-      "id": "0.4",
-      "title": "packages/schemas: TaskStatus/AttemptStatus/EventKind enums + error taxonomy",
-      "status": "completed",
+      "id": "1.3",
+      "title": "Readiness sweep + stale-claim release (scheduler; §9.2/§9.3 queries)",
+      "status": "pending",
       "priority": 4,
-      "depends_on": [
-        "0.1"
-      ],
-      "completed_at": "2026-08-19",
-      "commit": "1027584"
+      "depends_on": ["1.2"]
     },
     {
-      "id": "0.5",
-      "title": "Typed config + pino setup + uuidv7 helper",
-      "status": "completed",
+      "id": "1.4",
+      "title": "Accept/supersede liveness transaction (§5.3) over raw fns; canonicalization no-op stub",
+      "status": "pending",
       "priority": 5,
-      "depends_on": [
-        "0.1"
-      ],
-      "completed_at": "2026-08-19",
-      "commit": "0b79157"
+      "depends_on": ["1.2"]
+    },
+    {
+      "id": "1.6",
+      "title": "emitEvent (same-tx write + NOTIFY per D2) + api LISTEN + SSE stream with Last-Event-ID cursor",
+      "status": "pending",
+      "priority": 6,
+      "depends_on": ["1.4"]
+    },
+    {
+      "id": "1.7",
+      "title": "Run coordinator: phase transitions, cancellation, cycle-guard counter, budget warn stubs",
+      "status": "pending",
+      "priority": 7,
+      "depends_on": ["1.3", "1.6"]
+    },
+    {
+      "id": "1.8",
+      "title": "API surface: POST /runs (explicit task list), GET run/tasks/events, cancel + scripts/gates/p1.ts",
+      "status": "pending",
+      "priority": 8,
+      "depends_on": ["1.7"]
     }
   ],
   "known_issues": [],
   "notes": [
-    "Docs foundation done pre-0.1: git init, docs/adr/ extracted (001-020), harness hooks/rules adopted from skills-management 2026-08-19.",
-    "Biome adopted as formatter/linter (user decision 2026-08-19) — wire into ticket 0.1 scaffold (biome.json + bun run lint/format).",
-    "Ticket 0.2: host port 5432 is taken (juicer), 5433 (ai-hub), 5435 (skl) — map this project's Postgres to a free port, e.g. 5434.",
-    "Phase 0 gate (bun run gate:p0) passed 2026-08-19 — phase complete; next session starts Phase 1 (ticket 1.1 state machines, the first real test file).",
-    "Phase 1 plan drafted and approved-in-principle 2026-08-19: docs/plans/phase-1-plan.md — decisions D1 (raw SQL in packages/db/src/raw, core orchestrates) and D2 (LISTEN/NOTIFY event fanout with poll fallback). Seed Phase 1 tasks from it when starting Session A."
+    "Phase 0 archived to progress/archive/phase-0.json (gate passed 2026-08-19).",
+    "Session grouping per phase-1-plan: A=1.1+1.5 (pure), B=1.2+1.3 (concurrency), C=1.4+1.6 (liveness+events), D=1.7+1.8+gate.",
+    "Decisions D1 (raw SQL in packages/db/src/raw, core orchestrates) and D2 (LISTEN/NOTIFY + 2s poll fallback) are settled — see plan doc.",
+    "Late-phase pre-flight (~30 min): ai-hub reachability + vLLM response_format json_schema check before Phase 2 starts."
   ]
 }

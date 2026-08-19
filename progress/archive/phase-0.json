@@ -1,0 +1,60 @@
+{
+  "current_phase": "Phase 0 \u2014 Foundation",
+  "plan": "docs/implementation-plan.md \u00a76",
+  "gate": "bun run migrate && bun test green; api/worker boot and connect",
+  "tasks": [
+    {
+      "id": "0.1",
+      "title": "Monorepo scaffold: bun workspaces, tsconfig, Biome, import-lint (core isolation rule)",
+      "status": "completed",
+      "priority": 1,
+      "depends_on": [],
+      "completed_at": "2026-08-19",
+      "commit": "befa63a"
+    },
+    {
+      "id": "0.2",
+      "title": "infra/docker-compose.yml: postgres16 + volumes",
+      "status": "completed",
+      "priority": 2,
+      "depends_on": ["0.1"],
+      "completed_at": "2026-08-19",
+      "commit": "1019f71"
+    },
+    {
+      "id": "0.3",
+      "title": "packages/db: drizzle schema for all v0.2.1 tables + migration 0001 (schema from design \u00a717/\u00a724.7)",
+      "status": "completed",
+      "priority": 3,
+      "depends_on": ["0.1", "0.2"],
+      "completed_at": "2026-08-19",
+      "commit": "0cf33d6"
+    },
+    {
+      "id": "0.4",
+      "title": "packages/schemas: TaskStatus/AttemptStatus/EventKind enums + error taxonomy",
+      "status": "completed",
+      "priority": 4,
+      "depends_on": ["0.1"],
+      "completed_at": "2026-08-19",
+      "commit": "1027584"
+    },
+    {
+      "id": "0.5",
+      "title": "Typed config + pino setup + uuidv7 helper",
+      "status": "completed",
+      "priority": 5,
+      "depends_on": ["0.1"],
+      "completed_at": "2026-08-19",
+      "commit": "0b79157"
+    }
+  ],
+  "known_issues": [],
+  "notes": [
+    "Docs foundation done pre-0.1: git init, docs/adr/ extracted (001-020), harness hooks/rules adopted from skills-management 2026-08-19.",
+    "Biome adopted as formatter/linter (user decision 2026-08-19) \u2014 wire into ticket 0.1 scaffold (biome.json + bun run lint/format).",
+    "Ticket 0.2: host port 5432 is taken (juicer), 5433 (ai-hub), 5435 (skl) \u2014 map this project's Postgres to a free port, e.g. 5434.",
+    "Phase 0 gate (bun run gate:p0) passed 2026-08-19 \u2014 phase complete; next session starts Phase 1 (ticket 1.1 state machines, the first real test file).",
+    "Phase 1 plan drafted and approved-in-principle 2026-08-19: docs/plans/phase-1-plan.md \u2014 decisions D1 (raw SQL in packages/db/src/raw, core orchestrates) and D2 (LISTEN/NOTIFY event fanout with poll fallback). Seed Phase 1 tasks from it when starting Session A."
+  ]
+}
