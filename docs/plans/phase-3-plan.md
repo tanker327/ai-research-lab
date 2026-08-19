@@ -18,6 +18,7 @@
 
 ## Findings during the phase (append-only)
 
+- **No `z.record` in agent output schemas (3.7 live run):** vLLM guided decoding returns upstream 500 on open-keyed objects (`additionalProperties` schemas). PlannedTask.input became a CLOSED, fully-bounded nullable-field object; the interpreter builds the task's input record dropping nulls. NORM alongside the bounded-arrays rule: agent schemas contain no records/open maps.
 - **Merge direction must be deterministic (3.5):** naive trigram merging ping-pongs two near-dup subjects across re-runs (each folds into the other). Rule: only merge INTO a subject that sorts lexicographically earlier — re-runs converge on one row, keeping canonical rows a pure function of the live set.
 - **ai v7 forbids system-role rows in `messages` (3.2):** `AI_InvalidPromptError` at runtime — the system prompt must go through `generateText`'s separate `system` option. ModelClient already exposes it; agents pass `system: SYSTEM`, never a system message.
 

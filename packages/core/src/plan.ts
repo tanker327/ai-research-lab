@@ -153,7 +153,12 @@ export async function applyAcceptedPlan(
     for (const t of plan.planDelta.addTasks) {
       const id = idFor.get(t.localId);
       if (!id) continue;
-      const input = { ...t.input };
+      // Closed PlannedTaskInput → the task's input record; nulls are "field
+      // not used", never stored (ADR-011: concrete values only).
+      const input: Record<string, unknown> = {};
+      for (const [k, v] of Object.entries(t.input)) {
+        if (v !== null) input[k] = v;
+      }
       if (t.type === "research" && t.researchQuestion && input.researchQuestion === undefined) {
         input.researchQuestion = t.researchQuestion;
       }

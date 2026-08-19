@@ -80,6 +80,19 @@ export const PlannerSpecDraft = ResearchSpecification.omit({
 });
 export type PlannerSpecDraft = z.infer<typeof PlannerSpecDraft>;
 
+// CLOSED input shape (P3 norm): vLLM guided decoding 500s on open-keyed
+// objects (z.record → additionalProperties), so planned-task input is an
+// explicit, fully-bounded set of nullable fields. The plan interpreter turns
+// it into the task's input record, dropping nulls (ADR-011: concrete values
+// only).
+export const PlannedTaskInput = z.object({
+  researchQuestion: z.string().max(4000).nullable(),
+  seedUrls: z.array(z.string().max(2000)).max(10).nullable(),
+  excludedSources: z.array(z.string().max(2000)).max(20).nullable(),
+  focus: z.string().max(2000).nullable(), // analyze/synthesize guidance
+});
+export type PlannedTaskInput = z.infer<typeof PlannedTaskInput>;
+
 export const PlannedTask = z.object({
   localId: z.string().min(1).max(60),
   type: TaskType,
@@ -94,7 +107,7 @@ export const PlannedTask = z.object({
   parallelizable: z.boolean(),
   // Fully concrete at creation (ADR-011) — the interpreter enforces this with
   // the placeholder guard; the schema can only bound the shape.
-  input: z.record(z.string(), z.unknown()),
+  input: PlannedTaskInput,
 });
 export type PlannedTask = z.infer<typeof PlannedTask>;
 

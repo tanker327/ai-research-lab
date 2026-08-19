@@ -50,6 +50,9 @@ function plannerOutput(overrides: Partial<PlannerOutput["planDelta"]> = {}): Pla
           parallelizable: true,
           input: {
             researchQuestion: "Which open-weight coding models fit in 24GB VRAM as of 2026?",
+            seedUrls: ["https://example.com/models"],
+            excludedSources: null,
+            focus: null,
           },
         },
         {
@@ -61,7 +64,12 @@ function plannerOutput(overrides: Partial<PlannerOutput["planDelta"]> = {}): Pla
           dependencies: ["d1"],
           successCriteria: [],
           parallelizable: false,
-          input: { focus: "vram fit" },
+          input: {
+            researchQuestion: null,
+            seedUrls: null,
+            excludedSources: null,
+            focus: "vram fit",
+          },
         },
       ],
       cancelTaskIds: [],
@@ -146,7 +154,14 @@ describe("applyAcceptedPlan via sweepEvaluations", () => {
   it("placeholder input → attempt REJECTED, ladder retries, decision recorded (ADR-011)", async () => {
     const bad = plannerOutput();
     const first = bad.planDelta.addTasks[0];
-    if (first) first.input = { researchQuestion: "Investigate {{candidate}} model" };
+    if (first) {
+      first.input = {
+        researchQuestion: "Investigate {{candidate}} model",
+        seedUrls: null,
+        excludedSources: null,
+        focus: null,
+      };
+    }
     const { taskId, attemptId } = await seedPlanCandidate(bad);
     const result = await sweepEvaluations(db);
     expect(result.retried).toContain(taskId);

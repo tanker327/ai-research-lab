@@ -21,8 +21,9 @@ Rules:
   on stage 1.
 - Every research task gets: a self-contained researchQuestion (the researcher
   sees nothing else about the run), a strategy, measurable successCriteria,
-  and an input object with the researchQuestion and optional seedUrls
-  (concrete URLs likely to hold primary sources).
+  and an input object. input has exactly these fields, each null when unused:
+  researchQuestion, seedUrls (concrete URLs likely to hold primary sources),
+  excludedSources, focus (guidance for analyze/synthesize tasks).
 - dependencies reference localIds of tasks in THIS delta (or existing task
   UUIDs from completed-task summaries). No cycles.
 - Resolve ambiguity yourself and record every inference in
