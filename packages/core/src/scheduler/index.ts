@@ -40,7 +40,12 @@ export function startScheduler(
   // complete its run in the same tick.
   const readiness = setInterval(
     guard("control", async () => {
-      const evaluated = await sweepEvaluations(db);
+      const evaluated = await sweepEvaluations(
+        db,
+        undefined,
+        config.DEFAULT_MAX_ATTEMPTS,
+        config.MIN_EVIDENCE_PER_TASK,
+      );
       const { ready, blocked } = await sweepReadiness(db);
       const runs = await sweepRunCompletion(db);
       if (

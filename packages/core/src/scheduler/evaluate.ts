@@ -7,14 +7,25 @@ import {
   type Db,
   type EvaluationCandidate,
   insertDecisionRecord,
+  selectAttemptOutput,
   selectEvaluationCandidates,
+  selectEvidenceStatsByAttempt,
   updateTaskStatus,
 } from "@lab/db";
-import { CategorizedError, newId, ResearchStrategy, TaskType } from "@lab/schemas";
+import {
+  CategorizedError,
+  ExtractorOutput,
+  newId,
+  ResearcherOutput,
+  ResearchStrategy,
+  TaskType,
+} from "@lab/schemas";
+import { extractorPreAcceptChecks, researcherPreAcceptChecks } from "../checks";
 import { emitEvent } from "../events";
 import { acceptResearchAttempt } from "../extract";
 import { acceptAttempt } from "../liveness";
 import { applyAcceptedPlan } from "../plan";
+import { rejectSucceededAttempt } from "../quality";
 import { decideRetry, enforceAttemptCap, type RetryVerdict } from "../retry";
 import { assertTaskTransition } from "../state/task";
 
@@ -33,12 +44,27 @@ export async function sweepEvaluations(
   db: Db,
   now = () => new Date(),
   maxAttemptsDefault = 3,
+  minEvidence = 3,
 ): Promise<EvaluationSweepResult> {
   const result: EvaluationSweepResult = { accepted: [], retried: [], failed: [], acceptedRuns: [] };
   const candidates = await selectEvaluationCandidates(db);
 
   for (const c of candidates) {
     if (c.attemptStatus === "SUCCEEDED") {
+      // Deterministic pre-accept checks (3.6) — they run only when the output
+      // parses as the real agent contract (fake-handler attempts skip), and
+      // rejections ride the ordinary retry ladder (rule 10).
+      const failures = await preAcceptChecks(db, c, minEvidence);
+      if (failures.length > 0) {
+        const rejection = await db.transaction((tx) =>
+          rejectSucceededAttempt(tx, c, failures, {
+            decisionType: "deterministic_check",
+            actor: "check_runner",
+          }),
+        );
+        (rejection.verdictKind === "task_failed" ? result.failed : result.retried).push(c.taskId);
+        continue;
+      }
       // Plan tasks: acceptance and PlanDelta interpretation are one
       // transaction (ticket 3.2, ADR-003/011) — a rejected delta rides the
       // same retry ladder as any other quality rejection.
@@ -102,6 +128,23 @@ export async function sweepEvaluations(
     (verdict.kind === "task_failed" ? result.failed : result.retried).push(c.taskId);
   }
   return result;
+}
+
+async function preAcceptChecks(
+  db: Db,
+  c: EvaluationCandidate,
+  minEvidence: number,
+): Promise<ReturnType<typeof researcherPreAcceptChecks>> {
+  if (c.taskType !== "research" && c.taskType !== "extract") return [];
+  const output = await selectAttemptOutput(db, c.attemptId);
+  if (c.taskType === "research") {
+    const parsed = ResearcherOutput.safeParse(output);
+    return parsed.success ? researcherPreAcceptChecks(parsed.data) : [];
+  }
+  const parsed = ExtractorOutput.safeParse(output);
+  if (!parsed.success) return [];
+  const stats = await selectEvidenceStatsByAttempt(db, c.attemptId);
+  return extractorPreAcceptChecks(parsed.data, stats, minEvidence);
 }
 
 function recordAcceptedRun(result: EvaluationSweepResult, c: EvaluationCandidate): void {

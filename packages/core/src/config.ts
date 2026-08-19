@@ -28,6 +28,7 @@ export const ConfigSchema = z.object({
   // D4: self-hosted SearXNG. web_search is registered only when this is set.
   SEARXNG_BASE_URL: z.string().url().optional(),
   RESEARCHER_MAX_TOOL_CALLS: intFromEnv(8), // deterministic loop cap (ADR-016)
+  MIN_EVIDENCE_PER_TASK: intFromEnv(3), // deterministic min-evidence check (3.6)
 
   API_PORT: intFromEnv(8787),
   WORKER_CONCURRENCY: intFromEnv(2),

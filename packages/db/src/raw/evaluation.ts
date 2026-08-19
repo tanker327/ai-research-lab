@@ -51,3 +51,42 @@ export async function selectEvaluationCandidates(tx: SqlExecutor): Promise<Evalu
     infraFailureCount: r.infra_failure_count as number,
   }));
 }
+
+// Rule/agent verdict rows (ticket 3.6). evaluator_name like 'check:min_evidence'.
+export interface NewEvaluation {
+  id: string;
+  runId: string;
+  targetType: string;
+  targetId: string;
+  evaluatorType: string;
+  evaluatorName: string;
+  decision: string;
+  reasons: string[];
+  metadata: Record<string, unknown>;
+}
+
+export async function insertEvaluation(tx: SqlExecutor, e: NewEvaluation): Promise<void> {
+  await tx.execute(sql`
+    INSERT INTO evaluations (id, run_id, target_type, target_id, evaluator_type, evaluator_name,
+                             decision, reasons, metadata)
+    VALUES (${e.id}, ${e.runId}, ${e.targetType}, ${e.targetId}, ${e.evaluatorType},
+            ${e.evaluatorName}, ${e.decision}, ${JSON.stringify(e.reasons)}::jsonb,
+            ${JSON.stringify(e.metadata)}::jsonb)`);
+}
+
+// Deterministic-check input (3.6): evidence written by one attempt.
+// vendor_affiliated NULL counts as vendor (safety).
+export async function selectEvidenceStatsByAttempt(
+  tx: SqlExecutor,
+  attemptId: string,
+): Promise<{ evidenceCount: number; nonVendorCount: number }> {
+  const rows = await tx.execute(sql`
+    SELECT count(*)::int AS n,
+           count(*) FILTER (WHERE vendor_affiliated = false)::int AS non_vendor
+    FROM evidence WHERE attempt_id = ${attemptId}`);
+  const r = [...rows][0];
+  return {
+    evidenceCount: (r?.n as number) ?? 0,
+    nonVendorCount: (r?.non_vendor as number) ?? 0,
+  };
+}

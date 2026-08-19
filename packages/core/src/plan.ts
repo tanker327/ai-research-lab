@@ -27,13 +27,12 @@ import {
   PlannerOutput,
   ResearchStrategy,
   type TaskStatus,
-  TaskType,
+  type TaskType,
   newId as uuid,
 } from "@lab/schemas";
 import { emitEvent } from "./events";
 import { acceptAttemptInTx } from "./liveness";
-import { decideRetry, enforceAttemptCap } from "./retry";
-import { assertAttemptTransition } from "./state/attempt";
+import { rejectSucceededAttempt } from "./quality";
 import { assertTaskTransition } from "./state/task";
 
 const ACTOR = "plan_interpreter";
@@ -234,51 +233,17 @@ export async function applyAcceptedPlan(
   });
 }
 
-// The reject path stays on the ladder (rule 10): decideRetry owns what
-// happens next; this only records the verdict.
+// The reject path stays on the ladder (rule 10) via the shared quality path.
 async function rejectPlan(
   tx: Tx,
   c: EvaluationCandidate,
   reason: string,
 ): Promise<PlanApplication> {
-  assertAttemptTransition("SUCCEEDED", "REJECTED");
-  await markAttemptRejected(tx, c.attemptId);
-  const verdict = enforceAttemptCap(
-    decideRetry(
-      {
-        taskType: TaskType.parse(c.taskType),
-        attemptNumber: c.attemptNumber,
-        infraRetryCount: Math.max(0, c.infraFailureCount - 1),
-        strategy: ResearchStrategy.safeParse(c.strategy).data ?? null,
-      },
-      null,
-      { rejected: true, reasons: [reason] },
-    ),
-    c.attemptCount,
-    c.maxAttempts,
+  const rejection = await rejectSucceededAttempt(
+    tx,
+    c,
+    [{ check: "check:plan_interpreter", reason }],
+    { decisionType: "plan_rejection", actor: ACTOR },
   );
-  const to = verdict.kind === "task_failed" ? "FAILED" : "READY";
-  assertTaskTransition("EVALUATING", to);
-  await updateTaskStatus(tx, c.taskId, to);
-  await insertDecisionRecord(tx, {
-    id: newId(),
-    runId: c.runId,
-    taskId: c.taskId,
-    attemptId: c.attemptId,
-    type: "plan_rejection",
-    decision: verdict.kind,
-    rationale: `${reason}. Ladder: ${verdict.rationale}`,
-    createdBy: ACTOR,
-    metadata: {},
-  });
-  await emitEvent(tx, {
-    runId: c.runId,
-    taskId: c.taskId,
-    attemptId: c.attemptId,
-    type: verdict.kind === "task_failed" ? "TASK_FAILED" : "TASK_RETRY",
-    kind: verdict.kind === "task_failed" ? "fail" : "warn",
-    actor: ACTOR,
-    payload: { decision: verdict.kind, rationale: reason },
-  });
-  return { outcome: "rejected", createdTaskIds: [], rationale: reason };
+  return { outcome: "rejected", createdTaskIds: [], rationale: rejection.rationale };
 }
