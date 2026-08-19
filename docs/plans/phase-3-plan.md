@@ -50,15 +50,11 @@ interface ContextBuilder {
 - **Token budgeting V0.05:** budget per role in config; estimator is `chars/4` (no tokenizer dependency — deferred-trigger table). Overflow order per §12: drop `context`-relation evidence → tighten per-claim K → summarize→ if a hard constraint (spec, success criteria, contested claims) would drop, **fail the build loudly** with `QUALITY_FAILURE` — a task-sizing bug, never hidden.
 - `liveClaimDigest` (Planner) and `liveEvidenceDigest` (Researcher, same-subject only) are deterministic string renderings — code, not an LLM summarizer.
 
-### D3 — Planner tier while the frontier is dark: **needs user sign-off**
-Design routes the Planner to the frontier. Hub keys are still invalid (tracked user action). Proposal: a temporary, explicit routing amendment `planner → strong_local` behind config (`PLANNER_TIER=strong_local` default until keys land), with a `kind:'warn'` event emitted on every planner attempt routed off-frontier so the downgrade is visible in the console timeline — honoring "never silently downgrade" by making it loud instead of forbidden. Revert the default to `frontier` the day keys work. **Alternative:** fix the hub keys now and skip the amendment entirely.
+### D3 — Planner tier while the frontier is dark: **RESOLVED 2026-08-19 — strong_local + warn**
+Design routes the Planner to the frontier. Hub keys are still invalid (tracked user action). Proposal: a temporary, explicit routing amendment `planner → strong_local` behind config (`PLANNER_TIER=strong_local` default until keys land), with a `kind:'warn'` event emitted on every planner attempt routed off-frontier so the downgrade is visible in the console timeline — honoring "never silently downgrade" by making it loud instead of forbidden. Revert the default to `frontier` the day keys work. *(User approved 2026-08-19.)*
 
-### D4 — Researcher discovery without web_search: **needs user decision (carried from P2)**
-Pass-1 research with only `web_fetch` can follow links but cannot *find* starting points. Options:
-1. **Pick a search provider now** (Brave / Serper / SearXNG self-hosted — no key, runs next to ai-hub) and land `web_search` in 3.3.
-2. **Planner-seeded URLs V0.05:** `PlannedTask.input` for research tasks includes `seedUrls` (the Planner knows plausible starting points; strategy prompts bias toward official docs/known aggregators). Ship 3.3 with this; add `web_search` when a provider is chosen.
-
-Recommendation: **(2) now, (1) when decided** — keeps 3.3 unblocked and seedUrls remain useful even with search. The gate's research question is chosen so seeds work (e.g. a PostgreSQL-docs question).
+### D4 — Researcher discovery: **RESOLVED 2026-08-19 — self-hosted SearXNG**
+User will run a SearXNG server and share the endpoint when needed. `web_search` lands in ticket 3.3 against SearXNG's JSON API (`SEARXNG_BASE_URL` in config; tool returns title/url/snippet triples, bounded list). Contract tests run against a stubbed fetch, so 3.3 is not blocked on the deployment — but the **live** researcher golden run and `gate:p3` need the endpoint. Tracked as a user action with a deadline of Session C's golden run. Research task inputs may still carry optional Planner `seedUrls` (cheap, complements search).
 
 ### D5 — PlanDelta interpretation is Control-Plane code (ADR-003, ADR-011)
 The Planner returns `PlanDelta`; `packages/core/src/plan.ts` interprets it in one transaction:

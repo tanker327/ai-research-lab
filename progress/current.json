@@ -15,11 +15,12 @@
     {
       "id": "3.1",
       "title": "packages/context: forPlanner/forResearcher builders + token budgeting (R12: output persisted verbatim; never selects reasoning artifacts \u2014 ADR-018)",
-      "status": "pending",
+      "status": "in_progress",
       "priority": 2,
       "depends_on": [
         "3.0"
-      ]
+      ],
+      "started_at": "2026-08-19"
     },
     {
       "id": "3.2",
@@ -78,13 +79,14 @@
   ],
   "known_issues": [
     "USER ACTION: openai/xai keys on the deployed hub are invalid \u2014 frontier tier dark; required before Phase 4 tier escalation.",
-    "USER DECISION: D4 web_search provider (Brave/Serper/SearXNG/other) \u2014 web_search tool gated until chosen.",
+    "USER ACTION: share SearXNG endpoint (SEARXNG_BASE_URL) before Session C's live researcher run / gate:p3 (D4 resolved: self-hosted SearXNG).",
     "Dev stack and test suite share one Postgres \u2014 stop dev processes before bun run check (separate test DB is a candidate chore; needs approval)."
   ],
   "notes": [
     "Phase 2 archived to progress/archive/phase-2.json 2026-08-19 \u2014 gate green twice; 394 tests.",
     "P2 gate norm for all agent schemas: every array/string bounded (.max()) \u2014 constrained decoding degenerates on unbounded arrays.",
     "Reasoning models need maxOutputTokens headroom (local model thinks before answering).",
-    "Standing UI rule: every phase DoD wires its capabilities into apps/web (ticket 3.7)."
+    "Standing UI rule: every phase DoD wires its capabilities into apps/web (ticket 3.7).",
+    "D3 resolved: PLANNER_TIER=strong_local + warn event until hub frontier keys fixed (2026-08-19)."
   ]
 }
