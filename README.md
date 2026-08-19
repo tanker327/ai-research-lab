@@ -21,7 +21,7 @@ Key properties:
 apps/
   api      Hono API + scheduler (readiness/stale/evaluation sweeps, SSE event stream)
   worker   claim → dispatch → finish loop (run N of them; SKIP LOCKED makes it safe)
-  web      Console UI (Vite + React) — runs, task board, live timeline, attempt inspector
+  web      Console UI (Vite + React + Tailwind + shadcn/ui) — runs, task board, live timeline, attempt inspector
 packages/
   schemas  All I/O contracts (Zod) — the only place shapes are declared
   core     Control plane: state machines, retry policy, sweeps, guards (zero LLM imports)

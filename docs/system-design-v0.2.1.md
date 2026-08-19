@@ -967,7 +967,7 @@ The SSE stream is a tail over the existing event write path — it powers the li
 
 ## 24.6 UI Specification (the mockup is normative)
 
-`research-lab-console.html` (meta group `ai-research-lab`) is the reference implementation for P6. Its decisions are recorded here so the real build doesn't relitigate them:
+`research-lab-console.html` (meta group `ai-research-lab`) is the reference implementation for P6. Its decisions are recorded here so the real build doesn't relitigate them. (Implementation note, 2026-08-19: the console implements this spec with Tailwind v4 + shadcn/ui — the mockup's palette, type stacks, and interactions remain normative; its CSS *tokens* are mapped onto shadcn's semantic theme variables rather than ported class-for-class. See implementation-plan §2.)
 
 - **Views:** Runs list · New research · Overview · Task graph · Claims & evidence · Timeline · Report · Transcript.
 - **Task graph is staged columns, not a force-directed node graph.** Stages *are* the semantics of staged planning; a spring layout would hide exactly the structure that matters. (ADR-019)
