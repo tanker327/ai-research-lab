@@ -2,6 +2,7 @@
 export * from "./claim";
 export * from "./config";
 export * from "./events";
+export * from "./liveness";
 export * from "./logger";
 export * from "./retry";
 export * from "./scheduler";
