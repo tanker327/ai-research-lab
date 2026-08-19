@@ -161,3 +161,9 @@ export async function cancelAttemptsForRun(tx: SqlExecutor, runId: string): Prom
     RETURNING id`);
   return [...rows].map((r) => r.id as string);
 }
+
+export async function selectRuns(tx: SqlExecutor, limit = 50): Promise<RunRow[]> {
+  const rows = await tx.execute(sql`
+    SELECT * FROM research_runs ORDER BY created_at DESC LIMIT ${limit}`);
+  return [...rows].map(mapRun);
+}

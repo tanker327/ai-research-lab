@@ -44,6 +44,14 @@ async function createRun(): Promise<string> {
 }
 
 describe("API surface", () => {
+  it("GET /runs lists runs newest-first (console runs view)", async () => {
+    const id = await createRun();
+    const res = await app.request("/runs");
+    expect(res.status).toBe(200);
+    const runs = (await res.json()) as Array<{ id: string; status: string }>;
+    expect(runs.some((r) => r.id === id)).toBe(true);
+  });
+
   it("POST /runs creates a run and seeds tasks; GET endpoints read it back", async () => {
     const id = await createRun();
 

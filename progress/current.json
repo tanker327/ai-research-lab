@@ -4,6 +4,14 @@
   "gate": "test agent runs generateStructured vs frontier AND strong_local through ai-hub; guided decoding vs fast_local with a nasty schema; tool calls persist ordered with snapshots",
   "tasks": [
     {
+      "id": "ui-0",
+      "title": "Console v0 (pulled forward from Phase 6, user decision): apps/web shell + runs/new/overview/tasks/timeline on real APIs; evidence/report/transcript placeholders",
+      "status": "completed",
+      "priority": 0,
+      "depends_on": [],
+      "completed_at": "2026-08-19"
+    },
+    {
       "id": "2.0",
       "title": "Pre-flight (~30 min): ai-hub reachability + vLLM response_format json_schema support from this machine; then draft docs/plans/phase-2-plan.md",
       "status": "pending",
@@ -37,6 +45,13 @@
       "status": "pending",
       "priority": 3,
       "depends_on": []
+    },
+    {
+      "id": "2.5",
+      "title": "Console wiring for Phase 2: model-call + tool-call panels in the run inspector (standing rule: every phase DoD wires its capabilities into the UI)",
+      "status": "pending",
+      "priority": 5,
+      "depends_on": ["2.1", "2.3"]
     }
   ],
   "known_issues": [],
@@ -45,6 +60,7 @@
     "Phase 1 carry-over: RUNNING\u2192READY task transition retained per \u00a75.1 but currently unused (stale release now routes through EVALUATING per rule 10 \u2014 see phase-1-plan amendment).",
     "2.0 pre-flight was deferred from late Phase 1 (phase-1-plan risk item) \u2014 do it first.",
     "Per-phase planning cadence (user-approved 2026-08-19): draft docs/plans/phase-2-plan.md with decisions + acceptance criteria before coding, mirror of phase-1-plan.md.",
-    "Post-phase audit 2026-08-19 (344c4c2): doc-sync gaps closed (design \u00a78.2/\u00a78.3 amended, D2 OPEN-QUESTION comment, .env.example) + handler unit tests added. Phase 2 plan template should include a doc-sync checklist in its DoD."
+    "Post-phase audit 2026-08-19 (344c4c2): doc-sync gaps closed (design \u00a78.2/\u00a78.3 amended, D2 OPEN-QUESTION comment, .env.example) + handler unit tests added. Phase 2 plan template should include a doc-sync checklist in its DoD.",
+    "PLAN CHANGE 2026-08-19 (user): UI-first \u2014 console built incrementally from now on, placeholders OK; every phase's DoD includes wiring new capabilities into apps/web. implementation-plan Phase 6 carries the amendment note. Console v0 shipped: bun run dev:web (:5173, proxies /api \u2192 :8787)."
   ]
 }

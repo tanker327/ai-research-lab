@@ -425,6 +425,16 @@ flowchart LR
 
 ## Phase 6 — Console UI (~1 week)
 
+> **Amended 2026-08-19 (user decision):** the console is no longer a last-minute
+> phase — it is built **incrementally from Phase 2 onward**. Console v0 (shell,
+> runs list, new-run, overview + phase rail, task board, kind-colored timeline
+> with SSE live tail — all against real Phase-1 read APIs; evidence/report/
+> transcript as labeled placeholders) shipped early in `apps/web`. From here,
+> **every phase's definition of done includes wiring its new capabilities into
+> the console** (P2: model/tool call panels · P3: evidence & claims browser,
+> real Planner-driven new-run · P4: verdicts, decision blocks · P5: report +
+> transcript). This section remains the target end state; its gate is unchanged.
+
 Port the mockup (`research-lab-console.html`) view-for-view against real read APIs: runs list, new-research, overview (phase rail + metrics + latest verdict), staged-column task graph, inspector drawer with trace viewer, claims & evidence browser, kind-colored timeline with SSE live tail, report with citation-chip jumps, transcript reading mode. The mockup's CSS tokens and interactions are normative (ADR-019, §24.6).
 
 **Gate:** watch a live run end-to-end in the console; open a superseded attempt's trace after an API restart (verifies ADR-017 + §24.9).

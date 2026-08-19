@@ -2,7 +2,7 @@
 // ticket 1.8.
 import { cancelRun, startRun } from "@lab/core";
 import type { Db } from "@lab/db";
-import { selectEventsAfter, selectRun, selectTasksByRun } from "@lab/db";
+import { selectEventsAfter, selectRun, selectRuns, selectTasksByRun } from "@lab/db";
 import { CreateRunRequest } from "@lab/schemas";
 import { Hono } from "hono";
 import { streamSSE } from "hono/streaming";
@@ -33,6 +33,10 @@ export function createApp({ db, bus, log }: ApiDeps): Hono {
     const id = await startRun(db, { ...req, title: req.title ?? null, tasks });
     log.info({ runId: id, tasks: tasks.length }, "run created");
     return c.json({ id }, 201);
+  });
+
+  app.get("/runs", async (c) => {
+    return c.json(await selectRuns(db));
   });
 
   app.get("/runs/:id", async (c) => {
