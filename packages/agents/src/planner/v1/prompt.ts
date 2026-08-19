@@ -3,7 +3,7 @@
 // in-place (CLAUDE.md, design §33).
 import type { ModelMessage, PlannerInput } from "@lab/schemas";
 
-export const OUTPUT_BUDGET = 6000; // reasoning headroom (P2 norm)
+export const OUTPUT_BUDGET = 12_000; // local model thinks first — real reasoning headroom (P2/P3 norm)
 
 export const SYSTEM = `You are the Planner of an autonomous research lab. You produce a research
 specification and a plan DELTA — tasks to add, cancel, or supersede. Code

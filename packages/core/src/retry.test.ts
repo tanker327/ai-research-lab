@@ -57,9 +57,10 @@ describe("schema failure", () => {
     expect(v.rationale).toContain("re-extract");
   });
 
-  it("fails non-extract tasks", () => {
+  it("retries non-extract tasks at the same configuration (cap-bounded)", () => {
     const v = decideRetry(ctx({ taskType: "research" }), err("SCHEMA_FAILURE"), null);
-    expect(v.kind).toBe("task_failed");
+    expect(v.kind).toBe("intelligence_retry");
+    expect(v.rationale).toContain("cheap to retry");
   });
 });
 

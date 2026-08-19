@@ -3,7 +3,7 @@
 // one small structured step decision; the note itself is prose markdown.
 import type { ResearcherInput } from "@lab/schemas";
 
-export const OUTPUT_BUDGET = 8000; // note + reasoning headroom (P2 norm)
+export const OUTPUT_BUDGET = 14_000; // note (≤20k chars) + reasoning headroom (P2/P3 norm)
 
 export function systemPrompt(hasSearch: boolean, maxSteps: number): string {
   return `You are a Researcher in an autonomous research lab, working ONE question.

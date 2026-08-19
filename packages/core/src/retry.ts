@@ -60,13 +60,17 @@ export function decideRetry(
     };
   }
 
-  // Malformed extractor output re-extracts from the stored research note —
-  // never re-research (design P8): the expensive collection succeeded.
-  if (err?.category === "SCHEMA_FAILURE" && a.taskType === "extract") {
+  // Malformed structured output retries at the same configuration — for
+  // extract that means re-extract from the stored note (never re-research,
+  // P8); for other roles a constrained-decoding hiccup (truncation, invalid
+  // JSON) is transient-shaped and cheap to re-run. The attempt cap bounds it.
+  if (err?.category === "SCHEMA_FAILURE") {
     return {
       kind: "intelligence_retry",
       rationale:
-        "SCHEMA_FAILURE on extract: re-extracting from the persisted research note — never re-research (P8).",
+        a.taskType === "extract"
+          ? "SCHEMA_FAILURE on extract: re-extracting from the persisted research note — never re-research (P8)."
+          : `SCHEMA_FAILURE on ${a.taskType}: re-running the same configuration — malformed structured output is cheap to retry and the attempt cap bounds it.`,
     };
   }
 
