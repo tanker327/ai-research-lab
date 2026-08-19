@@ -447,7 +447,7 @@ stateDiagram-v2
     EVALUATING --> BLOCKED: dependency failed / no viable path
     EVALUATING --> WAITING_HUMAN: checkpoint required
     EVALUATING --> FAILED: attempts exhausted / terminal
-    RUNNING --> READY: stale claim released (worker died)
+    RUNNING --> EVALUATING: stale claim released (worker died; amended P1.3 — see §8.3)
     CREATED --> CANCELLED
     READY --> CANCELLED
     RUNNING --> CANCELLED
@@ -470,7 +470,9 @@ type ResearchRunStatus =
 
 ## 8.3 Worker Loop & Atomic Claim
 
-Unchanged from v0.1 and correct: poll → `SELECT … FOR UPDATE SKIP LOCKED` → claim → create attempt → resolve agent/model → build context → run → persist → `EVALUATING` → events. Stale-claim release: a scheduler sweep returns tasks RUNNING past `claim_timeout` to READY and marks the attempt FAILED (`TRANSIENT_INFRA`), relying on §11 idempotency for safety.
+Unchanged from v0.1 and correct: poll → `SELECT … FOR UPDATE SKIP LOCKED` → claim → create attempt → resolve agent/model → build context → run → persist → `EVALUATING` → events. Stale-claim release: a scheduler sweep marks the attempt of a task RUNNING past `claim_timeout` FAILED (`TRANSIENT_INFRA`), relying on §11 idempotency for safety.
+
+> **Amended 2026-08-19 (P1.3, Phase 1 gate finding):** stale release parks the task in `EVALUATING`, not `READY`. Returning straight to READY bypassed the retry ladder (CLAUDE.md rule 10) — neither backoff nor `max_attempts` applied, and a `claim_timeout` shorter than a task's work time produced an unbounded reclaim loop. The Retry Coordinator now rules on every re-run; `RUNNING → READY` remains a legal transition but is currently unused.
 
 ## 8.4 Attempts
 

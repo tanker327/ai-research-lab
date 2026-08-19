@@ -141,7 +141,7 @@ export type TaskStatus =
 const TRANSITIONS: Record<TaskStatus, TaskStatus[]> = {
   CREATED:      ["READY", "BLOCKED", "CANCELLED"],
   READY:        ["RUNNING", "CANCELLED"],
-  RUNNING:      ["EVALUATING", "READY", "CANCELLED"],   // READY = stale-claim release
+  RUNNING:      ["EVALUATING", "READY", "CANCELLED"],   // stale release goes via EVALUATING since P1.3 (rule 10); READY retained but unused
   EVALUATING:   ["DONE", "READY", "BLOCKED", "WAITING_HUMAN", "FAILED", "CANCELLED"],
   WAITING_HUMAN:["READY", "CANCELLED"],
   BLOCKED:      ["READY", "CANCELLED"],                 // unblocked by replan

@@ -14,6 +14,8 @@ describe("loadConfig", () => {
     const c = loadConfig(valid);
     expect(c.WORKER_CONCURRENCY).toBe(2);
     expect(c.POLL_INTERVAL_MS).toBe(500);
+    expect(c.API_PORT).toBe(8787);
+    expect(c.STALE_SWEEP_INTERVAL_MS).toBe(30_000);
     expect(c.ARTIFACT_ROOT).toBe("./data/artifacts");
   });
 

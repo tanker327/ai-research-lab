@@ -8,6 +8,9 @@ import { CategorizedError, FakeTaskInput, newId, type TaskType } from "@lab/sche
 
 export type TaskHandler = (db: Db, work: ClaimedWork) => Promise<void>;
 
+// Portable (vitest runs handlers under Node; the worker runs under Bun).
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
 async function fakeHandler(db: Db, work: ClaimedWork): Promise<void> {
   const parsed = FakeTaskInput.safeParse(work.task.input ?? {});
   if (!parsed.success) {
@@ -18,7 +21,7 @@ async function fakeHandler(db: Db, work: ClaimedWork): Promise<void> {
   const fake = parsed.data.fake;
   switch (fake.behavior) {
     case "sleep":
-      await Bun.sleep(fake.ms);
+      await sleep(fake.ms);
       return;
     case "fail":
       throw new CategorizedError(fake.category, fake.message);
@@ -30,7 +33,7 @@ async function fakeHandler(db: Db, work: ClaimedWork): Promise<void> {
         attemptId: work.attempt.id,
         excerpt: fake.excerpt,
       });
-      if (fake.sleepMs > 0) await Bun.sleep(fake.sleepMs);
+      if (fake.sleepMs > 0) await sleep(fake.sleepMs);
       return;
   }
 }

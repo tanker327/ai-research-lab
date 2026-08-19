@@ -1,3 +1,8 @@
+// OPEN-QUESTION(§22) resolution, decision D2 (phase-1-plan): cross-process
+// event fanout uses same-transaction NOTIFY as a doorbell + this api-side
+// LISTEN connection + a poll fallback. Promote to an ADR only if the
+// mechanism grows.
+//
 // Cross-process event fanout, api side (decision D2). One DEDICATED postgres.js
 // connection LISTENs on lab_events (never a pool connection — notifications
 // would stall behind queries); a fallback poll tick wakes every subscriber so
