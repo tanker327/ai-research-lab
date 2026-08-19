@@ -93,7 +93,7 @@ export const webFetchTool: ToolDef = {
         detail: parsed.error.issues,
       });
     }
-    const { url, timeoutMs } = parsed.data;
+    const { url, timeoutMs, startChar } = parsed.data;
 
     const capture =
       (deps.firecrawlBaseUrl ? await scrapeViaFirecrawl(deps.firecrawlBaseUrl, url, deps) : null) ??
@@ -112,16 +112,19 @@ export const webFetchTool: ToolDef = {
       metadata: { url, status: capture.status, via: capture.via },
     });
 
+    const totalChars = capture.excerptSource.length;
     const output: WebFetchResult = {
       url,
       status: capture.status,
       contentType: capture.mediaType,
-      excerpt: capture.excerptSource.slice(0, EXCERPT_CHARS),
+      excerpt: capture.excerptSource.slice(startChar, startChar + EXCERPT_CHARS),
+      startChar,
+      totalChars,
       snapshotArtifactId: saved.id,
     };
     return {
       output,
-      snippet: `${capture.status} ${url} · ${saved.sizeBytes}b via ${capture.via}${saved.deduped ? " (deduped)" : ""}`,
+      snippet: `${capture.status} ${url} · chars ${startChar}-${Math.min(startChar + EXCERPT_CHARS, totalChars)}/${totalChars} via ${capture.via}${saved.deduped ? " (deduped)" : ""}`,
       artifactId: saved.id,
     };
   },

@@ -147,6 +147,9 @@ export type SelfAssessment = z.infer<typeof SelfAssessment>;
 const stepFetch = z.object({
   action: z.literal("fetch"),
   url: z.string().max(2000),
+  // Page through long documents: refetch with the offset where the previous
+  // excerpt window ended (null = start of page).
+  startChar: z.number().int().min(0).max(5_000_000).nullable(),
   why: z.string().max(300),
 });
 const stepSearch = z.object({

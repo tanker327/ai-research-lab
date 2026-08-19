@@ -201,7 +201,7 @@ describe("researcher dispatch (3.3)", () => {
     // The one fetch stub serves both the hub (chat completions) and pages.
     let modelCall = 0;
     const steps = [
-      { action: "fetch", url: "https://docs.example.com/q", why: "official docs" },
+      { action: "fetch", url: "https://docs.example.com/q", startChar: null, why: "official docs" },
       {
         action: "finish",
         note: `# Question\nq\n# Findings\n${"Quoted excerpt from the official documentation follows, with source URL noted. ".repeat(10)}`,

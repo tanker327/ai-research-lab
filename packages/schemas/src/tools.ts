@@ -8,6 +8,10 @@ export type ToolName = z.infer<typeof ToolName>;
 export const WebFetchInput = z.object({
   url: z.string().url(),
   timeoutMs: z.number().int().positive().max(60_000).default(20_000),
+  // Long pages page through the capture (P3 gate finding: reference pages
+  // bigger than one excerpt window truncated before the section that
+  // mattered). 0-based char offset into the extracted text.
+  startChar: z.number().int().min(0).max(5_000_000).default(0),
 });
 export type WebFetchInput = z.infer<typeof WebFetchInput>;
 
@@ -36,7 +40,9 @@ export const WebFetchResult = z.object({
   url: z.string(),
   status: z.number().int(),
   contentType: z.string().nullable(),
-  excerpt: z.string(), // stripped text, truncated for the model
+  excerpt: z.string(), // extracted text window [startChar, startChar+window)
+  startChar: z.number().int(),
+  totalChars: z.number().int(), // of the full extracted text — more pages exist if > startChar+excerpt
   snapshotArtifactId: z.string().uuid(), // full capture, content-addressed
 });
 export type WebFetchResult = z.infer<typeof WebFetchResult>;

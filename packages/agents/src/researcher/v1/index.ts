@@ -91,8 +91,14 @@ export const researcherV1: Agent<ResearcherInput, ResearcherAgentResult> = {
         if (decision.action === "fetch") {
           const out = (await ctx.tools.invoke("web_fetch", {
             url: decision.url,
+            startChar: decision.startChar ?? 0,
           })) as WebFetchResult;
-          observation = `FETCHED ${out.url} (HTTP ${out.status})\n${out.excerpt}`;
+          const end = out.startChar + out.excerpt.length;
+          const more =
+            end < out.totalChars
+              ? ` — TRUNCATED at char ${end} of ${out.totalChars}; fetch again with startChar=${end} to continue`
+              : "";
+          observation = `FETCHED ${out.url} (HTTP ${out.status}) [chars ${out.startChar}-${end} of ${out.totalChars}${more}]\n${out.excerpt}`;
         } else {
           const out = (await ctx.tools.invoke("web_search", {
             query: decision.query,

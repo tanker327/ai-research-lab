@@ -65,6 +65,8 @@ function makeCtx(model: ModelClient, opts: CtxOpts = {}) {
           status: 200,
           contentType: "text/html",
           excerpt: "PostgreSQL supports FP8.",
+          startChar: 0,
+          totalChars: 24,
           snapshotArtifactId: "00000000-0000-7000-8000-000000000001",
         };
       },
@@ -107,18 +109,20 @@ describe("researcher v1 loop", () => {
 
   it("fetch then finish: tool invoked once, observation fed back", async () => {
     const { model, calls } = stubModel([
-      { action: "fetch", url: "https://example.com/docs", why: "official docs" },
+      { action: "fetch", url: "https://example.com/docs", startChar: null, why: "official docs" },
       FINISH,
     ]);
     const { ctx, invoked } = makeCtx(model);
     await researcherV1.run(INPUT, ctx);
-    expect(invoked).toEqual([{ name: "web_fetch", input: { url: "https://example.com/docs" } }]);
+    expect(invoked).toEqual([
+      { name: "web_fetch", input: { url: "https://example.com/docs", startChar: 0 } },
+    ]);
     expect(calls.length).toBe(2);
   });
 
   it("a failing tool is an observation, not an attempt failure", async () => {
     const { model } = stubModel([
-      { action: "fetch", url: "https://dead.example", why: "try" },
+      { action: "fetch", url: "https://dead.example", startChar: null, why: "try" },
       FINISH,
     ]);
     const { ctx } = makeCtx(model, {
@@ -132,7 +136,7 @@ describe("researcher v1 loop", () => {
 
   it("cap is enforced by code: a model that never finishes is QUALITY_FAILURE (ADR-016)", async () => {
     const { model, calls } = stubModel([
-      { action: "fetch", url: "https://example.com/1", why: "more" },
+      { action: "fetch", url: "https://example.com/1", startChar: null, why: "more" },
     ]);
     const { ctx, invoked } = makeCtx(model, { maxToolCalls: 2 });
     await expect(researcherV1.run(INPUT, ctx)).rejects.toMatchObject({

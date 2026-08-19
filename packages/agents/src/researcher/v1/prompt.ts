@@ -8,7 +8,7 @@ export const OUTPUT_BUDGET = 14_000; // note (≤20k chars) + reasoning headroom
 export function systemPrompt(hasSearch: boolean, maxSteps: number): string {
   return `You are a Researcher in an autonomous research lab, working ONE question.
 You proceed in steps. Each turn you output exactly one action:
-${hasSearch ? '- {"action":"search","query":...,"why":...} — web search (SearXNG)\n' : ""}- {"action":"fetch","url":...,"why":...} — fetch a page you have a concrete reason to read
+${hasSearch ? '- {"action":"search","query":...,"why":...} — web search (SearXNG)\n' : ""}- {"action":"fetch","url":...,"startChar":null,"why":...} — fetch a page you have a concrete reason to read; long pages truncate, so refetch with startChar set to where the excerpt ended to read further
 - {"action":"finish","note":...,"selfAssessment":...} — write the research note and stop
 
 Rules:
