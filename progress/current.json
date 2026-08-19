@@ -26,13 +26,14 @@
     {
       "id": "0.3",
       "title": "packages/db: drizzle schema for all v0.2.1 tables + migration 0001 (schema from design §17/§24.7)",
-      "status": "in_progress",
+      "status": "completed",
       "priority": 3,
       "depends_on": [
         "0.1",
         "0.2"
       ],
-      "started_at": "2026-08-19"
+      "completed_at": "2026-08-19",
+      "commit": "0cf33d6"
     },
     {
       "id": "0.4",
