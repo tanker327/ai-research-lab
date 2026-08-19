@@ -51,6 +51,119 @@ export async function insertFakeEvidence(
     VALUES (${e.id}, ${e.runId}, ${e.taskId}, ${e.attemptId}, 'community', ${e.excerpt})`);
 }
 
+// Phase-3 fixtures: seed the claim/evidence graph the Context Builder reads
+// (through live_* views — hence the attempt status knob).
+export async function seedAttempt(
+  tx: SqlExecutor,
+  a: {
+    id: string;
+    taskId: string;
+    runId: string;
+    attemptNumber?: number;
+    status?: string;
+    output?: Record<string, unknown> | null;
+  },
+): Promise<void> {
+  await tx.execute(sql`
+    INSERT INTO attempts (id, task_id, run_id, attempt_number, status, agent_name,
+                          agent_version, output)
+    VALUES (${a.id}, ${a.taskId}, ${a.runId}, ${a.attemptNumber ?? 1},
+            ${a.status ?? "ACCEPTED"}, 'fixture', 'v1',
+            ${a.output ? JSON.stringify(a.output) : null}::jsonb)`);
+}
+
+export async function seedSpec(
+  tx: SqlExecutor,
+  s: {
+    id: string;
+    runId: string;
+    version?: number;
+    objective: string;
+    successCriteria?: string[];
+    keyQuestions?: string[];
+  },
+): Promise<void> {
+  await tx.execute(sql`
+    INSERT INTO research_specs (id, run_id, version, objective, success_criteria, key_questions)
+    VALUES (${s.id}, ${s.runId}, ${s.version ?? 1}, ${s.objective},
+            ${JSON.stringify(s.successCriteria ?? [])}::jsonb,
+            ${JSON.stringify(s.keyQuestions ?? [])}::jsonb)`);
+}
+
+export async function seedCanonicalClaim(
+  tx: SqlExecutor,
+  c: {
+    id: string;
+    runId: string;
+    subjectKey: string;
+    predicateKey: string;
+    statement: string;
+    type?: string;
+    status?: string;
+    contestNote?: string | null;
+  },
+): Promise<void> {
+  await tx.execute(sql`
+    INSERT INTO canonical_claims (id, run_id, subject_key, predicate_key, statement, type,
+                                  status, contest_note)
+    VALUES (${c.id}, ${c.runId}, ${c.subjectKey}, ${c.predicateKey}, ${c.statement},
+            ${c.type ?? "fact"}, ${c.status ?? "supported"}, ${c.contestNote ?? null})`);
+}
+
+export async function seedRawClaim(
+  tx: SqlExecutor,
+  c: {
+    id: string;
+    runId: string;
+    taskId: string;
+    attemptId: string;
+    canonicalClaimId?: string | null;
+    statement?: string;
+    subjectKey: string;
+    predicateKey: string;
+    valueText?: string | null;
+    type?: string;
+  },
+): Promise<void> {
+  await tx.execute(sql`
+    INSERT INTO raw_claims (id, run_id, task_id, attempt_id, canonical_claim_id, statement,
+                            subject_key, predicate_key, value_text, type, created_by_agent)
+    VALUES (${c.id}, ${c.runId}, ${c.taskId}, ${c.attemptId}, ${c.canonicalClaimId ?? null},
+            ${c.statement ?? `${c.subjectKey} ${c.predicateKey}`}, ${c.subjectKey},
+            ${c.predicateKey}, ${c.valueText ?? null}, ${c.type ?? "fact"}, 'fixture')`);
+}
+
+export async function seedEvidence(
+  tx: SqlExecutor,
+  e: {
+    id: string;
+    runId: string;
+    taskId: string;
+    attemptId: string;
+    excerpt: string;
+    sourceClass?: string;
+    sourceUrl?: string | null;
+    vendorAffiliated?: boolean | null;
+    benchmarkOrigin?: string | null;
+  },
+): Promise<void> {
+  await tx.execute(sql`
+    INSERT INTO evidence (id, run_id, task_id, attempt_id, source_class, source_url,
+                          vendor_affiliated, benchmark_origin, excerpt)
+    VALUES (${e.id}, ${e.runId}, ${e.taskId}, ${e.attemptId}, ${e.sourceClass ?? "community"},
+            ${e.sourceUrl ?? null}, ${e.vendorAffiliated ?? null},
+            ${e.benchmarkOrigin ?? null}, ${e.excerpt})`);
+}
+
+export async function seedClaimEvidenceLink(
+  tx: SqlExecutor,
+  l: { canonicalClaimId: string; evidenceId: string; relation?: string },
+): Promise<void> {
+  await tx.execute(sql`
+    INSERT INTO claim_evidence_links (canonical_claim_id, evidence_id, relation)
+    VALUES (${l.canonicalClaimId}, ${l.evidenceId}, ${l.relation ?? "supports"})`);
+}
+
 export async function seedDependency(
   tx: SqlExecutor,
   taskId: string,

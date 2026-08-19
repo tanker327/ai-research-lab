@@ -15,66 +15,53 @@
     {
       "id": "3.1",
       "title": "packages/context: forPlanner/forResearcher builders + token budgeting (R12: output persisted verbatim; never selects reasoning artifacts \u2014 ADR-018)",
-      "status": "in_progress",
+      "status": "completed",
       "priority": 2,
-      "depends_on": [
-        "3.0"
-      ],
-      "started_at": "2026-08-19"
+      "depends_on": ["3.0"],
+      "started_at": "2026-08-19",
+      "completed_at": "2026-08-19"
     },
     {
       "id": "3.2",
       "title": "Planner v1: clarify-stage prompt, PlannerOutput schema, PlanDelta interpretation in core (staged planning, ADR-011)",
       "status": "pending",
       "priority": 3,
-      "depends_on": [
-        "3.1"
-      ]
+      "depends_on": ["3.1"]
     },
     {
       "id": "3.3",
       "title": "Researcher v1: pass-1 tool loop \u2192 Research Note artifact + tool-layer sourcesVisited",
       "status": "pending",
       "priority": 4,
-      "depends_on": [
-        "3.1"
-      ]
+      "depends_on": ["3.1"]
     },
     {
       "id": "3.4",
       "title": "Extractor v1: guided decoding, auto-created extract task after research accept",
       "status": "pending",
       "priority": 5,
-      "depends_on": [
-        "3.3"
-      ]
+      "depends_on": ["3.3"]
     },
     {
       "id": "3.5",
       "title": "packages/evidence: canonicalization (normalize \u2192 trgm candidates \u2192 batch-confirm \u2192 upsert)",
       "status": "pending",
       "priority": 6,
-      "depends_on": [
-        "3.4"
-      ]
+      "depends_on": ["3.4"]
     },
     {
       "id": "3.6",
       "title": "Deterministic checks: min-evidence, non-vendor rule (core/checks)",
       "status": "pending",
       "priority": 7,
-      "depends_on": [
-        "3.4"
-      ]
+      "depends_on": ["3.4"]
     },
     {
       "id": "3.7",
       "title": "Console wiring: evidence & claims browser, Planner-driven new-run (standing UI rule)",
       "status": "pending",
       "priority": 8,
-      "depends_on": [
-        "3.5"
-      ]
+      "depends_on": ["3.5"]
     }
   ],
   "known_issues": [

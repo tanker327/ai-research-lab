@@ -4,6 +4,7 @@ export * from "./fixtures";
 export * from "./raw/attempts";
 export * from "./raw/calls";
 export * from "./raw/claim";
+export * from "./raw/context";
 export * from "./raw/decisions";
 export * from "./raw/evaluation";
 export * from "./raw/events";

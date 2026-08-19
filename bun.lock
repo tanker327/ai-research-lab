@@ -62,6 +62,14 @@
     },
     "packages/context": {
       "name": "@lab/context",
+      "dependencies": {
+        "@lab/db": "workspace:*",
+        "@lab/schemas": "workspace:*",
+        "zod": "^4.4.3",
+      },
+      "devDependencies": {
+        "drizzle-orm": "^0.45.2",
+      },
     },
     "packages/core": {
       "name": "@lab/core",
