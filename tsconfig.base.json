@@ -17,7 +17,8 @@
       "@lab/core": ["./packages/core/src/index.ts"],
       "@lab/db": ["./packages/db/src/index.ts"],
       "@lab/schemas": ["./packages/schemas/src/index.ts"],
-      "@lab/model": ["./packages/model/src/index.ts"]
+      "@lab/model": ["./packages/model/src/index.ts"],
+      "@lab/tools": ["./packages/tools/src/index.ts"]
     }
   }
 }

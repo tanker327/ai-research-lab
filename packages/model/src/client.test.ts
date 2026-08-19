@@ -3,12 +3,17 @@
 // response_format per D2 mode), schema validation → SCHEMA_FAILURE, the
 // error-taxonomy mapping, and that every call writes an attempt-owned
 // model_calls row (rule 5).
-import { createDb, deleteRun, seedRun, seedTask } from "@lab/db";
+
+import { mkdtempSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { createArtifactStore, createDb, deleteRun, seedRun, seedTask } from "@lab/db";
 import { type ModelCallContext, newId } from "@lab/schemas";
 import postgres from "postgres";
 import { afterAll, afterEach, beforeEach, describe, expect, it } from "vitest";
 import { z } from "zod";
 import { createModelClient } from "./client";
+import { createArtifactReasoningSink } from "./reasoning";
 
 const url = process.env.DATABASE_URL ?? "postgres://lab:lab@localhost:5434/research_lab";
 const { db, close } = createDb(url);
@@ -237,6 +242,29 @@ describe("error taxonomy mapping", () => {
     expect(err).toMatchObject({ category: "TRANSIENT_INFRA" });
     const rows = await raw`SELECT * FROM model_calls WHERE attempt_id = ${ctx.attemptId}`;
     expect(rows).toHaveLength(0);
+  });
+});
+
+describe("reasoning sink over the real artifact store (2.4 wiring)", () => {
+  it("stores reasoning as a type='reasoning' artifact linked from the call", async () => {
+    const store = createArtifactStore(mkdtempSync(join(tmpdir(), "lab-reasoning-")));
+    const sink = createArtifactReasoningSink(store, db);
+    const { fetch } = stubFetch(() => ({
+      status: 200,
+      json: completion(JSON.stringify({ category: "database", confidence: "high" }), {
+        reasoning_content: "step by step…",
+      }),
+    }));
+    const client = makeClient(fetch, sink);
+    await client.generateStructured({ ctx, model: "default", schema: Classification, messages });
+
+    const [call] = await raw`SELECT reasoning_artifact_id FROM model_calls
+                             WHERE attempt_id = ${ctx.attemptId}`;
+    const [artifact] = await raw`SELECT type, created_by FROM artifacts
+                                 WHERE id = ${call?.reasoning_artifact_id}`;
+    expect(artifact).toMatchObject({ type: "reasoning", created_by: "test-agent" });
+    const back = await store.read(call?.reasoning_artifact_id as string, db);
+    expect(back.content.toString()).toBe("step by step…");
   });
 });
 

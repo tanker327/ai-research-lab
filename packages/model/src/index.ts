@@ -3,4 +3,5 @@
 export * from "./client";
 export * from "./errors";
 export * from "./policy";
+export * from "./reasoning";
 export * from "./semaphore";
