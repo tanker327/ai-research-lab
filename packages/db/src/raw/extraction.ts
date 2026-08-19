@@ -22,12 +22,16 @@ export async function insertEvidenceRow(
     metadata: Record<string, unknown>;
   },
 ): Promise<void> {
+  // postgres-js rejects Date objects through the raw template; pass ISO text
+  // (PG casts to timestamptz) and drop unparseable model-supplied dates.
+  const publishedAtMs = e.publishedAt ? Date.parse(e.publishedAt) : Number.NaN;
+  const publishedAt = Number.isNaN(publishedAtMs) ? null : new Date(publishedAtMs).toISOString();
   await tx.execute(sql`
     INSERT INTO evidence (id, run_id, task_id, attempt_id, source_class, source_url, publisher,
                           published_at, vendor_affiliated, benchmark_origin, excerpt,
                           artifact_id, metadata)
     VALUES (${e.id}, ${e.runId}, ${e.taskId}, ${e.attemptId}, ${e.sourceClass}, ${e.sourceUrl},
-            ${e.publisher}, ${e.publishedAt ? new Date(e.publishedAt) : null},
+            ${e.publisher}, ${publishedAt}::timestamptz,
             ${e.vendorAffiliated}, ${e.benchmarkOrigin}, ${e.excerpt}, ${e.artifactId},
             ${JSON.stringify(e.metadata)}::jsonb)`);
 }
