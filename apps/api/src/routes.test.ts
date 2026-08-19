@@ -102,6 +102,17 @@ describe("API surface", () => {
     expect(res.status).toBe(400);
   });
 
+  it("serves attempts and their calls for the inspector (2.5)", async () => {
+    const id = await createRun();
+    const attempts = (await (await app.request(`/runs/${id}/attempts`)).json()) as unknown[];
+    expect(Array.isArray(attempts)).toBe(true); // no attempts yet — empty list, not an error
+    const calls = (await (await app.request(`/attempts/${newId()}/calls`)).json()) as {
+      modelCalls: unknown[];
+      toolCalls: unknown[];
+    };
+    expect(calls).toEqual({ modelCalls: [], toolCalls: [] });
+  });
+
   it("404s on a missing run", async () => {
     expect((await app.request(`/runs/${newId()}`)).status).toBe(404);
     expect((await app.request(`/runs/${newId()}/cancel`, { method: "POST" })).status).toBe(404);

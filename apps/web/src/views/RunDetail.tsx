@@ -1,5 +1,6 @@
 import { navigate } from "../App";
 import { cancelRun, useRun, useTasks } from "../api";
+import { AttemptsView } from "./Attempts";
 import { Placeholder } from "./Placeholder";
 import { statusChip } from "./Runs";
 import { Timeline } from "./Timeline";
@@ -27,6 +28,7 @@ const TABS = [
   { key: "overview", label: "Overview" },
   { key: "tasks", label: "Tasks" },
   { key: "timeline", label: "Timeline" },
+  { key: "attempts", label: "Attempts" },
   { key: "evidence", label: "Evidence", badge: "P3" },
   { key: "report", label: "Report", badge: "P5" },
   { key: "transcript", label: "Transcript", badge: "P5" },
@@ -154,6 +156,8 @@ export function RunDetail({ runId, tab }: { runId: string; tab: string }) {
         )}
 
         {tab === "timeline" && <Timeline runId={runId} />}
+
+        {tab === "attempts" && <AttemptsView runId={runId} />}
 
         {tab === "evidence" && (
           <Placeholder

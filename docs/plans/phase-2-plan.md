@@ -23,6 +23,15 @@ Stale assumptions corrected: the Tailscale GPU box (`power-linux`) is offline (1
 
 **USER ACTION NEEDED (blocks the frontier tier, not this phase's start):** set real OpenAI and/or xAI keys on the deployed hub. Phase 2's gate can pass against `strong_local` + `cheapest`; Phase 4's tier-escalation ladder needs a working frontier before it can be exercised live.
 
+## Findings during the phase (append-only)
+
+- **SDK runtime gotcha (2.1):** `@ai-sdk/openai-compatible@3` ignores `languageModel(id, config)`'s per-model config at runtime — `supportsStructuredOutputs` only works provider-wide → two provider instances in the client.
+- **json_object needs the schema in the prompt (2.1, live deepseek):** with no wire-level schema the model invents its own shape; the client injects the JSON Schema into the system message in json_object mode.
+- **Reasoning headroom (2.1 smoke):** the local model is a reasoning model — small `maxOutputTokens` yields `finishReason: length` with an empty answer. Budget thinking tokens.
+- **Bound every array/string under constrained decoding (gate):** an unbounded array sent the reasoning-exhausted local model into a degenerate repeat loop (`"db","db","db",…` to max_tokens). NORM for all Phase-3+ agent schemas: every array gets `.max()`, every string `.max()`.
+- **SDK retries disabled (2.1):** `maxRetries: 0` — rule 10, decideRetry owns retry policy.
+- **Gate result:** passed twice 2026-08-19; frontier leg reported PENDING (hub 401 — user action) — required before Phase 4 tier escalation. web_search still gated on D4.
+
 ## Design decisions (settled before coding)
 
 ### D1 — Tier → hub-alias mapping; config speaks aliases

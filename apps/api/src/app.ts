@@ -2,7 +2,15 @@
 // ticket 1.8.
 import { cancelRun, startRun } from "@lab/core";
 import type { Db } from "@lab/db";
-import { selectEventsAfter, selectRun, selectRuns, selectTasksByRun } from "@lab/db";
+import {
+  selectAttemptsByRun,
+  selectEventsAfter,
+  selectModelCallsByAttempt,
+  selectRun,
+  selectRuns,
+  selectTasksByRun,
+  selectToolCallsByAttempt,
+} from "@lab/db";
 import { CreateRunRequest } from "@lab/schemas";
 import { Hono } from "hono";
 import { streamSSE } from "hono/streaming";
@@ -46,6 +54,20 @@ export function createApp({ db, bus, log }: ApiDeps): Hono {
 
   app.get("/runs/:id/tasks", async (c) => {
     return c.json(await selectTasksByRun(db, c.req.param("id")));
+  });
+
+  // Console inspector (ticket 2.5): attempts with their model/tool calls.
+  app.get("/runs/:id/attempts", async (c) => {
+    return c.json(await selectAttemptsByRun(db, c.req.param("id")));
+  });
+
+  app.get("/attempts/:id/calls", async (c) => {
+    const attemptId = c.req.param("id");
+    const [modelCalls, toolCalls] = await Promise.all([
+      selectModelCallsByAttempt(db, attemptId),
+      selectToolCallsByAttempt(db, attemptId),
+    ]);
+    return c.json({ modelCalls, toolCalls });
   });
 
   app.get("/runs/:id/events", async (c) => {

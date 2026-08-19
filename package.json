@@ -19,12 +19,14 @@
     "gate:p0": "bash scripts/gates/p0.sh",
     "gate:p1": "bun scripts/gates/p1.ts",
     "dev:web": "bun --cwd apps/web run dev",
-    "typecheck:web": "tsc --noEmit -p apps/web"
+    "typecheck:web": "tsc --noEmit -p apps/web",
+    "gate:p2": "bun scripts/gates/p2.ts"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.5.9",
     "bun-types": "^1.3.14",
     "drizzle-kit": "^0.31.10",
+    "pino": "^10.3.1",
     "typescript": "^7.0.2",
     "vitest": "^4.1.11",
     "zod": "^4.1.13"

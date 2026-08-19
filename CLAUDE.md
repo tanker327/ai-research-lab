@@ -66,7 +66,7 @@ bun run dev:worker         # one worker (run twice for two)
 bun run dev:web            # console UI (Vite dev server on :5173, proxies /api → :8787)
 bun run test               # vitest, requires postgres up
 bun run check              # biome lint + import-lint + typecheck + tests (run before commit)
-bun run gate:p1            # phase gate scripts
+bun run gate:p1            # phase gate scripts (gate:p2 spends a few cents — live models)
 bun run golden G2          # golden research task (live models, spends budget)
 ```
 
