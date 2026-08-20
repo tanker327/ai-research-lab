@@ -33,19 +33,15 @@ export const extractorV1: Agent<ExtractorInput, ExtractorOutput> = {
       messages: buildMessages(input, note),
     });
     const output = ExtractorOutput.parse(res.object);
-    // Referential integrity is code, not prompt: out-of-range refs or
-    // invented URLs are schema failures (cheap re-extract, P8).
-    const validUrls = new Set(input.sourcesVisited.map((s) => s.url));
+    // Referential integrity is code, not prompt. Out-of-range evidenceRefs
+    // are DROPPED (gate finding: a fast model repeatedly off-by-one'd its own
+    // array and burned all attempts — the ref is linking metadata, and losing
+    // one link beats losing the extraction). Invented URLs stay hard
+    // failures: that is fabrication, not sloppiness.
     for (const claim of output.claims) {
-      for (const ref of claim.evidenceRefs) {
-        if (ref >= output.evidence.length) {
-          throw new CategorizedError(
-            "SCHEMA_FAILURE",
-            `claim '${claim.subjectKey}/${claim.predicateKey}' references evidence[${ref}] which does not exist`,
-          );
-        }
-      }
+      claim.evidenceRefs = claim.evidenceRefs.filter((ref) => ref < output.evidence.length);
     }
+    const validUrls = new Set(input.sourcesVisited.map((s) => s.url));
     for (const e of output.evidence) {
       if (e.sourceUrl !== null && !validUrls.has(e.sourceUrl)) {
         throw new CategorizedError(
