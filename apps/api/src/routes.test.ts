@@ -10,6 +10,7 @@ import {
   seedAttempt,
   seedRun,
   seedTask,
+  selectRunForContext,
 } from "@lab/db";
 import { newId } from "@lab/schemas";
 import { pino } from "pino";
@@ -386,5 +387,38 @@ describe("Phase 6 write surface (6.4)", () => {
       body: JSON.stringify({ action: "stop" }),
     });
     expect(missing.status).toBe(404);
+  });
+});
+
+describe("Phase 7 (7.1): run-scoped roleTiers", () => {
+  it("POST /runs persists roleTiers on run metadata; invalid role/tier is a 400", async () => {
+    const res = await app.request("/runs", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        userRequest: "routing test",
+        tasks: [{ type: "research", title: "t", input: {} }],
+        roleTiers: { evaluator: "strong_local", researcher: "fast_local" },
+      }),
+    });
+    expect(res.status).toBe(201);
+    const { id } = (await res.json()) as { id: string };
+    cleanup.push(id);
+    const run = await selectRunForContext(db, id);
+    expect(run?.metadata.roleTiers).toEqual({
+      evaluator: "strong_local",
+      researcher: "fast_local",
+    });
+
+    const bad = await app.request("/runs", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        userRequest: "x",
+        tasks: [{ type: "research", title: "t", input: {} }],
+        roleTiers: { dj: "frontier" },
+      }),
+    });
+    expect(bad.status).toBe(400);
   });
 });

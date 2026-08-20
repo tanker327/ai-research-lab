@@ -18,6 +18,9 @@ export interface ClaimableTaskRow {
   input: unknown;
   maxAttempts: number;
   attemptCount: number;
+  // Run-scoped routing preference (7.1) — read here so the worker needs no
+  // second round trip; null when the run set none.
+  runRoleTiers: Record<string, string> | null;
 }
 
 function mapClaimableTask(r: Record<string, unknown>): ClaimableTaskRow {
@@ -34,21 +37,26 @@ function mapClaimableTask(r: Record<string, unknown>): ClaimableTaskRow {
     input: r.input,
     maxAttempts: r.max_attempts as number,
     attemptCount: r.attempt_count as number,
+    runRoleTiers: (r.run_role_tiers as Record<string, string> | null) ?? null,
   };
 }
 
 // §5.2: SKIP LOCKED makes concurrent claims race-free — a locked row is
-// invisible to other claimers, never a wait.
+// invisible to other claimers, never a wait. FOR UPDATE OF t: ONLY the task
+// row locks — locking the joined run row would serialize every claim in the
+// run (7.1 join).
 export async function selectNextReadyTaskForUpdate(
   tx: SqlExecutor,
 ): Promise<ClaimableTaskRow | null> {
   const rows = await tx.execute(sql`
-    SELECT id, run_id, type, title, priority, agent_role, agent_version,
-           model_tier, strategy, input, max_attempts, attempt_count
-    FROM research_tasks
-    WHERE status = 'READY'
-    ORDER BY priority DESC, created_at ASC
-    FOR UPDATE SKIP LOCKED
+    SELECT t.id, t.run_id, t.type, t.title, t.priority, t.agent_role, t.agent_version,
+           t.model_tier, t.strategy, t.input, t.max_attempts, t.attempt_count,
+           r.metadata->'roleTiers' AS run_role_tiers
+    FROM research_tasks t
+    JOIN research_runs r ON r.id = t.run_id
+    WHERE t.status = 'READY'
+    ORDER BY t.priority DESC, t.created_at ASC
+    FOR UPDATE OF t SKIP LOCKED
     LIMIT 1`);
   const row = rows[0];
   return row ? mapClaimableTask(row) : null;

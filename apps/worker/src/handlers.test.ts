@@ -5,7 +5,7 @@
 import { createDb, deleteRun, seedRun, seedTask } from "@lab/db";
 import { CategorizedError, newId, TaskType } from "@lab/schemas";
 import { afterAll, afterEach, describe, expect, it } from "vitest";
-import { createHandlerRegistry } from "./handlers";
+import { createHandlerRegistry, taskTierOverride } from "./handlers";
 
 const url = process.env.DATABASE_URL ?? "postgres://lab:lab@localhost:5434/research_lab";
 const { db, sql, close } = createDb(url);
@@ -46,6 +46,7 @@ async function seedWork(input: Record<string, unknown>) {
       input,
       maxAttempts: 3,
       attemptCount: 1,
+      runRoleTiers: null,
     },
     attempt: { id: attemptId, attemptNumber: 1 },
   };
@@ -346,5 +347,62 @@ describe("extractor dispatch (3.4)", () => {
     });
     const claims = await sql`SELECT id FROM raw_claims WHERE attempt_id = ${work.attempt.id}`;
     expect(claims).toHaveLength(0); // nothing persisted on failure
+  });
+});
+
+describe("tier resolution order (7.1)", () => {
+  const work = (over: {
+    modelTier?: string | null;
+    runRoleTiers?: Record<string, string> | null;
+    agentRole?: string;
+  }) =>
+    ({
+      task: {
+        id: "t",
+        runId: "r",
+        type: "research",
+        title: "x",
+        priority: 50,
+        agentRole: over.agentRole ?? "researcher",
+        agentVersion: "v1",
+        modelTier: over.modelTier ?? null,
+        strategy: null,
+        input: {},
+        maxAttempts: 3,
+        attemptCount: 0,
+        runRoleTiers: over.runRoleTiers ?? null,
+      },
+      attempt: { id: "a", attemptNumber: 1 },
+    }) as Parameters<typeof taskTierOverride>[1];
+  const deps = agentDeps(stubHubFetch({})) as Parameters<typeof taskTierOverride>[0];
+
+  it("task-level override (ladder escalation) outranks the run preference", () => {
+    expect(
+      taskTierOverride(
+        deps,
+        work({ modelTier: "frontier", runRoleTiers: { researcher: "fast_local" } }),
+      ),
+    ).toBe("frontier");
+  });
+
+  it("run roleTiers applies for the task's role when no task override exists", () => {
+    expect(taskTierOverride(deps, work({ runRoleTiers: { researcher: "fast_local" } }))).toBe(
+      "fast_local",
+    );
+    // Another role's preference never leaks.
+    expect(taskTierOverride(deps, work({ runRoleTiers: { evaluator: "fast_local" } }))).toBeNull();
+  });
+
+  it("unconfigured or invalid tiers are inert at both levels (belt)", () => {
+    expect(
+      taskTierOverride(
+        deps,
+        work({ modelTier: "cheap_remote", runRoleTiers: { researcher: "nope" } }),
+      ),
+    ).toBeNull();
+  });
+
+  it("no override anywhere → null (the policy table decides)", () => {
+    expect(taskTierOverride(deps, work({}))).toBeNull();
   });
 });

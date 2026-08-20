@@ -3,6 +3,7 @@
 // Planner replaces this entry point in Phase 3.
 import { z } from "zod";
 import { TaskType } from "./enums";
+import { RoleTiers } from "./routing";
 
 export const CreateRunTask = z.object({
   id: z.string().uuid().optional(),
@@ -25,6 +26,10 @@ export const CreateRunRequest = z.object({
   // plan task and staged planning grows the DAG (ADR-011). An explicit list
   // remains for demos/tests/gates.
   tasks: z.array(CreateRunTask).min(1).optional(),
+  // 7.1 (phase-7-plan D4): per-role TIER preference for this run. Persisted
+  // on research_runs.metadata.roleTiers; the worker resolves task override >
+  // this map > the policy table.
+  roleTiers: RoleTiers.optional(),
 });
 export type CreateRunRequest = z.infer<typeof CreateRunRequest>;
 

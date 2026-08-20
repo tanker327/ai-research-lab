@@ -149,3 +149,33 @@ describe("finishAttempt", () => {
     expect(event?.kind).toBe("fail");
   });
 });
+
+describe("run-scoped roleTiers on the claim row (7.1)", () => {
+  it("carries research_runs.metadata.roleTiers; null when the run set none", async () => {
+    await raw`UPDATE research_runs
+              SET metadata = '{"roleTiers": {"researcher": "frontier"}}'::jsonb
+              WHERE id = ${runId}`;
+    await seedTask(workerA.db, {
+      id: newId(),
+      runId,
+      status: "READY",
+      type: "research",
+      title: "routed",
+    });
+    const work = await claimNextReadyTask(workerA.db, "wA");
+    expect(work?.task.runRoleTiers).toEqual({ researcher: "frontier" });
+
+    const plainRun = newId();
+    runIds.push(plainRun);
+    await seedRun(workerA.db, plainRun);
+    await seedTask(workerA.db, {
+      id: newId(),
+      runId: plainRun,
+      status: "READY",
+      type: "research",
+      title: "unrouted",
+    });
+    const plain = await claimNextReadyTask(workerA.db, "wA");
+    expect(plain?.task.runRoleTiers).toBeNull();
+  });
+});

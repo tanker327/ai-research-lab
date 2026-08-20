@@ -68,6 +68,9 @@ export interface StartRunInput {
   title?: string | null;
   userRequest: string;
   budget?: Record<string, unknown>;
+  // Run-scoped per-role tier preference (7.1) — persisted verbatim on
+  // research_runs.metadata.roleTiers; validated by the API (RoleTiers).
+  roleTiers?: Record<string, string>;
   tasks: Array<{
     id?: string;
     type: string;
@@ -88,6 +91,7 @@ export async function startRun(db: Db, req: StartRunInput): Promise<string> {
       title: req.title ?? null,
       userRequest: req.userRequest,
       budget: req.budget ?? {},
+      metadata: req.roleTiers ? { roleTiers: req.roleTiers } : {},
     });
     await emitEvent(tx, { runId, type: "RUN_CREATED", kind: "info", actor: ACTOR });
 

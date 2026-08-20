@@ -34,11 +34,18 @@ function mapRun(r: Record<string, unknown>): RunRow {
 
 export async function insertRun(
   tx: SqlExecutor,
-  run: { id: string; title: string | null; userRequest: string; budget: Record<string, unknown> },
+  run: {
+    id: string;
+    title: string | null;
+    userRequest: string;
+    budget: Record<string, unknown>;
+    metadata?: Record<string, unknown>; // e.g. roleTiers (7.1)
+  },
 ): Promise<void> {
   await tx.execute(sql`
-    INSERT INTO research_runs (id, title, user_request, budget)
-    VALUES (${run.id}, ${run.title}, ${run.userRequest}, ${JSON.stringify(run.budget)}::jsonb)`);
+    INSERT INTO research_runs (id, title, user_request, budget, metadata)
+    VALUES (${run.id}, ${run.title}, ${run.userRequest}, ${JSON.stringify(run.budget)}::jsonb,
+            ${JSON.stringify(run.metadata ?? {})}::jsonb)`);
 }
 
 export async function selectRun(tx: SqlExecutor, runId: string): Promise<RunRow | null> {

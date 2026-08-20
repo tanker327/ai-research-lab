@@ -91,12 +91,20 @@ function tierModes(config: Config) {
 
 // 4.5: an intelligence-retry escalation writes model_tier onto the task row;
 // the next attempt routes there (guardDarkFrontier still applies on top).
+// 7.1: below the task override sits the run's per-role preference
+// (research_runs.metadata.roleTiers, carried on the claim row) — an
+// escalation outranks a preference; the policy table remains the floor.
 // Belt (gate finding): only tiers with a configured model are honored — an
-// unconfigured suggestion (cheap_remote) is inert, not fatal.
-function taskTierOverride(deps: AgentDeps, work: ClaimedWork): ModelTier | null {
-  const parsed = ModelTier.safeParse(work.task.modelTier);
-  if (!parsed.success) return null;
-  return parsed.data in tierModels(deps.config) ? parsed.data : null;
+// unconfigured value is inert, not fatal.
+export function taskTierOverride(deps: AgentDeps, work: ClaimedWork): ModelTier | null {
+  const configured = (t: unknown): ModelTier | null => {
+    const parsed = ModelTier.safeParse(t);
+    if (!parsed.success) return null;
+    return parsed.data in tierModels(deps.config) ? parsed.data : null;
+  };
+  return (
+    configured(work.task.modelTier) ?? configured(work.task.runRoleTiers?.[work.task.agentRole])
+  );
 }
 
 // The per-attempt AgentContext (§5.5): tools scoped to the role, artifact

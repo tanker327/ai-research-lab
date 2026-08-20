@@ -29,3 +29,10 @@ export const ResolvedRoute = z.object({
   mode: StructuredMode, // provider capability (D2)
 });
 export type ResolvedRoute = z.infer<typeof ResolvedRoute>;
+
+// Run-scoped routing preference (ticket 7.1, phase-7-plan D4): the user picks
+// a TIER per role at creation/review time. Resolution order in the worker:
+// task-level override (ladder escalations — they outrank a preference) >
+// run roleTiers > the policy table. Raw model names stay deployment config.
+export const RoleTiers = z.partialRecord(AgentRole, ModelTier);
+export type RoleTiers = z.infer<typeof RoleTiers>;
