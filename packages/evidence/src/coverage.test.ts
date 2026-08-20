@@ -7,6 +7,7 @@ import {
   deleteRun,
   seedAttempt,
   seedCanonicalClaim,
+  seedDependency,
   seedEvidence,
   seedRawClaim,
   seedRun,
@@ -50,8 +51,17 @@ describe("computeCoverage", () => {
     const runId = newId();
     cleanup.push(runId);
     await seedRun(db, runId);
-    const a = await seedResearchTask(runId, "What are the transactional DDL limits?");
+    const research = await seedResearchTask(runId, "What are the transactional DDL limits?");
     const b = await seedResearchTask(runId, "How do other databases compare?", "FAILED");
+    // Evidence/claims are written by the EXTRACT task (ADR-012) — per-question
+    // coverage must walk research → extract lineage (live gate finding: the
+    // Evaluator itself flagged perQuestion counts stuck at 0).
+    const extractTask = newId();
+    const extractAttempt = newId();
+    await seedTask(db, { id: extractTask, runId, status: "DONE", type: "extract", title: "x" });
+    await seedDependency(db, extractTask, research.taskId);
+    await seedAttempt(db, { id: extractAttempt, taskId: extractTask, runId, status: "ACCEPTED" });
+    const a = { taskId: extractTask, attemptId: extractAttempt };
 
     // Task A: 3 evidence — non-vendor, vendor, NULL (counts as vendor) → ratio 2/3.
     await seedEvidence(db, {

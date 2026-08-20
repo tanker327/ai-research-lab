@@ -25,6 +25,9 @@ The Analyst reads live claims and produces findings; a deterministic CoverageSum
 
 - **gate:p3 semantics superseded (4.4):** with the analysis loop live, a run with claims can no longer COMPLETE from the completion sweep — it is analyzed and judged first, and completion is the Evaluator's ACCEPT. `gate:p3`'s "run COMPLETED" assertion now exercises the full loop (and can land at WAITING_HUMAN if the guard trips); gate:p4 is the phase's live gate going forward.
 - **RUN_DEGRADED fires once, at analysis entry** (not at completion as in P3): failed leaves stay loud, and the Evaluator sees them in `runMetrics.tasksFailed`.
+- **First live gate run (2026-08-19): the full loop worked end to end unassisted** — plan → research → extract → canonicalize → analyze → evaluate → ACCEPT → COMPLETED, on the very first live pass. Two findings from it:
+  - **Per-question coverage counted zero for every question** — evidence/claims carry the EXTRACT task's id (ADR-012 two-pass), not the research task's; the lineage walk now goes research → dependent extract tasks via `task_dependencies`. Spotted BY THE EVALUATOR itself in its issues list — the loop auditing its own instrumentation.
+  - **A future-dated "impossible rubric" is not impossible to a good judge:** deepseek-pro ACCEPTed leg B's post-2027-benchmark criterion as *documented absence* with accepted uncertainties — a defensible judgment, not a rubber-stamp. Leg B's rubric is now MEASURABLY unmet in coverage (≥12 distinct non-vendor publishers, ≥5 benchmark origins) with absence-acceptance explicitly forbidden.
 
 ## Design decisions
 

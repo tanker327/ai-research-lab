@@ -92,11 +92,16 @@ try {
   console.log("— Leg B: cycle guard (cap=1, impossible rubric)");
   startStack({ DEFAULT_MAX_EVAL_CYCLES: "1" });
   await waitApi();
+  // Live-gate finding (first run): a future-dated "impossible" criterion was
+  // reasonably ACCEPTed as documented absence — the rubric must be MEASURABLY
+  // unmet in coverage and explicitly forbid absence-acceptance.
   const runB = await createRun(
     "Does PostgreSQL support transactional DDL? " +
-      "STRICT success criterion: only accept if the evidence includes an independent " +
-      "third-party benchmark of DDL rollback performance published after January 2027 — " +
-      "evidence older than that must not satisfy this criterion. " +
+      "STRICT success criteria that MUST be verified against the coverage numbers: the " +
+      "evidence base must span at least 12 distinct non-vendor publishers AND at least 5 " +
+      "distinct benchmark origins. If the coverage does not meet these thresholds the " +
+      "analysis MUST NOT be accepted — documented absence or accepted uncertainty does " +
+      "NOT satisfy these thresholds. " +
       "Primary source (content page, not a TOC): " +
       "https://wiki.postgresql.org/wiki/Transactional_DDL_in_PostgreSQL:_A_Competitive_Analysis",
     "phase-4 gate leg B",

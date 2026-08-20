@@ -66,10 +66,12 @@ export async function selectSourceClassMix(
 }
 
 // Per-key-question coverage: the key question IS the research task's
-// researchQuestion (raw_claims/evidence task lineage) — derived, never
-// prompted (phase-4-plan D2). Tasks without a researchQuestion (fake/seed
-// tasks) are skipped. Claims counted as DISTINCT canonical ids so merged
-// duplicates don't inflate a question's coverage.
+// researchQuestion — derived, never prompted (phase-4-plan D2). Evidence and
+// claims are written by the EXTRACT task (ADR-012 two-pass), which depends on
+// its research task — so the lineage walk goes research task → dependent
+// tasks → side-effect rows (live gate finding: counting by the research
+// task's own id showed 0 for every question; the Evaluator spotted it).
+// Claims counted as DISTINCT canonical ids so merges don't inflate coverage.
 export interface QuestionCoverageRow {
   question: string;
   taskStatus: string;
@@ -84,15 +86,27 @@ export async function selectCoveragePerQuestion(
   runId: string,
 ): Promise<QuestionCoverageRow[]> {
   const rows = await tx.execute(sql`
+    WITH lineage_tasks AS (
+      SELECT rt.id AS id, rt.id AS root FROM research_tasks rt WHERE rt.run_id = ${runId}
+      UNION ALL
+      SELECT td.task_id AS id, td.depends_on_task_id AS root
+      FROM task_dependencies td
+      JOIN research_tasks rt ON rt.id = td.task_id
+      WHERE rt.run_id = ${runId} AND rt.type = 'extract'
+    )
     SELECT t.input->>'researchQuestion' AS question, t.status AS task_status,
-           (SELECT count(*)::int FROM live_evidence le WHERE le.task_id = t.id) AS evidence_count,
+           (SELECT count(*)::int FROM live_evidence le WHERE le.task_id IN
+             (SELECT lineage.id FROM lineage_tasks lineage WHERE lineage.root = t.id)) AS evidence_count,
            (SELECT count(DISTINCT lrc.canonical_claim_id)::int FROM live_raw_claims lrc
-             WHERE lrc.task_id = t.id AND lrc.canonical_claim_id IS NOT NULL) AS claim_count,
+             WHERE lrc.canonical_claim_id IS NOT NULL AND lrc.task_id IN
+             (SELECT lineage.id FROM lineage_tasks lineage WHERE lineage.root = t.id)) AS claim_count,
            (SELECT count(DISTINCT le.publisher)::int FROM live_evidence le
-             WHERE le.task_id = t.id AND le.publisher IS NOT NULL) AS distinct_publishers,
+             WHERE le.publisher IS NOT NULL AND le.task_id IN
+             (SELECT lineage.id FROM lineage_tasks lineage WHERE lineage.root = t.id)) AS distinct_publishers,
            (SELECT coalesce(avg(CASE WHEN le.vendor_affiliated IS DISTINCT FROM false
                                      THEN 1.0 ELSE 0.0 END), 0)::float
-             FROM live_evidence le WHERE le.task_id = t.id) AS vendor_ratio
+             FROM live_evidence le WHERE le.task_id IN
+             (SELECT lineage.id FROM lineage_tasks lineage WHERE lineage.root = t.id)) AS vendor_ratio
     FROM research_tasks t
     WHERE t.run_id = ${runId} AND t.type = 'research'
       AND t.input->>'researchQuestion' IS NOT NULL
