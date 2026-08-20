@@ -49,16 +49,63 @@ export async function canonicalizeRun(
   runId: string,
   confirmMerges?: MergeConfirmer,
 ): Promise<CanonicalizeResult> {
-  return db.transaction(async (tx) => {
-    const raw = await selectLiveRawClaims(tx, runId);
+  // PHASE 1 — plain reads: live raw claims + trgm merge candidates. NO
+  // transaction is held here, because phase 2 awaits a MODEL call — a live
+  // run hung a merge-confirm HTTP request forever and the open transaction
+  // starved the scheduler's whole connection pool for 90+ minutes (P4 gate
+  // finding). Never await the network inside a DB transaction.
+  const raw = await selectLiveRawClaims(db, runId);
 
-    // RESOLVE: group by normalized exact key.
-    const groups = new Map<string, LiveRawClaimRow[]>();
-    for (const rc of raw) {
-      const key = `${normalizeKey(rc.subjectKey)}|${normalizeKey(rc.predicateKey)}`;
-      groups.set(key, [...(groups.get(key) ?? []), rc]);
+  // RESOLVE: group by normalized exact key.
+  const groups = new Map<string, LiveRawClaimRow[]>();
+  for (const rc of raw) {
+    const key = `${normalizeKey(rc.subjectKey)}|${normalizeKey(rc.predicateKey)}`;
+    groups.set(key, [...(groups.get(key) ?? []), rc]);
+  }
+
+  // Candidate near-dup subjects (pg_trgm), batch-confirmed by the caller's
+  // fast model. Merge direction is deterministic: only INTO a subject that
+  // sorts earlier, so two spellings converge on one row instead of
+  // ping-ponging across re-runs (a canonical row is a pure function of the
+  // live set).
+  const candidatesByKey = new Map<string, Awaited<ReturnType<typeof selectTrgmCandidates>>>();
+  const pairs: MergePair[] = [];
+  const pairSlices = new Map<string, [number, number]>();
+  for (const [key, members] of groups) {
+    const [subjectKey, predicateKey] = key.split("|") as [string, string];
+    const first = members[0];
+    if (!first) continue;
+    const candidates = (
+      await selectTrgmCandidates(db, runId, subjectKey, predicateKey, TRGM_THRESHOLD)
+    ).filter((c) => c.subjectKey < subjectKey);
+    candidatesByKey.set(key, candidates);
+    if (candidates.length > 0 && confirmMerges) {
+      pairSlices.set(key, [pairs.length, pairs.length + candidates.length]);
+      pairs.push(
+        ...candidates.map((c) => ({
+          subjectA: subjectKey,
+          statementA: first.statement,
+          subjectB: c.subjectKey,
+          statementB: c.statement,
+        })),
+      );
     }
+  }
 
+  // PHASE 2 — the model call, outside any transaction. A plain "no" (or no
+  // confirmer, or any failure) means a new row: degrade to no-merge, never
+  // wrongly merge.
+  let verdicts: boolean[] = [];
+  if (pairs.length > 0 && confirmMerges) {
+    try {
+      verdicts = await confirmMerges(pairs);
+    } catch {
+      verdicts = [];
+    }
+  }
+
+  // PHASE 3 — all writes in one transaction, using the precomputed verdicts.
+  return db.transaction(async (tx) => {
     const result: CanonicalizeResult = { canonicalIds: [], merged: 0, contested: 0, linked: 0 };
     const rawToCanonical = new Map<string, string>();
 
@@ -67,30 +114,11 @@ export async function canonicalizeRun(
       const first = members[0];
       if (!first) continue;
 
-      // Candidate near-dup subjects (pg_trgm) confirmed in batch by the
-      // caller's fast model — a plain "no" (or no confirmer) means a new row.
-      // Merge direction is deterministic: only INTO a subject that sorts
-      // earlier, so two spellings converge on one row instead of ping-ponging
-      // across re-runs (a canonical row is a pure function of the live set).
       let targetSubject = subjectKey;
-      const candidates = (
-        await selectTrgmCandidates(tx, runId, subjectKey, predicateKey, TRGM_THRESHOLD)
-      ).filter((c) => c.subjectKey < subjectKey);
-      if (candidates.length > 0 && confirmMerges) {
-        let verdicts: boolean[] = [];
-        try {
-          verdicts = await confirmMerges(
-            candidates.map((c) => ({
-              subjectA: subjectKey,
-              statementA: first.statement,
-              subjectB: c.subjectKey,
-              statementB: c.statement,
-            })),
-          );
-        } catch {
-          verdicts = []; // degrade to no-merge, never wrongly merge
-        }
-        const hit = candidates.find((_, i) => verdicts[i] === true);
+      const candidates = candidatesByKey.get(key) ?? [];
+      const slice = pairSlices.get(key);
+      if (slice) {
+        const hit = candidates.find((_, i) => verdicts[slice[0] + i] === true);
         if (hit) {
           targetSubject = hit.subjectKey;
           result.merged += 1;
