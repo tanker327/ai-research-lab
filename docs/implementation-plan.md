@@ -125,6 +125,8 @@ TASK_CLAIM_TIMEOUT_S=900
 POLL_INTERVAL_MS=500
 DEFAULT_MAX_ATTEMPTS=3
 DEFAULT_MAX_EVAL_CYCLES=3
+MIN_EVIDENCE_PER_TASK=3
+MAX_PLAN_STAGES=2
 ```
 
 Typed config module (`packages/core/src/config.ts`) validates all of this with Zod at startup; a missing var is a crash at boot, never a runtime surprise.

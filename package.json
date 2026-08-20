@@ -22,7 +22,8 @@
     "dev:web": "bun --cwd apps/web run dev",
     "typecheck:web": "tsc --noEmit -p apps/web",
     "gate:p2": "bun scripts/gates/p2.ts",
-    "gate:p3": "bun scripts/gates/p3.ts"
+    "gate:p3": "bun scripts/gates/p3.ts",
+    "gate:p4": "bun scripts/gates/p4.ts"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.5.9",
