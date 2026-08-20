@@ -4,6 +4,7 @@
 // attempt goes through decideRetry (rule 10) and the verdict is persisted as
 // a DecisionRecord before the task moves.
 import {
+  applyRetryDirectives,
   type Db,
   type EvaluationCandidate,
   insertDecisionRecord,
@@ -152,6 +153,15 @@ export async function sweepEvaluations(
       const to = verdict.kind === "task_failed" ? "FAILED" : "READY";
       assertTaskTransition("EVALUATING", to);
       await updateTaskStatus(tx, c.taskId, to);
+      // 4.5: ladder directives are APPLIED on the failure path too — the
+      // SCHEMA_FAILURE attempt-2 frontier escalation writes the tier onto the
+      // task row so the next claim actually routes there.
+      if (verdict.kind === "intelligence_retry" && (verdict.strategy || verdict.tier)) {
+        await applyRetryDirectives(tx, c.taskId, {
+          strategy: verdict.strategy,
+          modelTier: verdict.tier,
+        });
+      }
       await insertDecisionRecord(tx, {
         id: newId(),
         runId: c.runId,

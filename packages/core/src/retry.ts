@@ -60,17 +60,28 @@ export function decideRetry(
     };
   }
 
-  // Malformed structured output retries at the same configuration — for
-  // extract that means re-extract from the stored note (never re-research,
-  // P8); for other roles a constrained-decoding hiccup (truncation, invalid
-  // JSON) is transient-shaped and cheap to re-run. The attempt cap bounds it.
+  // Malformed structured output: attempt 1 retries the same configuration (a
+  // constrained-decoding hiccup is cheap to re-run); attempt ≥2 ESCALATES to
+  // the frontier tier — live finding: a deterministic local model at
+  // temperature 0 replays the identical truncated output from cache in
+  // milliseconds, so a same-configuration retry is a no-op. "Remodel" is a
+  // designed failure response (P5). Extract still re-extracts from the
+  // persisted note either way — never re-research (P8).
   if (err?.category === "SCHEMA_FAILURE") {
+    const what =
+      a.taskType === "extract"
+        ? "re-extracting from the persisted research note (never re-research, P8)"
+        : `re-running ${a.taskType}`;
+    if (a.attemptNumber >= 2) {
+      return {
+        kind: "intelligence_retry",
+        tier: "frontier",
+        rationale: `SCHEMA_FAILURE on ${a.taskType} attempt ${a.attemptNumber}: the same configuration reproduced the malformed output — ${what} on the frontier tier.`,
+      };
+    }
     return {
       kind: "intelligence_retry",
-      rationale:
-        a.taskType === "extract"
-          ? "SCHEMA_FAILURE on extract: re-extracting from the persisted research note — never re-research (P8)."
-          : `SCHEMA_FAILURE on ${a.taskType}: re-running the same configuration — malformed structured output is cheap to retry and the attempt cap bounds it.`,
+      rationale: `SCHEMA_FAILURE on ${a.taskType}: ${what} at the same configuration — a decoding hiccup is cheap to retry; escalation follows if it repeats.`,
     };
   }
 

@@ -57,10 +57,28 @@ describe("schema failure", () => {
     expect(v.rationale).toContain("re-extract");
   });
 
-  it("retries non-extract tasks at the same configuration (cap-bounded)", () => {
+  it("attempt 1 retries at the same configuration (cap-bounded)", () => {
     const v = decideRetry(ctx({ taskType: "research" }), err("SCHEMA_FAILURE"), null);
     expect(v.kind).toBe("intelligence_retry");
+    expect(v.kind === "intelligence_retry" && v.tier).toBeFalsy();
     expect(v.rationale).toContain("cheap to retry");
+  });
+
+  it("attempt ≥2 escalates to frontier — a deterministic model replays the same bad output", () => {
+    const v = decideRetry(
+      ctx({ taskType: "analyze", attemptNumber: 2 }),
+      err("SCHEMA_FAILURE"),
+      null,
+    );
+    expect(v).toMatchObject({ kind: "intelligence_retry", tier: "frontier" });
+    // Extract still never re-researches — but it does remodel.
+    const e = decideRetry(
+      ctx({ taskType: "extract", attemptNumber: 3 }),
+      err("SCHEMA_FAILURE"),
+      null,
+    );
+    expect(e).toMatchObject({ kind: "intelligence_retry", tier: "frontier" });
+    expect(e.rationale).toContain("never re-research");
   });
 });
 
