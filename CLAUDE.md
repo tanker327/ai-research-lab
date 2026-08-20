@@ -50,7 +50,7 @@ If a ticket seems to require deviating from these, **stop and flag it** — do n
 
 ## Testing rules
 
-- Tests run against **real Postgres** (docker compose). Mocked-DB tests of control-plane logic are worthless — the correctness *is* SQL semantics (SKIP LOCKED, partial unique indexes, transactional supersede).
+- Tests run against **real Postgres** (docker compose), in the dedicated `research_lab_test` database (`bun run test` sets DATABASE_URL) — the suite's sweeps and fake workers must never touch live runs in `research_lab`. Mocked-DB tests of control-plane logic are worthless — the correctness *is* SQL semantics (SKIP LOCKED, partial unique indexes, transactional supersede).
 - Failure-injection fixtures (implementation-plan §8) are the Phase 1/4 test suite. When you fix a concurrency bug, add its injection to the matrix.
 - Phase gates are scripts in `scripts/gates/` — a phase is done when its gate passes in CI, not when the code "looks done."
 - Agent code (`packages/agents`) gets contract tests (schema in/out, allowlist enforcement) with stubbed ModelClient. Live-model tests live in `scripts/golden/` and are run manually.

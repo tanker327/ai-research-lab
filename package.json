@@ -10,7 +10,7 @@
     "format": "biome check --write .",
     "lint:imports": "bun scripts/import-lint.ts",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run",
+    "test": "DATABASE_URL=\"${DATABASE_URL:-postgres://lab:lab@localhost:5434/research_lab_test}\" vitest run",
     "check": "bun run lint && bun run lint:imports && bun run typecheck && bun run typecheck:web && bun run build:web && bun run test && bun run test:hooks",
     "build:web": "bun run --cwd apps/web build",
     "migrate": "drizzle-kit migrate --config packages/db/drizzle.config.ts",
