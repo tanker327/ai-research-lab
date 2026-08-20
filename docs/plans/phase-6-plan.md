@@ -137,6 +137,13 @@ these three verbs; richer semantics stay deferred (§22).
 - **2026-08-20 (6.0) — Timeline SSE was silently frozen for P4/P5 events**
   (hardcoded Phase-1 event-name list + no history refetch). Filed as G5/6.3;
   load-bearing for the gate.
+- **2026-08-20 (gate, scripted leg) — PASSED first run.** The api process
+  (scheduler included) was SIGTERMed after the run's first model call and
+  restarted; the run COMPLETED across the restart (ADR-017). The live run
+  itself produced a SUPERSEDED attempt — its trace assembled through the
+  fresh api (4 blocks, no fixture fallback needed). Metrics served (8 calls,
+  4 frontier, 1/3 cycles, 6 evidence); SSE carried named + default frames.
+  Remaining: the human watch leg closes the phase.
 - **2026-08-20 (6.4) — task machine gained FAILED → CANCELLED (human
   retirement).** D5's `retry` verb needs the failed loop task out of the
   completion sweep's failed set without special-case metadata; retirement is
