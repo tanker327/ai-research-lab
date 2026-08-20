@@ -16,6 +16,6 @@ export * from "./raw/plan";
 export * from "./raw/runs";
 export * from "./raw/sweeps";
 export * from "./raw/toolcalls";
-export * from "./schema";
 export * from "./raw/trace";
+export * from "./schema";
 export * from "./trace";

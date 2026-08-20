@@ -10,8 +10,9 @@ import { navigate } from "../App";
 import { cancelRun, useCheckpoints, useRun, useTasks } from "../api";
 import { AttemptsView } from "./Attempts";
 import { ClaimsView } from "./Claims";
-import { Placeholder } from "./Placeholder";
+import { ReportView } from "./Report";
 import { Timeline } from "./Timeline";
+import { TranscriptView } from "./Transcript";
 import { VerdictsView } from "./Verdicts";
 
 const PHASES = [
@@ -40,8 +41,8 @@ const TABS = [
   { key: "attempts", label: "Attempts" },
   { key: "evidence", label: "Evidence" },
   { key: "verdict", label: "Verdict" },
-  { key: "report", label: "Report", badge: "P5" },
-  { key: "transcript", label: "Transcript", badge: "P5" },
+  { key: "report", label: "Report" },
+  { key: "transcript", label: "Transcript" },
 ];
 
 // Phase-rail pill (mockup .rail .ph) — done/now/pending/terminal states.
@@ -102,11 +103,6 @@ export function RunDetail({ runId, tab }: { runId: string; tab: string }) {
           {TABS.map((t) => (
             <TabsTrigger key={t.key} value={t.key}>
               {t.label}
-              {t.badge && (
-                <span className="ml-1.5 font-mono text-[0.62rem] text-muted-foreground">
-                  {t.badge}
-                </span>
-              )}
             </TabsTrigger>
           ))}
         </TabsList>
@@ -222,20 +218,8 @@ export function RunDetail({ runId, tab }: { runId: string; tab: string }) {
 
         {tab === "evidence" && <ClaimsView runId={runId} />}
         {tab === "verdict" && <VerdictsView runId={runId} />}
-        {tab === "report" && (
-          <Placeholder
-            title="Report with citation chips"
-            phase="Phase 5"
-            note="Synthesizer output with sentence→claim citation map (§24.4)."
-          />
-        )}
-        {tab === "transcript" && (
-          <Placeholder
-            title="Transcript reading mode"
-            phase="Phase 5"
-            note="Chronological run narrative assembled from the trace read model (§24.2)."
-          />
-        )}
+        {tab === "report" && <ReportView runId={runId} />}
+        {tab === "transcript" && <TranscriptView runId={runId} />}
       </div>
     </>
   );

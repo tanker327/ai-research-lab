@@ -193,3 +193,128 @@ export async function cancelRun(id: string): Promise<void> {
 export function eventStreamUrl(runId: string, after?: string): string {
   return `${BASE}/runs/${runId}/events/stream${after ? `?after=${after}` : ""}`;
 }
+
+// ---- Phase 5 read surface (5.4): report, citations, trace, transcript ----
+
+export interface ReportDto {
+  attemptId: string;
+  title: string | null;
+  markdown: string | null;
+  citationMap: Record<string, string[]>;
+  artifactId: string | null;
+}
+
+export interface CitationDto {
+  chip: string;
+  claims: Array<{
+    id: string;
+    statement: string | null;
+    status: string | null;
+    subjectKey: string | null;
+    evidence: Array<{
+      excerpt: string;
+      sourceUrl: string | null;
+      sourceClass: string;
+      vendorAffiliated: boolean | null;
+      retrievedAt: string;
+    }>;
+  }>;
+}
+
+// 404 = no accepted report yet — a normal state, not an error.
+async function getOrNull<T>(path: string): Promise<T | null> {
+  const res = await fetch(`${BASE}${path}`);
+  if (res.status === 404) return null;
+  if (!res.ok) throw new Error(`${path} → ${res.status}`);
+  return res.json() as Promise<T>;
+}
+
+export const useReport = (runId: string) =>
+  useQuery({
+    queryKey: ["report", runId],
+    queryFn: () => getOrNull<ReportDto>(`/runs/${runId}/report`),
+    refetchInterval: 5000,
+  });
+
+export const useCitations = (runId: string, enabled: boolean) =>
+  useQuery({
+    queryKey: ["citations", runId],
+    queryFn: () => getOrNull<CitationDto[]>(`/runs/${runId}/report/citations`),
+    enabled,
+  });
+
+export interface TraceToolCall {
+  id: string;
+  seq: number;
+  toolName: string;
+  request: Record<string, unknown>;
+  responseSnippet: string | null;
+  error: { message?: string } | null;
+  latencyMs: number | null;
+}
+
+export interface TraceArtifactRef {
+  id: string;
+  type: string;
+  name: string;
+  mediaType: string;
+  sizeBytes: number | null;
+  createdBy: string;
+}
+
+export interface TraceControlEntry {
+  source: "event" | "evaluation" | "decision";
+  type: string;
+  kind: string | null;
+  decision: string | null;
+  detail: string;
+  createdAt: string;
+}
+
+export type TraceBlockDto =
+  | { kind: "context_in"; input: Record<string, unknown> }
+  | { kind: "reasoning"; artifacts: TraceArtifactRef[] }
+  | { kind: "tool_call"; call: TraceToolCall }
+  | {
+      kind: "output";
+      output: Record<string, unknown> | null;
+      error: Record<string, unknown> | null;
+      artifacts: TraceArtifactRef[];
+    }
+  | { kind: "control"; entries: TraceControlEntry[] };
+
+export interface TraceDto {
+  attempt: {
+    id: string;
+    taskId: string;
+    attemptNumber: number;
+    status: string;
+    agentName: string;
+    agentVersion: string;
+    model: string | null;
+    modelTier: string | null;
+    startedAt: string | null;
+    completedAt: string | null;
+    taskType: string;
+    taskTitle: string;
+    planStage: number;
+    modelCalls: number;
+  };
+  blocks: TraceBlockDto[];
+}
+
+export interface TranscriptDto {
+  stage: number;
+  stages: number[];
+  traces: TraceDto[];
+}
+
+export const useTranscript = (runId: string, stage?: number) =>
+  useQuery({
+    queryKey: ["transcript", runId, stage ?? "first"],
+    queryFn: () =>
+      getOrNull<TranscriptDto>(
+        `/runs/${runId}/transcript${stage !== undefined ? `?stage=${stage}` : ""}`,
+      ),
+    refetchInterval: 5000,
+  });
