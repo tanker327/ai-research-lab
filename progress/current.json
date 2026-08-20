@@ -81,15 +81,14 @@
     {
       "id": "4.7",
       "title": "Phase 4 gate: scripts/gates/p4.ts (leg A milestone: gap\u2192follow-up\u2192ACCEPT cycle \u22652; leg B guard: impossible rubric + cap 1 \u2192 WAITING_HUMAN) \u2014 phase done when gate passes",
-      "status": "in_progress",
+      "status": "pending",
       "priority": 8,
       "depends_on": [
         "4.4",
         "4.5",
         "4.6"
       ],
-      "started_at": "2026-08-19",
-      "notes": "Approved implicitly by phase-4-plan D7 review (gate legs are the plan's D7, not new scope)."
+      "notes": "Gate script committed (5382cfc); live gate:p4 run in progress in the background this session \u2014 mark completed when both legs pass."
     }
   ],
   "known_issues": [
