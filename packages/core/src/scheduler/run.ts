@@ -244,7 +244,11 @@ export async function sweepRunCompletion(
           result.waiting.push(run.id);
           return;
         }
-        const analyzeCount = loopTasks.filter((t) => t.type === "analyze").length;
+        // CANCELLED loop tasks don't count toward the invariant — an
+        // operator-cancelled (or superseded) analysis must be re-enqueued.
+        const analyzeCount = loopTasks.filter(
+          (t) => t.type === "analyze" && t.status !== "CANCELLED",
+        ).length;
         const cycles = await selectAcceptedEvaluationCycles(tx, run.id);
         if (analyzeCount === cycles) {
           if (failedOrCancelled > 0 && analyzeCount === 0) {
