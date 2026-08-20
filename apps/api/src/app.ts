@@ -1,6 +1,14 @@
 // Hono app. Ticket 1.6 lands the SSE stream; the rest of the API surface is
 // ticket 1.8.
-import { cancelRun, resolveCheckpoint, startRun } from "@lab/core";
+import {
+  addPlannedTask,
+  cancelRun,
+  editPlannedTask,
+  removePlannedTask,
+  resolveCheckpoint,
+  startRun,
+  updateRunRouting,
+} from "@lab/core";
 import type { ArtifactStore, Db } from "@lab/db";
 import {
   assembleAttemptTrace,
@@ -21,7 +29,13 @@ import {
   selectToolCallsByAttempt,
 } from "@lab/db";
 import { computeCoverage } from "@lab/evidence";
-import { CreateRunRequest, ResolveCheckpointRequest } from "@lab/schemas";
+import {
+  AddPlanTaskRequest,
+  CreateRunRequest,
+  EditPlanTaskRequest,
+  ResolveCheckpointRequest,
+  UpdateRoutingRequest,
+} from "@lab/schemas";
 import { Hono } from "hono";
 import { streamSSE } from "hono/streaming";
 import type { Logger } from "pino";
@@ -145,6 +159,67 @@ export function createApp({ db, bus, log, artifacts, maxEvalCycles = 3 }: ApiDep
 
   app.get("/runs/:id/checkpoints", async (c) => {
     return c.json(await selectCheckpointsByRun(db, c.req.param("id")));
+  });
+
+  // Plan-review editing (7.3, D3): legal only while a plan_review checkpoint
+  // is pending; every edit is audited (PLAN_EDITED event + DecisionRecord).
+  const editError = (err: unknown) => {
+    const message = err instanceof Error ? err.message : String(err);
+    const status = message.includes("does not exist") ? 404 : 409;
+    return { message, status } as const;
+  };
+
+  app.patch("/runs/:id/tasks/:taskId", async (c) => {
+    const body = EditPlanTaskRequest.safeParse(await c.req.json().catch(() => null));
+    if (!body.success) return c.json({ error: "invalid request", issues: body.error.issues }, 400);
+    try {
+      const { actor, ...edit } = body.data;
+      await editPlannedTask(db, c.req.param("id"), c.req.param("taskId"), edit, actor ?? "console");
+      return c.json({ ok: true });
+    } catch (err) {
+      const e = editError(err);
+      return c.json({ error: e.message }, e.status);
+    }
+  });
+
+  app.post("/runs/:id/tasks", async (c) => {
+    const body = AddPlanTaskRequest.safeParse(await c.req.json().catch(() => null));
+    if (!body.success) return c.json({ error: "invalid request", issues: body.error.issues }, 400);
+    try {
+      const { actor, ...args } = body.data;
+      const taskId = await addPlannedTask(db, c.req.param("id"), args, actor ?? "console");
+      return c.json({ id: taskId }, 201);
+    } catch (err) {
+      const e = editError(err);
+      return c.json({ error: e.message }, e.status);
+    }
+  });
+
+  app.delete("/runs/:id/tasks/:taskId", async (c) => {
+    try {
+      await removePlannedTask(db, c.req.param("id"), c.req.param("taskId"), "console");
+      return c.json({ ok: true });
+    } catch (err) {
+      const e = editError(err);
+      return c.json({ error: e.message }, e.status);
+    }
+  });
+
+  app.patch("/runs/:id/routing", async (c) => {
+    const body = UpdateRoutingRequest.safeParse(await c.req.json().catch(() => null));
+    if (!body.success) return c.json({ error: "invalid request", issues: body.error.issues }, 400);
+    try {
+      await updateRunRouting(
+        db,
+        c.req.param("id"),
+        body.data.roleTiers,
+        body.data.actor ?? "console",
+      );
+      return c.json({ ok: true });
+    } catch (err) {
+      const e = editError(err);
+      return c.json({ error: e.message }, e.status);
+    }
   });
 
   // Checkpoint resolution (6.4, D5): three verbs, control plane interprets.

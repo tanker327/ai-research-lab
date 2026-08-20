@@ -10,6 +10,7 @@ export * from "./extract";
 export * from "./liveness";
 export * from "./logger";
 export * from "./plan";
+export * from "./plan-edit";
 export * from "./quality";
 export * from "./retry";
 export * from "./scheduler";

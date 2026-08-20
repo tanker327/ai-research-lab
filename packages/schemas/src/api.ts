@@ -2,7 +2,7 @@
 // import the same shapes. Phase 1 runs take an explicit task list — the
 // Planner replaces this entry point in Phase 3.
 import { z } from "zod";
-import { TaskType } from "./enums";
+import { ModelTier, TaskType } from "./enums";
 import { RoleTiers } from "./routing";
 
 export const CreateRunTask = z.object({
@@ -47,3 +47,32 @@ export const ResolveCheckpointRequest = z.object({
   actor: z.string().max(200).optional(),
 });
 export type ResolveCheckpointRequest = z.infer<typeof ResolveCheckpointRequest>;
+
+// Plan-review editing (ticket 7.3, phase-7-plan D3). Legal only while the
+// run holds a pending plan_review checkpoint; the control plane guards.
+export const EditPlanTaskRequest = z.object({
+  title: z.string().min(1).max(500).optional(),
+  researchQuestion: z.string().min(12).max(500).optional(),
+  priority: z.number().int().min(0).max(100).optional(),
+  strategy: z.string().max(60).nullish(),
+  modelTier: ModelTier.nullish(),
+  actor: z.string().max(200).optional(),
+});
+export type EditPlanTaskRequest = z.infer<typeof EditPlanTaskRequest>;
+
+export const AddPlanTaskRequest = z.object({
+  title: z.string().min(1).max(500),
+  researchQuestion: z.string().min(12).max(500),
+  priority: z.number().int().min(0).max(100).optional(),
+  strategy: z.string().max(60).nullish(),
+  modelTier: ModelTier.nullish(),
+  dependsOn: z.array(z.string().uuid()).max(10).default([]),
+  actor: z.string().max(200).optional(),
+});
+export type AddPlanTaskRequest = z.infer<typeof AddPlanTaskRequest>;
+
+export const UpdateRoutingRequest = z.object({
+  roleTiers: RoleTiers,
+  actor: z.string().max(200).optional(),
+});
+export type UpdateRoutingRequest = z.infer<typeof UpdateRoutingRequest>;

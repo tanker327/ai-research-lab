@@ -187,3 +187,53 @@ export async function selectAnalysisLoopTasks(
     status: r.status as string,
   }));
 }
+
+// Plan-review editing reads/writes (ticket 7.3). Edits are legal only while
+// the run holds a pending checkpoint of the given reason — the caller checks
+// via this read inside the same tx.
+export async function selectPendingCheckpointId(
+  tx: SqlExecutor,
+  runId: string,
+  reason: string,
+): Promise<string | null> {
+  const rows = await tx.execute(sql`
+    SELECT id FROM human_checkpoints
+    WHERE run_id = ${runId} AND reason = ${reason} AND status = 'pending'
+    ORDER BY created_at DESC LIMIT 1`);
+  return ([...rows][0]?.id as string | undefined) ?? null;
+}
+
+export interface PlannedTaskEdit {
+  title?: string;
+  priority?: number;
+  strategy?: string | null;
+  modelTier?: string | null;
+  input?: Record<string, unknown>; // full replacement — caller merges
+}
+
+export async function updatePlannedTaskFields(
+  tx: SqlExecutor,
+  taskId: string,
+  edit: PlannedTaskEdit,
+): Promise<void> {
+  await tx.execute(sql`
+    UPDATE research_tasks SET
+      title = COALESCE(${edit.title ?? null}, title),
+      priority = COALESCE(${edit.priority ?? null}, priority),
+      strategy = CASE WHEN ${edit.strategy !== undefined} THEN ${edit.strategy ?? null} ELSE strategy END,
+      model_tier = CASE WHEN ${edit.modelTier !== undefined} THEN ${edit.modelTier ?? null} ELSE model_tier END,
+      input = COALESCE(${edit.input ? JSON.stringify(edit.input) : null}::jsonb, input),
+      updated_at = now()
+    WHERE id = ${taskId}`);
+}
+
+export async function updateRunRoleTiers(
+  tx: SqlExecutor,
+  runId: string,
+  roleTiers: Record<string, string>,
+): Promise<void> {
+  await tx.execute(sql`
+    UPDATE research_runs
+    SET metadata = jsonb_set(metadata, '{roleTiers}', ${JSON.stringify(roleTiers)}::jsonb)
+    WHERE id = ${runId}`);
+}

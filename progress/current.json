@@ -24,17 +24,20 @@
     {
       "id": "7.2",
       "title": "Review pause: reviewPlan flag, plan_review checkpoint on stage-1 accept, readiness-sweep WAITING_HUMAN hold, approve verb",
-      "status": "in_progress",
+      "status": "completed",
       "priority": 3,
       "depends_on": ["7.0"],
-      "started_at": "2026-08-20"
+      "started_at": "2026-08-20",
+      "completed_at": "2026-08-20",
+      "commit": "079cdd4"
     },
     {
       "id": "7.3",
       "title": "Plan-edit endpoints: PATCH/POST/DELETE task + PATCH routing, legality guards, audit trail (PLAN_EDITED events + DecisionRecords)",
-      "status": "pending",
+      "status": "in_progress",
       "priority": 4,
-      "depends_on": ["7.2"]
+      "depends_on": ["7.2"],
+      "started_at": "2026-08-20"
     },
     {
       "id": "7.4",
