@@ -7,7 +7,7 @@ import { describe, expect, it } from "vitest";
 import { attemptMachine } from "./attempt";
 import { InvalidTransitionError, type StateMachine } from "./machine";
 import { runMachine } from "./run";
-import { assertTransition, taskMachine } from "./task";
+import { assertTransition, TASK_TRANSITIONS, taskMachine } from "./task";
 
 function exhaustive<S extends string>(machine: StateMachine<S>, allStatuses: readonly S[]) {
   describe(`${machine.entity} machine`, () => {
@@ -47,9 +47,10 @@ exhaustive(attemptMachine, AttemptStatus.options);
 exhaustive(runMachine, RunStatus.options);
 
 describe("terminal states", () => {
-  it("task terminals are DONE/FAILED/CANCELLED with no exits", () => {
+  it("task terminals are DONE/CANCELLED; FAILED exits only to CANCELLED (6.4 human retirement)", () => {
     const terminals = TaskStatus.options.filter((s) => taskMachine.isTerminal(s));
-    expect(terminals.sort()).toEqual(["CANCELLED", "DONE", "FAILED"]);
+    expect(terminals.sort()).toEqual(["CANCELLED", "DONE"]);
+    expect(TASK_TRANSITIONS.FAILED).toEqual(["CANCELLED"]);
   });
 
   it("attempt terminals are ACCEPTED/SUPERSEDED/CANCELLED with no exits", () => {

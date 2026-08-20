@@ -11,7 +11,10 @@ export const TASK_TRANSITIONS: Readonly<Record<TaskStatus, readonly TaskStatus[]
   WAITING_HUMAN: ["READY", "CANCELLED"],
   BLOCKED: ["READY", "CANCELLED"], // unblocked by replan
   DONE: [],
-  FAILED: [],
+  // Human retirement (6.4, phase-6-plan D5): resolving a checkpoint with
+  // `retry` cancels the failed loop task so the completion sweep stops
+  // re-parking the run on it; a fresh task takes its place.
+  FAILED: ["CANCELLED"],
   CANCELLED: [],
 };
 

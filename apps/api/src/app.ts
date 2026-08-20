@@ -1,6 +1,6 @@
 // Hono app. Ticket 1.6 lands the SSE stream; the rest of the API surface is
 // ticket 1.8.
-import { cancelRun, startRun } from "@lab/core";
+import { cancelRun, resolveCheckpoint, startRun } from "@lab/core";
 import type { ArtifactStore, Db } from "@lab/db";
 import {
   assembleAttemptTrace,
@@ -21,7 +21,7 @@ import {
   selectToolCallsByAttempt,
 } from "@lab/db";
 import { computeCoverage } from "@lab/evidence";
-import { CreateRunRequest } from "@lab/schemas";
+import { CreateRunRequest, ResolveCheckpointRequest } from "@lab/schemas";
 import { Hono } from "hono";
 import { streamSSE } from "hono/streaming";
 import type { Logger } from "pino";
@@ -145,6 +145,28 @@ export function createApp({ db, bus, log, artifacts, maxEvalCycles = 3 }: ApiDep
 
   app.get("/runs/:id/checkpoints", async (c) => {
     return c.json(await selectCheckpointsByRun(db, c.req.param("id")));
+  });
+
+  // Checkpoint resolution (6.4, D5): three verbs, control plane interprets.
+  app.post("/runs/:id/checkpoints/:checkpointId/resolve", async (c) => {
+    const body = ResolveCheckpointRequest.safeParse(await c.req.json().catch(() => null));
+    if (!body.success) {
+      return c.json({ error: "invalid request", issues: body.error.issues }, 400);
+    }
+    try {
+      const result = await resolveCheckpoint(db, {
+        runId: c.req.param("id"),
+        checkpointId: c.req.param("checkpointId"),
+        action: body.data.action,
+        note: body.data.note,
+        actor: body.data.actor ?? "console",
+      });
+      return c.json(result);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      const status = message.includes("does not exist") ? 404 : 409;
+      return c.json({ error: message }, status);
+    }
   });
 
   app.get("/runs/:id/attempts", async (c) => {

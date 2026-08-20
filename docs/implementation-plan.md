@@ -152,7 +152,8 @@ const TRANSITIONS: Record<TaskStatus, TaskStatus[]> = {
   EVALUATING:   ["DONE", "READY", "BLOCKED", "WAITING_HUMAN", "FAILED", "CANCELLED"],
   WAITING_HUMAN:["READY", "CANCELLED"],
   BLOCKED:      ["READY", "CANCELLED"],                 // unblocked by replan
-  DONE: [], FAILED: [], CANCELLED: [],
+  DONE: [], CANCELLED: [],
+  FAILED: ["CANCELLED"],   // human retirement on checkpoint `retry` (P6.4) — a fresh task supersedes
 };
 
 export function assertTransition(from: TaskStatus, to: TaskStatus): void {

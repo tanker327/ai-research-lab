@@ -385,3 +385,17 @@ export const useMetrics = (runId: string) =>
     queryFn: () => get<MetricsDto>(`/runs/${runId}/metrics`),
     refetchInterval: 5000,
   });
+
+export async function resolveCheckpoint(
+  runId: string,
+  checkpointId: string,
+  action: "retry" | "accept" | "stop",
+  note?: string,
+): Promise<void> {
+  const res = await fetch(`${BASE}/runs/${runId}/checkpoints/${checkpointId}/resolve`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ action, note: note || undefined, actor: "console" }),
+  });
+  if (!res.ok) throw new Error(`resolve failed: ${res.status} ${await res.text()}`);
+}

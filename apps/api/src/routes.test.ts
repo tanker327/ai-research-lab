@@ -271,3 +271,23 @@ describe("Phase 6 read surface (6.2)", () => {
     expect(m.wallClockSeconds).toBeGreaterThanOrEqual(0);
   });
 });
+
+describe("Phase 6 write surface (6.4)", () => {
+  it("POST resolve validates the body and maps not-found/illegal to 400/404/409", async () => {
+    const runId = newId();
+    cleanup.push(runId);
+    await seedRun(db, runId, "resolve route test");
+    const bad = await app.request(`/runs/${runId}/checkpoints/${newId()}/resolve`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ action: "explode" }),
+    });
+    expect(bad.status).toBe(400);
+    const missing = await app.request(`/runs/${runId}/checkpoints/${newId()}/resolve`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ action: "stop" }),
+    });
+    expect(missing.status).toBe(404);
+  });
+});

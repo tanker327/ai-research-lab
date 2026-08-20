@@ -35,17 +35,20 @@
     {
       "id": "6.3",
       "title": "SSE generic-message fix + timeline robustness (D4, bug G5)",
-      "status": "in_progress",
+      "status": "completed",
       "priority": 4,
       "depends_on": ["6.0"],
-      "started_at": "2026-08-20"
+      "started_at": "2026-08-20",
+      "completed_at": "2026-08-20",
+      "commit": "cfb79d0"
     },
     {
       "id": "6.4",
       "title": "Checkpoint resolution: resolve endpoint + banner actions (D5)",
-      "status": "pending",
+      "status": "in_progress",
       "priority": 5,
-      "depends_on": ["6.0"]
+      "depends_on": ["6.0"],
+      "started_at": "2026-08-20"
     },
     {
       "id": "6.5",

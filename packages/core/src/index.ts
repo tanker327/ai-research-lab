@@ -1,5 +1,6 @@
 // @lab/core — control plane. Deterministic; imports no agent/model/tool code (rule 1).
 export * from "./analysis";
+export * from "./checkpoint";
 export * from "./checks";
 export * from "./claim";
 export * from "./config";

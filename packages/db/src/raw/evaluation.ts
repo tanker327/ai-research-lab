@@ -156,3 +156,42 @@ export async function selectRejectionReasonsForTask(
     ORDER BY e.created_at DESC LIMIT ${limit}`);
   return [...rows].flatMap((r) => (r.reasons as string[]) ?? []).slice(0, limit);
 }
+
+// Checkpoint resolution (ticket 6.4): lock the pending row, then retire it
+// with the human's response recorded verbatim.
+export interface CheckpointForUpdate {
+  id: string;
+  runId: string;
+  taskId: string | null;
+  reason: string;
+  status: string;
+}
+
+export async function getCheckpointForUpdate(
+  tx: SqlExecutor,
+  checkpointId: string,
+): Promise<CheckpointForUpdate | null> {
+  const rows = await tx.execute(sql`
+    SELECT id, run_id, task_id, reason, status FROM human_checkpoints
+    WHERE id = ${checkpointId} FOR UPDATE`);
+  const r = [...rows][0];
+  if (!r) return null;
+  return {
+    id: r.id as string,
+    runId: r.run_id as string,
+    taskId: (r.task_id as string | null) ?? null,
+    reason: r.reason as string,
+    status: r.status as string,
+  };
+}
+
+export async function markCheckpointResolved(
+  tx: SqlExecutor,
+  checkpointId: string,
+  response: Record<string, unknown>,
+): Promise<void> {
+  await tx.execute(sql`
+    UPDATE human_checkpoints
+    SET status = 'resolved', response = ${JSON.stringify(response)}::jsonb, resolved_at = now()
+    WHERE id = ${checkpointId}`);
+}

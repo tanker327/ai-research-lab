@@ -27,3 +27,12 @@ export const CreateRunRequest = z.object({
   tasks: z.array(CreateRunTask).min(1).optional(),
 });
 export type CreateRunRequest = z.infer<typeof CreateRunRequest>;
+
+// Checkpoint resolution (ticket 6.4, phase-6-plan D5): three deliberately
+// small verbs; the Control Plane interprets (ADR-003 applies to humans too).
+export const ResolveCheckpointRequest = z.object({
+  action: z.enum(["retry", "accept", "stop"]),
+  note: z.string().max(2000).optional(),
+  actor: z.string().max(200).optional(),
+});
+export type ResolveCheckpointRequest = z.infer<typeof ResolveCheckpointRequest>;

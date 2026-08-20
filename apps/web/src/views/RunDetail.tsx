@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils";
 import { navigate } from "../App";
 import { cancelRun, useCheckpoints, useRun, useTasks } from "../api";
 import { AttemptsView } from "./Attempts";
+import { CheckpointBanner } from "./CheckpointBanner";
 import { ClaimsView } from "./Claims";
 import { OverviewMetrics } from "./OverviewMetrics";
 import { ReportView } from "./Report";
@@ -113,18 +114,10 @@ export function RunDetail({ runId, tab }: { runId: string; tab: string }) {
         {run?.status === "WAITING_HUMAN" && pendingCheckpoints.length > 0 && (
           <Card className="border-fail">
             <CardHeader className="text-fail">Waiting on a human decision</CardHeader>
-            <CardContent className="grid gap-2 text-[0.82rem]">
+            <CardContent className="grid gap-3 text-[0.82rem]">
               {pendingCheckpoints.map((cp) => (
-                <div key={cp.id}>
-                  <span className="mr-2 font-mono text-[0.68rem] uppercase tracking-[0.06em] text-muted-foreground">
-                    {cp.reason}
-                  </span>
-                  {cp.question}
-                </div>
+                <CheckpointBanner key={cp.id} runId={runId} cp={cp} />
               ))}
-              <div className="font-mono text-[0.68rem] text-muted-foreground">
-                Checkpoint resolution UI lands in a later ticket — resolve via the database for now.
-              </div>
             </CardContent>
           </Card>
         )}
