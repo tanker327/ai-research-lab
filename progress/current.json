@@ -1,68 +1,28 @@
 {
-  "current_phase": "Phase 5 — Synthesizer + Citation Validator (not started)",
-  "plan": "docs/implementation-plan.md §6 Phase 5; draft docs/plans/phase-5-plan.md before coding (per-phase cadence)",
-  "gate": "End-to-end run produces a report where a sampled factual sentence traces sentence→claim→live evidence→source→attempt via API only; validator rejects a doctored uncited draft (ADR-020). Console wires report + transcript (standing UI rule).",
+  "current_phase": "Phase 6 — Console UI completion (not started)",
+  "plan": "docs/implementation-plan.md §6 Phase 6 (amended: console built incrementally since P2 — this phase closes remaining gaps vs the normative mockup, ADR-019/§24.6); draft docs/plans/phase-6-plan.md before coding",
+  "gate": "Watch a live run end-to-end in the console; open a superseded attempt's trace after an API restart (verifies ADR-017 + §24.9).",
   "tasks": [
     {
-      "id": "5.0",
-      "title": "Draft docs/plans/phase-5-plan.md — review with user before coding",
-      "status": "completed",
-      "completed_at": "2026-08-20",
-      "commit": "f9ac7d2",
+      "id": "6.0",
+      "title": "Draft docs/plans/phase-6-plan.md — inventory remaining mockup gaps vs the built console (runs list, new-research, overview rail, task graph, inspector drawer, SSE tail, report, transcript all exist in some form); review with user before coding",
+      "status": "pending",
       "priority": 1,
       "depends_on": []
-    },
-    {
-      "id": "5.1",
-      "title": "Synthesizer v1: approved-material-only context, citationMap output (web tools denied)",
-      "status": "completed",
-      "started_at": "2026-08-20",
-      "priority": 2,
-      "depends_on": ["5.0"],
-      "completed_at": "2026-08-20",
-      "commit": "ea190e2"
-    },
-    {
-      "id": "5.2",
-      "title": "Deterministic citation validator: uncited factual sentence ⇒ REJECT attempt (ADR-020)",
-      "status": "completed",
-      "priority": 3,
-      "depends_on": ["5.1"],
-      "started_at": "2026-08-20",
-      "completed_at": "2026-08-20",
-      "commit": "9eaebd7"
-    },
-    {
-      "id": "5.3",
-      "title": "Read APIs: trace, transcript (paginated by stage), claims, coverage, citations (§24.5)",
-      "status": "completed",
-      "priority": 4,
-      "depends_on": ["5.1"],
-      "started_at": "2026-08-20",
-      "completed_at": "2026-08-20",
-      "commit": "e3be933"
-    },
-    {
-      "id": "5.4",
-      "title": "Console wiring: report with citation-chip jumps + transcript reading mode (standing UI rule)",
-      "status": "completed",
-      "priority": 5,
-      "depends_on": ["5.2", "5.3"],
-      "started_at": "2026-08-20",
-      "completed_at": "2026-08-20",
-      "commit": "f6e0946"
     }
   ],
   "known_issues": [
     "OPTIONAL: openai/xai hub keys upgrade the frontier beyond deepseek-v4-pro — alias swap + FRONTIER_STRUCTURED_MODE=json_schema.",
-    "Firecrawl scrape latency invisible in console — candidate console chore (surfaced in P4 latency analysis).",
-    "gate:p4 single-process end-to-end pass still outstanding (all assertions verified manually after crash-resume) — optional re-run before P5 gate work."
+    "Firecrawl scrape latency invisible in console — candidate Phase 6 item (surfaced in P4 latency analysis).",
+    "gate:p4 single-process end-to-end pass still outstanding (all assertions verified manually after crash-resume); gate:p5 passed single-process first try.",
+    "Checkpoint resolution UI missing — WAITING_HUMAN runs are resolved via SQL today (banner says so); candidate Phase 6 item."
   ],
   "notes": [
-    "Phase 4 archived 2026-08-20 — THE MILESTONE achieved live: 3x RESEARCH_MORE → 11 follow-ups → ACCEPT on cycle 4, coverage 10→55 evidence; cycle guard passed 4x. 476 tests.",
-    "P4 norms: json_object outputs — semantically-optional arrays .default([]); never await network inside a DB tx; SCHEMA_FAILURE attempt ≥2 escalates tier; unconfigured tier suggestions inert.",
+    "Phase 5 archived 2026-08-20 — gate passed first run: doctored draft rejected with named checks; sampled sentence walked chip→claim→evidence→attempt via API only. Kept run 01a01f87-c481 (phase-5 gate leg A). 501 tests.",
+    "P5 norms: every body sentence outside ## Uncertainties must cite (ADR-020); citable = live + not rejected + evidence-backed ('approved' status has no workflow); validator REJECT reasons feed the next synthesize attempt (rejectionFeedback).",
+    "P4 norms: .default([]) on semantically-optional arrays; never await network inside a DB tx; SCHEMA_FAILURE attempt ≥2 escalates tier; unconfigured tier suggestions inert.",
     "Tests run in research_lab_test DB (bun run test) — never against live runs.",
-    "Frontier = deepseek/deepseek-v4-pro; watch account balance (a mid-run 402 parked a run at WAITING_HUMAN).",
-    "Standing UI rule: every phase DoD wires its capabilities into apps/web (ticket 5.4)."
+    "Frontier = deepseek/deepseek-v4-pro; watch account balance (a mid-run 402 parks runs at WAITING_HUMAN).",
+    "Do NOT create new top-level tasks without user approval — Phase 6 tickets are defined in the 6.0 plan review."
   ]
 }

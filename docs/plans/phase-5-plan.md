@@ -40,6 +40,14 @@ API calls only; the validator demonstrably rejects a doctored uncited draft.
   Verbatim matching would punish faithful restating (an LLM judgment we must
   not make in code, D3): the deterministic proxy is that the Uncertainties
   section exists with at least as many entries as the verdict accepted.
+- **2026-08-20 (gate) — PASSED, single process, first run.** Leg B: the live
+  scheduler rejected the doctored draft with `check:uncited_sentences` +
+  `check:chips_cite_live_claims`. Leg A: a planner-driven run completed
+  through synthesis — report "PostgreSQL Transactional DDL: Yes, With a
+  Database/Tablespace Exception", 4 chips; a randomly sampled sentence walked
+  chip c3 → supported claim → wiki.postgresql.org evidence → attempt trace
+  (4 blocks) via API calls only; 2 accepted uncertainties reproduced; 7
+  transcript traces in stage order. Kept run: gate leg A (GATE_KEEP_RUN=1).
 - **2026-08-20 (5.2) — validator rejects must be fixable, not replayed.** The
   P4 cached-replay lesson applied proactively: rule-check REJECT reasons from
   prior attempts of the same task are fed into the next synthesize context
