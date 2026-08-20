@@ -1,0 +1,81 @@
+{
+  "current_phase": "Phase 7 \u2014 Interactive Plan Review + Per-Role Model Routing (complete)",
+  "plan": "docs/plans/phase-7-plan.md (approved at proposal level 2026-08-20: stage-1-only pause; tiers not raw models; spec editing deferred)",
+  "gate": "Run with reviewPlan pauses at plan_review after stage-1; API leg edits a task + removes one + adds one + sets a role tier \u2192 approve \u2192 run completes; edited question is the researcher's actual input; re-routed role's model_calls carry the chosen tier. Console leg: same interactively.",
+  "tasks": [
+    {
+      "id": "7.0",
+      "title": "Phase-7 plan drafted + approved; tracker seeded",
+      "status": "completed",
+      "completed_at": "2026-08-20",
+      "commit": "50093bd",
+      "priority": 1,
+      "depends_on": []
+    },
+    {
+      "id": "7.1",
+      "title": "roleTiers end to end: CreateRunRequest field, run metadata, worker tier resolution (task override > run map > policy), creation-form selects",
+      "status": "completed",
+      "priority": 2,
+      "depends_on": ["7.0"],
+      "completed_at": "2026-08-20",
+      "commit": "e8fa9a3"
+    },
+    {
+      "id": "7.2",
+      "title": "Review pause: reviewPlan flag, plan_review checkpoint on stage-1 accept, readiness-sweep WAITING_HUMAN hold, approve verb",
+      "status": "completed",
+      "priority": 3,
+      "depends_on": ["7.0"],
+      "started_at": "2026-08-20",
+      "completed_at": "2026-08-20",
+      "commit": "079cdd4"
+    },
+    {
+      "id": "7.3",
+      "title": "Plan-edit endpoints: PATCH/POST/DELETE task + PATCH routing, legality guards, audit trail (PLAN_EDITED events + DecisionRecords)",
+      "status": "completed",
+      "priority": 4,
+      "depends_on": ["7.2"],
+      "started_at": "2026-08-20",
+      "completed_at": "2026-08-20",
+      "commit": "d95f9b0"
+    },
+    {
+      "id": "7.4",
+      "title": "Console: Plan Review screen (#/run/:id/review) + New Research form review toggle and tier selects",
+      "status": "completed",
+      "priority": 5,
+      "depends_on": ["7.1", "7.3"],
+      "completed_at": "2026-08-20",
+      "commit": "29be102"
+    },
+    {
+      "id": "7.5",
+      "title": "scripts/gates/p7.ts (API leg) + console leg with user",
+      "status": "completed",
+      "priority": 6,
+      "depends_on": ["7.4"],
+      "started_at": "2026-08-20",
+      "completed_at": "2026-08-20",
+      "commit": "b9d2d62",
+      "notes": "API leg passed first run (b42a4b6 findings); console leg signed off by user 2026-08-20 ('the review flow works')."
+    }
+  ],
+  "known_issues": [
+    "OPTIONAL: openai/xai hub keys upgrade the frontier beyond deepseek-v4-pro \u2014 alias swap + FRONTIER_STRUCTURED_MODE=json_schema.",
+    "gate:p4 single-process end-to-end pass still outstanding (all assertions verified manually) \u2014 optional ceremony.",
+    "Watch run 01a01fab-cb49 still parked at its cycle_guard checkpoint \u2014 user may accept/stop from the console banner or leave it.",
+    "Background dev-stack processes launched by the agent get externally SIGTERMed on this machine \u2014 run dev:api/worker/web in user terminals for watch sessions.",
+    "One unreproduced single-test flake observed right after the P7 cap fix (3 subsequent full runs green; failing test name not captured) \u2014 if it recurs, capture the name and add a failure injection per retry-policy."
+  ],
+  "notes": [
+    "Phase 6 archived 2026-08-20 \u2014 gate fully passed (scripted restart-survival leg first-run + human watch sign-off). 510 tests.",
+    "P6 norms: SSE events are double-written (named + default message frame) \u2014 clients listen via es.onmessage, never hardcode event-type names; FAILED\u2192CANCELLED is the human-retirement transition (checkpoint retry only).",
+    "P5 norms: every body sentence outside ## Uncertainties must cite (ADR-020); citable = live + not rejected + evidence-backed; validator REJECT reasons feed the next synthesize attempt.",
+    "P4 norms: .default([]) on semantically-optional arrays; never await network inside a DB tx; SCHEMA_FAILURE attempt \u22652 escalates tier; unconfigured tier suggestions inert.",
+    "Tests run in research_lab_test DB (bun run test) \u2014 never against live runs.",
+    "Frontier = deepseek/deepseek-v4-pro; WATCH ACCOUNT BALANCE before gate:p7 (a mid-run 402 parks runs at WAITING_HUMAN).",
+    "Standing UI rule: every phase DoD wires its capabilities into apps/web (ticket 7.4)."
+  ]
+}

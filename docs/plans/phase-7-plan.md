@@ -142,3 +142,7 @@ review screen when the pending reason is plan_review.
   researcher's verbatim attempt input (R12), the removed task ended CANCELLED
   with zero attempts, the added task ran, and the analyst's model_calls were
   tier `frontier`. Remaining: the console review leg with the user.
+- **2026-08-20 (gate, console leg) — PASSED, user sign-off.** The user ran the
+  interactive flow end to end (New research with "pause after planning" →
+  edits on `#/run/:id/review` → tier change → Start research): "the review
+  flow works." **Phase 7 gate fully passed — phase closed.**

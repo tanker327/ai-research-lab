@@ -1,78 +1,61 @@
 {
-  "current_phase": "Phase 7 — Interactive Plan Review + Per-Role Model Routing (started)",
-  "plan": "docs/plans/phase-7-plan.md (approved at proposal level 2026-08-20: stage-1-only pause; tiers not raw models; spec editing deferred)",
-  "gate": "Run with reviewPlan pauses at plan_review after stage-1; API leg edits a task + removes one + adds one + sets a role tier → approve → run completes; edited question is the researcher's actual input; re-routed role's model_calls carry the chosen tier. Console leg: same interactively.",
+  "current_phase": "Phase 8 — Golden Suite + Hardening (started)",
+  "plan": "docs/plans/phase-8-plan.md (direction chosen by user 2026-08-20: lock in quality before growing features; builds implementation-plan §7 golden tasks G1–G4 with committed JSON baselines + budget assertions, then closes the known-issue tail)",
+  "gate": "G1 and G2 run live end to end with baselines recorded — G1 clean-accepts (target 1 cycle), G2 surfaces a contested claim and loops (target 2 cycles) — every budget assertion holds (≤$1.50 frontier spend, ≤45min wall clock, no silent cycle-guard breach), and the user stamps a human verdict on each report (--judge).",
   "tasks": [
     {
-      "id": "7.0",
-      "title": "Phase-7 plan drafted + approved; tracker seeded",
+      "id": "8.0",
+      "title": "Phase-8 plan drafted (inventory: no golden runner exists; CLAUDE.md `bun run golden` was stale) + direction approved by user",
       "status": "completed",
       "completed_at": "2026-08-20",
-      "commit": "50093bd",
+      "commit": "4f72621",
       "priority": 1,
       "depends_on": []
     },
     {
-      "id": "7.1",
-      "title": "roleTiers end to end: CreateRunRequest field, run metadata, worker tier resolution (task override > run map > policy), creation-form selects",
-      "status": "completed",
+      "id": "8.1",
+      "title": "Golden runner: scripts/golden/run.ts + `bun run golden <ID>` — gate-pattern stack spawn, tasks-as-data (tasks.ts), metrics/verdict collection, budget assertions, baseline writer + --judge stamping (D1 D2)",
+      "status": "pending",
       "priority": 2,
-      "depends_on": ["7.0"],
-      "completed_at": "2026-08-20",
-      "commit": "e8fa9a3"
+      "depends_on": ["8.0"]
     },
     {
-      "id": "7.2",
-      "title": "Review pause: reviewPlan flag, plan_review checkpoint on stage-1 accept, readiness-sweep WAITING_HUMAN hold, approve verb",
-      "status": "completed",
+      "id": "8.2",
+      "title": "G1–G4 task definitions with encoded expectations (targetCycles, expectContested, expectCheckpoint, budgets) per §7 (D3)",
+      "status": "pending",
       "priority": 3,
-      "depends_on": ["7.0"],
-      "started_at": "2026-08-20",
-      "completed_at": "2026-08-20",
-      "commit": "079cdd4"
+      "depends_on": ["8.1"]
     },
     {
-      "id": "7.3",
-      "title": "Plan-edit endpoints: PATCH/POST/DELETE task + PATCH routing, legality guards, audit trail (PLAN_EDITED events + DecisionRecords)",
-      "status": "completed",
+      "id": "8.3",
+      "title": "Hardening tail: gate:p4 single-process ceremony, 5× full-suite flake hunt, CLAUDE.md commands accuracy (D4)",
+      "status": "pending",
       "priority": 4,
-      "depends_on": ["7.2"],
-      "started_at": "2026-08-20",
-      "completed_at": "2026-08-20",
-      "commit": "d95f9b0"
+      "depends_on": ["8.1"]
     },
     {
-      "id": "7.4",
-      "title": "Console: Plan Review screen (#/run/:id/review) + New Research form review toggle and tier selects",
-      "status": "completed",
+      "id": "gate",
+      "title": "G1+G2 live with baselines committed, budgets green, human verdicts stamped",
+      "status": "pending",
       "priority": 5,
-      "depends_on": ["7.1", "7.3"],
-      "completed_at": "2026-08-20",
-      "commit": "29be102"
-    },
-    {
-      "id": "7.5",
-      "title": "scripts/gates/p7.ts (API leg) + console leg with user",
-      "status": "in_progress",
-      "priority": 6,
-      "depends_on": ["7.4"],
-      "started_at": "2026-08-20"
+      "depends_on": ["8.2"]
     }
   ],
   "known_issues": [
     "OPTIONAL: openai/xai hub keys upgrade the frontier beyond deepseek-v4-pro — alias swap + FRONTIER_STRUCTURED_MODE=json_schema.",
-    "gate:p4 single-process end-to-end pass still outstanding (all assertions verified manually) — optional ceremony.",
-    "Watch run 01a01fab-cb49 still parked at its cycle_guard checkpoint — user may accept/stop from the console banner or leave it.",
-    "Background dev-stack processes launched by the agent get externally SIGTERMed on this machine — run dev:api/worker/web in user terminals for watch sessions.",
-    "One unreproduced single-test flake observed right after the P7 cap fix (3 subsequent full runs green; failing test name not captured) — if it recurs, capture the name and add a failure injection per retry-policy."
+    "gate:p4 single-process end-to-end pass still outstanding — folded into ticket 8.3.",
+    "Parked runs awaiting user action from the console: 01a01fad (RTX, analysis_failed — Retry; first beneficiary of the 41c2cd0 cap fix) and 01a01fab (cycle_guard — Accept or Stop).",
+    "Background dev-stack processes launched by the agent get externally SIGTERMed on this machine — use ONE supervised background bash (children + wait, gate pattern) or user terminals.",
+    "One unreproduced single-test flake observed right after the P7 cap fix (name not captured; 3 subsequent full runs green) — 8.3's 5× hunt resolves it either way."
   ],
   "notes": [
-    "Phase 6 archived 2026-08-20 — gate fully passed (scripted restart-survival leg first-run + human watch sign-off). 510 tests.",
-    "P6 norms: SSE events are double-written (named + default message frame) — clients listen via es.onmessage, never hardcode event-type names; FAILED→CANCELLED is the human-retirement transition (checkpoint retry only).",
+    "Phase 7 archived 2026-08-20 — gate fully passed (API leg first run + user console sign-off 'the review flow works'). 529 tests.",
+    "P7 norms: tier resolution task.model_tier > run.metadata.roleTiers[role] > policy (escalation outranks preference); plan edits legal only while plan_review pending + task CREATED, always audited (PLAN_EDITED + human_plan_edit); promoteReadyTasks skips WAITING_HUMAN runs; attempt cap counts intelligence attempts only (infra casualties excluded, 41c2cd0).",
+    "P6 norms: SSE events are double-written (named + default message frame) — clients listen via es.onmessage; FAILED→CANCELLED is the human-retirement transition (checkpoint retry only).",
     "P5 norms: every body sentence outside ## Uncertainties must cite (ADR-020); citable = live + not rejected + evidence-backed; validator REJECT reasons feed the next synthesize attempt.",
-    "P4 norms: .default([]) on semantically-optional arrays; never await network inside a DB tx; SCHEMA_FAILURE attempt ≥2 escalates tier; unconfigured tier suggestions inert.",
     "Tests run in research_lab_test DB (bun run test) — never against live runs.",
-    "Frontier = deepseek/deepseek-v4-pro; WATCH ACCOUNT BALANCE before gate:p7 (a mid-run 402 parks runs at WAITING_HUMAN).",
-    "Standing UI rule: every phase DoD wires its capabilities into apps/web (ticket 7.4)."
+    "Frontier = deepseek/deepseek-v4-pro; WATCH ACCOUNT BALANCE before golden runs (a mid-run 402 parks runs at WAITING_HUMAN).",
+    "Goldens stay manual by design (spend money, need a human verdict) — no CI wiring (plan D5).",
+    "Standing UI rule: every phase DoD wires its capabilities into apps/web — Phase 8 is script-side; no new console surface expected."
   ]
 }
