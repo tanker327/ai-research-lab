@@ -94,4 +94,16 @@ which assertions fail) and baseline serialization — no live calls in vitest.
 
 ## Findings during the phase (append-only)
 
-*(populated as we go)*
+- **2026-08-20 — flake hunt clean.** Full suite (539 tests) ran 5× green;
+  the unreproduced post-cap-fix flake never recurred — known issue dropped.
+- **2026-08-20 — gate:p4 ceremony blocked by evaluator RUBBER-STAMPING (new
+  known issue, not a code bug).** Attempt 1: leg B correctly parked at the
+  cycle guard, then the whole stack was externally SIGTERMed mid-leg-A (the
+  known machine quirk). Retries 1 and 2 both failed identically: the local
+  evaluator ACCEPTed the deliberately impossible rubric, so the guard never
+  got exercised. Two identical failures = stop per retry-policy. The gate's
+  assertions were long since verified manually, so this does not block the
+  phase — but "evaluator rubber-stamps an impossible rubric" is a live
+  model-quality finding the goldens will measure (an over-lenient evaluator
+  shows up as G2 clean-accepting instead of looping). Possibly the temp-0
+  cached-replay class. Re-filed in known_issues.

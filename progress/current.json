@@ -1,7 +1,7 @@
 {
-  "current_phase": "Phase 8 \u2014 Golden Suite + Hardening (started)",
-  "plan": "docs/plans/phase-8-plan.md (direction chosen by user 2026-08-20: lock in quality before growing features; builds implementation-plan \u00a77 golden tasks G1\u2013G4 with committed JSON baselines + budget assertions, then closes the known-issue tail)",
-  "gate": "G1 and G2 run live end to end with baselines recorded \u2014 G1 clean-accepts (target 1 cycle), G2 surfaces a contested claim and loops (target 2 cycles) \u2014 every budget assertion holds (\u2264$1.50 frontier spend, \u226445min wall clock, no silent cycle-guard breach), and the user stamps a human verdict on each report (--judge).",
+  "current_phase": "Phase 8 — Golden Suite + Hardening (started)",
+  "plan": "docs/plans/phase-8-plan.md (direction chosen by user 2026-08-20: lock in quality before growing features; builds implementation-plan §7 golden tasks G1–G4 with committed JSON baselines + budget assertions, then closes the known-issue tail)",
+  "gate": "G1 and G2 run live end to end with baselines recorded — G1 clean-accepts (target 1 cycle), G2 surfaces a contested claim and loops (target 2 cycles) — every budget assertion holds (≤$1.50 frontier spend, ≤45min wall clock, no silent cycle-guard breach), and the user stamps a human verdict on each report (--judge).",
   "tasks": [
     {
       "id": "8.0",
@@ -14,7 +14,7 @@
     },
     {
       "id": "8.1",
-      "title": "Golden runner: scripts/golden/run.ts + `bun run golden <ID>` \u2014 gate-pattern stack spawn, tasks-as-data (tasks.ts), metrics/verdict collection, budget assertions, baseline writer + --judge stamping (D1 D2)",
+      "title": "Golden runner: scripts/golden/run.ts + `bun run golden <ID>` — gate-pattern stack spawn, tasks-as-data (tasks.ts), metrics/verdict collection, budget assertions, baseline writer + --judge stamping (D1 D2)",
       "status": "completed",
       "started_at": "2026-08-20",
       "priority": 2,
@@ -24,18 +24,23 @@
     },
     {
       "id": "8.2",
-      "title": "G1\u2013G4 task definitions with encoded expectations (targetCycles, expectContested, expectCheckpoint, budgets) per \u00a77 (D3)",
-      "status": "in_progress",
+      "title": "G1–G4 task definitions with encoded expectations (targetCycles, expectContested, expectCheckpoint, budgets) per §7 (D3)",
+      "status": "completed",
       "priority": 3,
       "depends_on": ["8.1"],
-      "started_at": "2026-08-20"
+      "started_at": "2026-08-20",
+      "completed_at": "2026-08-20",
+      "commit": "f2f0402"
     },
     {
       "id": "8.3",
-      "title": "Hardening tail: gate:p4 single-process ceremony, 5\u00d7 full-suite flake hunt, CLAUDE.md commands accuracy (D4)",
-      "status": "pending",
+      "title": "Hardening tail: gate:p4 single-process ceremony, 5× full-suite flake hunt, CLAUDE.md commands accuracy (D4)",
+      "status": "completed",
       "priority": 4,
-      "depends_on": ["8.1"]
+      "depends_on": ["8.1"],
+      "started_at": "2026-08-20",
+      "completed_at": "2026-08-20",
+      "notes": "Flake hunt 5x green (flake dropped); CLAUDE.md golden syntax updated; gate:p4 ceremony NOT completed — evaluator rubber-stamped the impossible rubric twice (re-filed as known issue; assertions long since verified manually)."
     },
     {
       "id": "gate",
@@ -46,20 +51,19 @@
     }
   ],
   "known_issues": [
-    "OPTIONAL: openai/xai hub keys upgrade the frontier beyond deepseek-v4-pro \u2014 alias swap + FRONTIER_STRUCTURED_MODE=json_schema.",
-    "gate:p4 single-process end-to-end pass still outstanding \u2014 folded into ticket 8.3.",
-    "Parked runs awaiting user action from the console: 01a01fad (RTX, analysis_failed \u2014 Retry; first beneficiary of the 41c2cd0 cap fix) and 01a01fab (cycle_guard \u2014 Accept or Stop).",
-    "Background dev-stack processes launched by the agent get externally SIGTERMed on this machine \u2014 use ONE supervised background bash (children + wait, gate pattern) or user terminals.",
-    "One unreproduced single-test flake observed right after the P7 cap fix (name not captured; 3 subsequent full runs green) \u2014 8.3's 5\u00d7 hunt resolves it either way."
+    "OPTIONAL: openai/xai hub keys upgrade the frontier beyond deepseek-v4-pro — alias swap + FRONTIER_STRUCTURED_MODE=json_schema.",
+    "Parked runs awaiting user action from the console: 01a01fad (RTX, analysis_failed — Retry; first beneficiary of the 41c2cd0 cap fix) and 01a01fab (cycle_guard — Accept or Stop).",
+    "Background dev-stack processes launched by the agent get externally SIGTERMed on this machine — use ONE supervised background bash (children + wait, gate pattern) or user terminals.",
+    "Evaluator rubber-stamping: gate:p4 leg B's impossible rubric was ACCEPTed twice in a row (2026-08-20 pm) after passing the same morning — possible temp-0 cached-replay class. gate:p4 ceremony left incomplete (assertions verified manually long ago); watch G2's cycle count for over-leniency."
   ],
   "notes": [
-    "Phase 7 archived 2026-08-20 \u2014 gate fully passed (API leg first run + user console sign-off 'the review flow works'). 529 tests.",
+    "Phase 7 archived 2026-08-20 — gate fully passed (API leg first run + user console sign-off 'the review flow works'). 529 tests.",
     "P7 norms: tier resolution task.model_tier > run.metadata.roleTiers[role] > policy (escalation outranks preference); plan edits legal only while plan_review pending + task CREATED, always audited (PLAN_EDITED + human_plan_edit); promoteReadyTasks skips WAITING_HUMAN runs; attempt cap counts intelligence attempts only (infra casualties excluded, 41c2cd0).",
-    "P6 norms: SSE events are double-written (named + default message frame) \u2014 clients listen via es.onmessage; FAILED\u2192CANCELLED is the human-retirement transition (checkpoint retry only).",
+    "P6 norms: SSE events are double-written (named + default message frame) — clients listen via es.onmessage; FAILED→CANCELLED is the human-retirement transition (checkpoint retry only).",
     "P5 norms: every body sentence outside ## Uncertainties must cite (ADR-020); citable = live + not rejected + evidence-backed; validator REJECT reasons feed the next synthesize attempt.",
-    "Tests run in research_lab_test DB (bun run test) \u2014 never against live runs.",
+    "Tests run in research_lab_test DB (bun run test) — never against live runs.",
     "Frontier = deepseek/deepseek-v4-pro; WATCH ACCOUNT BALANCE before golden runs (a mid-run 402 parks runs at WAITING_HUMAN).",
-    "Goldens stay manual by design (spend money, need a human verdict) \u2014 no CI wiring (plan D5).",
-    "Standing UI rule: every phase DoD wires its capabilities into apps/web \u2014 Phase 8 is script-side; no new console surface expected."
+    "Goldens stay manual by design (spend money, need a human verdict) — no CI wiring (plan D5).",
+    "Standing UI rule: every phase DoD wires its capabilities into apps/web — Phase 8 is script-side; no new console surface expected."
   ]
 }

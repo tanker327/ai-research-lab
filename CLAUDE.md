@@ -67,7 +67,9 @@ bun run dev:web            # console UI (Vite dev server on :5173, proxies /api 
 bun run test               # vitest, requires postgres up
 bun run check              # biome lint + import-lint + typecheck + tests (run before commit)
 bun run gate:p1            # phase gate scripts (gate:p2/p4/p5/p6/p7 spend a few cents on frontier calls; gate:p3 is a live ~10-min run on local models; gate:p6/p7 also have a human console leg)
-bun run golden G2          # golden research task (live models, spends budget)
+bun run golden G2          # golden research task G1–G4 (live models, spends budget; keeps the run,
+                           # writes scripts/golden/baselines/<id>/<date>.json — then stamp the human
+                           # verdict: bun run golden G2 --judge pass|fail --note "…" and commit it)
 ```
 
 ## Working style
