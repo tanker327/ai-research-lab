@@ -15,7 +15,8 @@
     {
       "id": "8.1",
       "title": "Golden runner: scripts/golden/run.ts + `bun run golden <ID>` — gate-pattern stack spawn, tasks-as-data (tasks.ts), metrics/verdict collection, budget assertions, baseline writer + --judge stamping (D1 D2)",
-      "status": "pending",
+      "status": "in_progress",
+      "started_at": "2026-08-20",
       "priority": 2,
       "depends_on": ["8.0"]
     },

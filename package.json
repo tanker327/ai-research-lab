@@ -26,7 +26,8 @@
     "gate:p4": "bun scripts/gates/p4.ts",
     "gate:p5": "bun scripts/gates/p5.ts",
     "gate:p6": "bun scripts/gates/p6.ts",
-    "gate:p7": "bun scripts/gates/p7.ts"
+    "gate:p7": "bun scripts/gates/p7.ts",
+    "golden": "bun scripts/golden/run.ts"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.5.9",
