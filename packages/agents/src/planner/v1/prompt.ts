@@ -60,6 +60,15 @@ export function buildMessages(input: PlannerInput): ModelMessage[] {
   if (input.liveClaimDigest) {
     parts.push(`## Live claims (canonical, deduplicated)\n${input.liveClaimDigest}`);
   }
+  if (input.evaluatorFeedback) {
+    const fb = input.evaluatorFeedback;
+    parts.push(
+      `## Evaluator feedback (this stage exists because the Evaluator decided ${fb.decision} — address it)\n` +
+        `Reasons:\n- ${fb.reasons.join("\n- ")}\n` +
+        `Issues:\n${fb.issues.map((i) => `- [${i.severity}] ${i.description}`).join("\n") || "(none)"}\n` +
+        `Suggested directions:\n${fb.requiredActions.map((a) => `- ${a.question} (${a.rationale})`).join("\n") || "(none)"}`,
+    );
+  }
   parts.push(
     `## Available capabilities\n${input.availableCapabilities
       .map((c) => `- ${c.name}: ${c.description}`)

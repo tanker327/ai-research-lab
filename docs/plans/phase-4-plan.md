@@ -23,7 +23,8 @@ The Analyst reads live claims and produces findings; a deterministic CoverageSum
 
 ## Findings during the phase (append-only)
 
-*(none yet)*
+- **gate:p3 semantics superseded (4.4):** with the analysis loop live, a run with claims can no longer COMPLETE from the completion sweep — it is analyzed and judged first, and completion is the Evaluator's ACCEPT. `gate:p3`'s "run COMPLETED" assertion now exercises the full loop (and can land at WAITING_HUMAN if the guard trips); gate:p4 is the phase's live gate going forward.
+- **RUN_DEGRADED fires once, at analysis entry** (not at completion as in P3): failed leaves stay loud, and the Evaluator sees them in `runMetrics.tasksFailed`.
 
 ## Design decisions
 

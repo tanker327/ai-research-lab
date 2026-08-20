@@ -8,11 +8,14 @@ import {
   type Db,
   existsPlanTaskForStage,
   getRunForUpdate,
+  insertHumanCheckpoint,
   insertPlannedTaskRow,
   insertRun,
   insertTask,
   insertTaskDependency,
+  selectAcceptedEvaluationCycles,
   selectActiveRuns,
+  selectAnalysisLoopTasks,
   selectMaxPlanStage,
   taskStatusCounts,
   updateRunStatus,
@@ -138,13 +141,14 @@ export async function startRun(db: Db, req: StartRunInput): Promise<string> {
 export interface RunCompletionSweepResult {
   completed: string[];
   failed: string[];
+  waiting: string[]; // analysis-loop failures parked at a human checkpoint
 }
 
 export async function sweepRunCompletion(
   db: Db,
   maxPlanStages = 2, // V0.05: discovery + one deep wave; the Evaluator drives more in P4
 ): Promise<RunCompletionSweepResult> {
-  const result: RunCompletionSweepResult = { completed: [], failed: [] };
+  const result: RunCompletionSweepResult = { completed: [], failed: [], waiting: [] };
   const active = await selectActiveRuns(db);
 
   for (const run of active) {
@@ -204,12 +208,99 @@ export async function sweepRunCompletion(
         }
       }
 
-      // ADR-010: failure is normal. A run with live claims and at least one
-      // DONE task completes even when some leaf tasks failed — the failures
-      // stay visible (RUN_DEGRADED warn; the P4 Evaluator will judge them).
-      // No claims to show for it → the run failed.
       const failedOrCancelled =
         (counts.FAILED ?? 0) + (counts.CANCELLED ?? 0) + (counts.BLOCKED ?? 0);
+
+      // Analysis loop driver (4.4, phase-4-plan D4): research work is done,
+      // stages are exhausted, claims exist → the run is ANALYZED and JUDGED
+      // before it can complete. Completion is the Evaluator's ACCEPT
+      // (applyEvaluatorDecision), never this sweep. Invariant: a fresh
+      // analysis is due exactly when #analyze-tasks == #accepted-cycles —
+      // analysis N+1 answers cycle N's demand (accept paths create the
+      // evaluate task in the same tx, so intermediate states never leak here).
+      if (liveClaims > 0) {
+        const loopTasks = await selectAnalysisLoopTasks(tx, run.id);
+        const failedLoop = loopTasks.filter((t) => t.status === "FAILED" || t.status === "BLOCKED");
+        if (failedLoop.length > 0) {
+          // An un-analyzable run is a human's call, not a silent FAILED
+          // (ADR-010 at run scope): the claims collected are real material.
+          await insertHumanCheckpoint(tx, {
+            id: newId(),
+            runId: run.id,
+            taskId: failedLoop[0]?.id ?? null,
+            reason: "analysis_failed",
+            question:
+              "The analysis/evaluation loop failed after all retries. Retry it, accept the claims as-is, or stop the run?",
+          });
+          assertRunTransition(locked.status, "WAITING_HUMAN");
+          await updateRunStatus(tx, run.id, "WAITING_HUMAN");
+          await emitEvent(tx, {
+            runId: run.id,
+            type: "RUN_WAITING_HUMAN",
+            kind: "warn",
+            actor: ACTOR,
+            payload: { reason: "analysis_failed", failedTaskIds: failedLoop.map((t) => t.id) },
+          });
+          result.waiting.push(run.id);
+          return;
+        }
+        const analyzeCount = loopTasks.filter((t) => t.type === "analyze").length;
+        const cycles = await selectAcceptedEvaluationCycles(tx, run.id);
+        if (analyzeCount === cycles) {
+          if (failedOrCancelled > 0 && analyzeCount === 0) {
+            // ADR-010: failed leaves don't block analysis — but they stay
+            // loud; the Evaluator sees them in runMetrics.
+            await emitEvent(tx, {
+              runId: run.id,
+              type: "RUN_DEGRADED",
+              kind: "warn",
+              actor: ACTOR,
+              payload: { counts, liveClaims },
+            });
+          }
+          const analyzeTaskId = newId();
+          await insertPlannedTaskRow(tx, {
+            id: analyzeTaskId,
+            runId: run.id,
+            planStage: Math.max(await selectMaxPlanStage(tx, run.id), 1),
+            specVersion: locked.specVersion,
+            type: "analyze",
+            title: cycles === 0 ? "Analyze findings" : `Analyze findings (cycle ${cycles + 1})`,
+            description: "",
+            priority: 90,
+            agentRole: "analyst",
+            modelTier: null,
+            strategy: null,
+            input: {},
+            successCriteria: [],
+            maxAttempts: 3,
+          });
+          await emitEvent(tx, {
+            runId: run.id,
+            taskId: analyzeTaskId,
+            type: "ANALYZE_TASK_CREATED",
+            kind: "info",
+            actor: ACTOR,
+            payload: { cycle: cycles + 1 },
+          });
+          if (locked.status === "RESEARCHING") {
+            assertRunTransition("RESEARCHING", "ANALYZING");
+            await updateRunStatus(tx, run.id, "ANALYZING");
+            await emitEvent(tx, {
+              runId: run.id,
+              type: "RUN_PHASE_CHANGED",
+              kind: "info",
+              actor: ACTOR,
+              payload: { from: "RESEARCHING", to: "ANALYZING" },
+            });
+          }
+        }
+        return; // the loop owns completion from here
+      }
+
+      // Zero live claims: nothing to analyze — the phase-1 walk survives.
+      // ADR-010: failure is normal, but with no claims to show for it a run
+      // with failures FAILED outright.
       if (failedOrCancelled > 0 && !((counts.DONE ?? 0) > 0 && liveClaims > 0)) {
         assertRunTransition(locked.status, "FAILED");
         await updateRunStatus(tx, run.id, "FAILED");
@@ -222,15 +313,6 @@ export async function sweepRunCompletion(
         });
         result.failed.push(run.id);
         return;
-      }
-      if ((counts.FAILED ?? 0) > 0) {
-        await emitEvent(tx, {
-          runId: run.id,
-          type: "RUN_DEGRADED",
-          kind: "warn",
-          actor: ACTOR,
-          payload: { counts, liveClaims },
-        });
       }
       await advanceRun(tx, run.id, locked.status, "COMPLETED");
       result.completed.push(run.id);

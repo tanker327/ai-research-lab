@@ -22,6 +22,7 @@ import {
   CategorizedError,
   FakeTaskInput,
   newId,
+  PlannerInput,
   ResearcherOutput,
   type SourceVisit,
   type TaskType,
@@ -159,8 +160,16 @@ async function guardDarkFrontier(
 
 function plannerHandler(deps: AgentDeps): TaskHandler {
   return async (db, work) => {
-    const stage = Number((work.task.input as Record<string, unknown>)?.planStage ?? 1);
-    const input = await deps.context.forPlanner(work.task.runId, stage);
+    const taskInput = (work.task.input ?? {}) as Record<string, unknown>;
+    const stage = Number(taskInput.planStage ?? 1);
+    // REPLAN stages carry the evaluator's verdict (4.4) — validated into the
+    // slim feedback shape; anything else is ignored.
+    const feedback = PlannerInput.shape.evaluatorFeedback.safeParse(taskInput.evaluatorFeedback);
+    const input = await deps.context.forPlanner(
+      work.task.runId,
+      stage,
+      feedback.success ? feedback.data : undefined,
+    );
     await updateAttemptInput(db, work.attempt.id, input); // R12: verbatim
 
     const route = await guardDarkFrontier(

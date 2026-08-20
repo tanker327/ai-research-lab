@@ -57,6 +57,20 @@ export const PlannerInput = z.object({
   completedTaskSummaries: z.array(TaskResultSummary).max(100).optional(), // stage ≥ 2
   liveClaimDigest: digestText.optional(), // Context Builder rendering, code not LLM
   availableCapabilities: z.array(CapabilitySummary).max(20),
+  // REPLAN only (design §7): the Evaluator's verdict that demanded this
+  // stage. Declared lazily — EvaluatorOutput is defined later in this module.
+  evaluatorFeedback: z
+    .object({
+      decision: z.string().max(40),
+      reasons: z.array(z.string().max(2000)).max(10),
+      issues: z
+        .array(z.object({ severity: z.string().max(20), description: z.string().max(2000) }))
+        .max(20),
+      requiredActions: z
+        .array(z.object({ question: z.string().max(500), rationale: z.string().max(1000) }))
+        .max(10),
+    })
+    .optional(),
 });
 export type PlannerInput = z.infer<typeof PlannerInput>;
 

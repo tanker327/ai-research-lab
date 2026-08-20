@@ -155,3 +155,34 @@ export async function countLiveClaims(tx: SqlExecutor, runId: string): Promise<n
   );
   return ([...rows][0]?.n as number) ?? 0;
 }
+
+export async function selectAttemptInput(
+  tx: SqlExecutor,
+  attemptId: string,
+): Promise<Record<string, unknown> | null> {
+  const rows = await tx.execute(sql`SELECT input FROM attempts WHERE id = ${attemptId}`);
+  return ([...rows][0]?.input as Record<string, unknown> | undefined) ?? null;
+}
+
+// Endgame reads (ticket 4.4): the analysis-loop driver decides from the
+// analyze/evaluate task population — see sweepRunCompletion.
+export interface TaskTypeRow {
+  id: string;
+  type: string;
+  status: string;
+}
+
+export async function selectAnalysisLoopTasks(
+  tx: SqlExecutor,
+  runId: string,
+): Promise<TaskTypeRow[]> {
+  const rows = await tx.execute(sql`
+    SELECT id, type, status FROM research_tasks
+    WHERE run_id = ${runId} AND type IN ('analyze', 'evaluate')
+    ORDER BY created_at`);
+  return [...rows].map((r) => ({
+    id: r.id as string,
+    type: r.type as string,
+    status: r.status as string,
+  }));
+}

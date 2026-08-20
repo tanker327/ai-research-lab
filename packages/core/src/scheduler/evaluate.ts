@@ -24,12 +24,14 @@ import {
   ResearchStrategy,
   TaskType,
 } from "@lab/schemas";
+import { acceptAnalysisAttempt } from "../analysis";
 import {
   analystPreAcceptChecks,
   evaluatorPreAcceptChecks,
   extractorPreAcceptChecks,
   researcherPreAcceptChecks,
 } from "../checks";
+import { applyEvaluatorDecision } from "../evaluation";
 import { emitEvent } from "../events";
 import { acceptResearchAttempt } from "../extract";
 import { acceptAttempt } from "../liveness";
@@ -54,6 +56,7 @@ export async function sweepEvaluations(
   now = () => new Date(),
   maxAttemptsDefault = 3,
   minEvidence = 3,
+  maxEvalCycles = 3,
 ): Promise<EvaluationSweepResult> {
   const result: EvaluationSweepResult = { accepted: [], retried: [], failed: [], acceptedRuns: [] };
   const candidates = await selectEvaluationCandidates(db);
@@ -112,6 +115,20 @@ export async function sweepEvaluations(
       // extract task in the same transaction.
       if (c.taskType === "research") {
         await acceptResearchAttempt(db, c, maxAttemptsDefault);
+        result.accepted.push(c.taskId);
+        recordAcceptedRun(result, c);
+        continue;
+      }
+      // Analysis accept creates the evaluate task in the same tx (4.4);
+      // evaluate accept interprets the decision under the ADR-016 guard.
+      if (c.taskType === "analyze") {
+        await acceptAnalysisAttempt(db, c);
+        result.accepted.push(c.taskId);
+        recordAcceptedRun(result, c);
+        continue;
+      }
+      if (c.taskType === "evaluate") {
+        await applyEvaluatorDecision(db, c, maxAttemptsDefault, maxEvalCycles);
         result.accepted.push(c.taskId);
         recordAcceptedRun(result, c);
         continue;

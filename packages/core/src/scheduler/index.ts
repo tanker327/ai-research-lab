@@ -45,6 +45,7 @@ export function startScheduler(
         undefined,
         config.DEFAULT_MAX_ATTEMPTS,
         config.MIN_EVIDENCE_PER_TASK,
+        config.DEFAULT_MAX_EVAL_CYCLES,
       );
       // Canonicalization BEFORE the completion sweep: the staged-planning
       // driver decides on live claims, which only exist after this hook runs

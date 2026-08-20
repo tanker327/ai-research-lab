@@ -45,7 +45,11 @@ export * from "./budget";
 export * from "./digest";
 
 export interface ContextBuilder {
-  forPlanner(runId: string, stage: number): Promise<PlannerInput>;
+  forPlanner(
+    runId: string,
+    stage: number,
+    evaluatorFeedback?: PlannerInput["evaluatorFeedback"],
+  ): Promise<PlannerInput>;
   forResearcher(taskId: string): Promise<ResearcherInput>;
   forExtractor(taskId: string): Promise<ExtractorInput>;
   forAnalyst(runId: string): Promise<AnalystInput>;
@@ -98,7 +102,7 @@ export function createContextBuilder(deps: ContextBuilderDeps): ContextBuilder {
   const now = deps.now ?? (() => new Date());
 
   return {
-    async forPlanner(runId, stage) {
+    async forPlanner(runId, stage, evaluatorFeedback) {
       const run = await selectRunForContext(deps.db, runId);
       if (!run) {
         throw new CategorizedError("PERMANENT_INFRA", `context: run ${runId} not found`);
@@ -137,6 +141,7 @@ export function createContextBuilder(deps: ContextBuilderDeps): ContextBuilder {
         completedTaskSummaries,
         liveClaimDigest,
         availableCapabilities: deps.capabilities,
+        evaluatorFeedback,
       });
     },
 
