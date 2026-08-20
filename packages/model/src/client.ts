@@ -209,7 +209,8 @@ export function createModelClient(opts: ModelClientOptions): ModelClient {
           throw new CategorizedError(
             "SCHEMA_FAILURE",
             `model output failed schema validation (${args.model})`,
-            { cause: err },
+            // detail is what attempts.error persists — keep the cause legible.
+            { cause: err, detail: { cause: String(err instanceof Error ? err.message : err).slice(0, 500) } },
           );
         }
       }

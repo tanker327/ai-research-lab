@@ -25,7 +25,7 @@ export const plannerV1: Agent<PlannerInput, PlannerOutput> = {
       schema: PlannerOutput,
       schemaName: "planner_output",
       mode: ctx.route.mode,
-      temperature: 0.2,
+      temperature: 0,
       maxOutputTokens: OUTPUT_BUDGET,
       // ai v7 rejects system-role rows in `messages` — system goes separately.
       system: SYSTEM,
