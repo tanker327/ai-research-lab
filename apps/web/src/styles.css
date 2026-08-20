@@ -102,3 +102,24 @@
     }
   }
 }
+
+/* Chip jump-and-flash (6.5, §24.6): a report citation lands on its claim. */
+.claim-flash {
+  animation: claim-flash 2.4s ease-out;
+}
+@keyframes claim-flash {
+  0%,
+  55% {
+    background-color: var(--run-soft);
+  }
+  100% {
+    background-color: transparent;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .claim-flash {
+    animation: none;
+    outline: 2px solid var(--run);
+    outline-offset: 3px;
+  }
+}

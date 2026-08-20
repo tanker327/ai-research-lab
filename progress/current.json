@@ -45,17 +45,20 @@
     {
       "id": "6.4",
       "title": "Checkpoint resolution: resolve endpoint + banner actions (D5)",
-      "status": "in_progress",
+      "status": "completed",
       "priority": 5,
       "depends_on": ["6.0"],
-      "started_at": "2026-08-20"
+      "started_at": "2026-08-20",
+      "completed_at": "2026-08-20",
+      "commit": "ae5ef4d"
     },
     {
       "id": "6.5",
       "title": "Chip jump-and-flash, keyboard nav, sidebar cleanup (D6)",
-      "status": "pending",
+      "status": "in_progress",
       "priority": 6,
-      "depends_on": ["6.1"]
+      "depends_on": ["6.1"],
+      "started_at": "2026-08-20"
     }
   ],
   "known_issues": [

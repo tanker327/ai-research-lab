@@ -1,4 +1,5 @@
 import { ArrowLeft } from "lucide-react";
+import { useEffect } from "react";
 import { Topbar } from "@/components/layout";
 import { StatusBadge, statusVariant } from "@/components/status-badge";
 import { Badge } from "@/components/ui/badge";
@@ -70,10 +71,23 @@ function PhasePill({
   );
 }
 
-export function RunDetail({ runId, tab }: { runId: string; tab: string }) {
+export function RunDetail({ runId, tab, sub }: { runId: string; tab: string; sub?: string }) {
   const { data: run } = useRun(runId);
   const { data: tasks } = useTasks(runId);
   const { data: checkpoints } = useCheckpoints(runId);
+
+  // Keyboard floor (6.5, §24.6): 1–8 switch tabs; inputs keep their digits.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement | null;
+      if (target && ["INPUT", "TEXTAREA", "SELECT"].includes(target.tagName)) return;
+      const idx = Number.parseInt(e.key, 10) - 1;
+      const t = TABS[idx];
+      if (!Number.isNaN(idx) && t) navigate(`/run/${runId}/${t.key}`);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [runId]);
   const terminal = run && ["COMPLETED", "FAILED", "CANCELLED"].includes(run.status);
   const pendingCheckpoints = checkpoints?.filter((cp) => cp.status === "pending") ?? [];
 
@@ -184,7 +198,7 @@ export function RunDetail({ runId, tab }: { runId: string; tab: string }) {
 
         {tab === "attempts" && <AttemptsView runId={runId} />}
 
-        {tab === "evidence" && <ClaimsView runId={runId} />}
+        {tab === "evidence" && <ClaimsView runId={runId} highlight={sub} />}
         {tab === "verdict" && <VerdictsView runId={runId} />}
         {tab === "report" && <ReportView runId={runId} />}
         {tab === "transcript" && <TranscriptView runId={runId} />}

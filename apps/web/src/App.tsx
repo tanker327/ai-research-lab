@@ -1,25 +1,27 @@
 // Console v0 shell — a subset of the normative mockup (ADR-019, §24.6),
 // pulled forward so every phase's capabilities land visibly. Views over real
 // Phase-1 data: runs, new, overview, tasks, timeline (SSE live tail).
-// Report / transcript are placeholders until Phase 5; evidence is live (3.7).
-import { Database, FileText, FlaskConical, List } from "lucide-react";
+// All eight views are live as of P6 (report/transcript landed with P5).
+import { FlaskConical, List } from "lucide-react";
 import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
 import { NewRunView } from "./views/NewRun";
 import { RunDetail } from "./views/RunDetail";
 import { RunsView } from "./views/Runs";
 
-// Hash mini-router: #/runs · #/new · #/run/<id>/<tab>
+// Hash mini-router: #/runs · #/new · #/run/<id>/<tab>[/<sub>]
+// (sub: e.g. a claim id the evidence tab scrolls to and flashes — 6.5 chip jump)
 export interface Route {
   view: "runs" | "new" | "run";
   runId?: string;
   tab?: string;
+  sub?: string;
 }
 
 function parseHash(): Route {
   const h = window.location.hash.replace(/^#\/?/, "");
-  const [a, b, c] = h.split("/");
-  if (a === "run" && b) return { view: "run", runId: b, tab: c ?? "overview" };
+  const [a, b, c, d] = h.split("/");
+  if (a === "run" && b) return { view: "run", runId: b, tab: c ?? "overview", sub: d };
   if (a === "new") return { view: "new" };
   return { view: "runs" };
 }
@@ -83,28 +85,20 @@ export function App() {
         <NavButton on={route.view === "new"} onClick={() => navigate("/new")}>
           <FlaskConical className="size-3.5" /> New research
         </NavButton>
-        <div className="px-4.5 pb-1 pt-3 font-mono text-[0.62rem] uppercase tracking-[0.1em] text-muted-foreground">
-          Coming online
-        </div>
-        <NavButton disabled title="Phase 3">
-          <Database className="size-3.5" /> Evidence · per run
-        </NavButton>
-        <NavButton disabled title="Phase 5">
-          <FileText className="size-3.5" /> Reports · P5
-        </NavButton>
         <div className="mt-auto border-t px-4.5 py-3 font-mono text-[0.64rem] leading-[1.7] text-muted-foreground">
           <div>
             <span className="mr-1.5 inline-block size-[7px] animate-pulse rounded-full bg-live align-[1px]" />
             api :8787
           </div>
-          <div>phase 3 · planner+researcher+extractor</div>
+          <div>plan · research · analyze · evaluate · synthesize</div>
+          <div className="mt-1 opacity-70">keys: 1–8 tabs · esc closes</div>
         </div>
       </nav>
       <main className="min-w-0 pb-15">
         {route.view === "runs" && <RunsView />}
         {route.view === "new" && <NewRunView />}
         {route.view === "run" && route.runId && (
-          <RunDetail runId={route.runId} tab={route.tab ?? "overview"} />
+          <RunDetail runId={route.runId} tab={route.tab ?? "overview"} sub={route.sub} />
         )}
       </main>
     </div>

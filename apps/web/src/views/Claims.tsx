@@ -2,6 +2,7 @@
 // subject, contested highlighted with their disagreement note, per-claim
 // evidence with source-class and vendor flags. Superseded attempts' rows are
 // already dark — this view only ever sees the live set (ADR-014).
+import { useEffect } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
@@ -35,12 +36,26 @@ function EvidenceLine({ e }: { e: ClaimRow["evidence"][number] }) {
   );
 }
 
-export function ClaimsView({ runId }: { runId: string }) {
+export function ClaimsView({ runId, highlight }: { runId: string; highlight?: string }) {
   const { data: claims, isLoading } = useClaims(runId);
   const bySubject = new Map<string, ClaimRow[]>();
   for (const c of claims ?? []) {
     bySubject.set(c.subjectKey, [...(bySubject.get(c.subjectKey) ?? []), c]);
   }
+
+  // Chip jump-and-flash (6.5, §24.6): a report chip navigates here with the
+  // claim id; scroll to it and flash (the CSS animation respects
+  // prefers-reduced-motion).
+  const loaded = !isLoading && (claims?.length ?? 0) > 0;
+  useEffect(() => {
+    if (!highlight || !loaded) return;
+    const el = document.getElementById(`claim-${highlight}`);
+    if (!el) return;
+    el.scrollIntoView({ block: "center" });
+    el.classList.add("claim-flash");
+    const t = setTimeout(() => el.classList.remove("claim-flash"), 2400);
+    return () => clearTimeout(t);
+  }, [highlight, loaded]);
 
   if (isLoading) return <div className="text-muted-foreground">loading…</div>;
   if ((claims?.length ?? 0) === 0) {
@@ -65,7 +80,7 @@ export function ClaimsView({ runId }: { runId: string }) {
           </CardHeader>
           <CardContent className="grid gap-3">
             {subjectClaims.map((c) => (
-              <div key={c.id}>
+              <div key={c.id} id={`claim-${c.id}`} className="rounded-md">
                 <div className="flex flex-wrap items-center gap-2">
                   <span className={cn(mono, "text-muted-foreground")}>{c.predicateKey}</span>
                   <Badge

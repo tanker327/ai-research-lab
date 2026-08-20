@@ -66,13 +66,18 @@ function CitationPanel({ citation, runId }: { citation: CitationDto; runId: stri
         <span className="ml-2">cited claims</span>
         <button
           type="button"
-          onClick={() => navigate(`/run/${runId}/evidence`)}
+          // 6.5: jump-and-flash the first backing claim in the evidence browser.
+          onClick={() =>
+            navigate(
+              `/run/${runId}/evidence${citation.claims[0] ? `/${citation.claims[0].id}` : ""}`,
+            )
+          }
           className={cn(
             mono,
             "ml-auto cursor-pointer text-live underline-offset-2 hover:underline",
           )}
         >
-          open evidence browser →
+          jump to claim →
         </button>
       </CardHeader>
       <CardContent className="grid gap-3">
