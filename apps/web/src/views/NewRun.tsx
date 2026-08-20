@@ -65,6 +65,8 @@ export function NewRunView() {
   const [err, setErr] = useState<string | null>(null);
   const [showRouting, setShowRouting] = useState(false);
   const [tiers, setTiers] = useState<Record<string, string>>({});
+  // 7.2/7.4: pause after stage-1 planning for interactive review (default ON).
+  const [reviewPlan, setReviewPlan] = useState(true);
 
   const submit = async (mode: "planner" | "demo") => {
     setBusy(true);
@@ -76,8 +78,9 @@ export function NewRunView() {
         userRequest: request || "console demo run",
         ...(mode === "demo" ? { tasks: demoTasks() } : {}), // no tasks → Planner
         ...(Object.keys(roleTiers).length > 0 ? { roleTiers } : {}),
+        ...(mode === "planner" && reviewPlan ? { reviewPlan: true } : {}),
       });
-      navigate(`/run/${id}`);
+      navigate(mode === "planner" && reviewPlan ? `/run/${id}/review` : `/run/${id}`);
     } catch (e) {
       setErr(String(e));
     } finally {
@@ -140,9 +143,17 @@ export function NewRunView() {
                 ))}
               </div>
             )}
+            <label className="flex cursor-pointer items-center gap-2 font-mono text-[0.72rem] text-secondary-foreground">
+              <input
+                type="checkbox"
+                checked={reviewPlan}
+                onChange={(e) => setReviewPlan(e.target.checked)}
+              />
+              pause after planning — review and edit the plan before research starts
+            </label>
             <div className="flex flex-wrap items-center gap-2.5">
               <Button onClick={() => submit("planner")} disabled={busy || !request.trim()}>
-                {busy ? "Starting…" : "Start research"}
+                {busy ? "Starting…" : reviewPlan ? "Plan, then review" : "Start research"}
               </Button>
               <span className="font-mono text-[0.76rem] text-muted-foreground">
                 planner · stage-1 discovery → extract → canonical claims → stage 2

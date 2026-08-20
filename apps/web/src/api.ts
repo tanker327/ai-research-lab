@@ -6,6 +6,7 @@ import { useQuery } from "@tanstack/react-query";
 const BASE = "/api";
 
 export interface RunRow {
+  metadata: Record<string, unknown>;
   id: string;
   title: string | null;
   userRequest: string;
@@ -18,6 +19,7 @@ export interface RunRow {
 }
 
 export interface TaskRow {
+  input: Record<string, unknown>;
   planStage: number;
   agentRole: string | null;
   strategy: string | null;
@@ -389,7 +391,7 @@ export const useMetrics = (runId: string) =>
 export async function resolveCheckpoint(
   runId: string,
   checkpointId: string,
-  action: "retry" | "accept" | "stop",
+  action: "retry" | "accept" | "stop" | "approve",
   note?: string,
 ): Promise<void> {
   const res = await fetch(`${BASE}/runs/${runId}/checkpoints/${checkpointId}/resolve`, {
@@ -399,3 +401,55 @@ export async function resolveCheckpoint(
   });
   if (!res.ok) throw new Error(`resolve failed: ${res.status} ${await res.text()}`);
 }
+
+// ---- Phase 7: plan review ----
+
+export interface SpecDto {
+  version: number;
+  objective: string;
+  scope: string[];
+  exclusions: string[];
+  constraints: string[];
+  successCriteria: string[];
+  keyQuestions: string[];
+  clarificationsAssumed: string[];
+}
+
+export const useSpec = (runId: string) =>
+  useQuery({
+    queryKey: ["spec", runId],
+    queryFn: () => getOrNull<SpecDto>(`/runs/${runId}/spec`),
+    refetchInterval: 5000,
+  });
+
+async function send(path: string, method: string, body?: unknown): Promise<Response> {
+  const res = await fetch(`${BASE}${path}`, {
+    method,
+    headers: { "content-type": "application/json" },
+    body: body === undefined ? undefined : JSON.stringify(body),
+  });
+  if (!res.ok) throw new Error(`${method} ${path} → ${res.status} ${await res.text()}`);
+  return res;
+}
+
+export const editPlanTask = (
+  runId: string,
+  taskId: string,
+  edit: {
+    title?: string;
+    researchQuestion?: string;
+    priority?: number;
+    modelTier?: string | null;
+  },
+) => send(`/runs/${runId}/tasks/${taskId}`, "PATCH", edit);
+
+export const addPlanTask = (
+  runId: string,
+  args: { title: string; researchQuestion: string; priority?: number },
+) => send(`/runs/${runId}/tasks`, "POST", args);
+
+export const removePlanTask = (runId: string, taskId: string) =>
+  send(`/runs/${runId}/tasks/${taskId}`, "DELETE");
+
+export const updateRunRouting = (runId: string, roleTiers: Record<string, string>) =>
+  send(`/runs/${runId}/routing`, "PATCH", { roleTiers });

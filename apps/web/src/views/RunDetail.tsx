@@ -13,6 +13,7 @@ import { AttemptsView } from "./Attempts";
 import { CheckpointBanner } from "./CheckpointBanner";
 import { ClaimsView } from "./Claims";
 import { OverviewMetrics } from "./OverviewMetrics";
+import { PlanReviewView } from "./PlanReview";
 import { ReportView } from "./Report";
 import { TaskBoard } from "./TaskBoard";
 import { Timeline } from "./Timeline";
@@ -198,6 +199,7 @@ export function RunDetail({ runId, tab, sub }: { runId: string; tab: string; sub
 
         {tab === "attempts" && <AttemptsView runId={runId} />}
 
+        {tab === "review" && <PlanReviewView runId={runId} />}
         {tab === "evidence" && <ClaimsView runId={runId} highlight={sub} />}
         {tab === "verdict" && <VerdictsView runId={runId} />}
         {tab === "report" && <ReportView runId={runId} />}

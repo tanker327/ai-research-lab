@@ -12,6 +12,7 @@ export interface RunRow {
   budget: Record<string, unknown>;
   evalCycleCount: number;
   specVersion: number;
+  metadata: Record<string, unknown>; // roleTiers / reviewPlan (7.x)
   createdAt: string;
   completedAt: string | null;
   cancelledAt: string | null;
@@ -26,6 +27,7 @@ function mapRun(r: Record<string, unknown>): RunRow {
     budget: (r.budget as Record<string, unknown>) ?? {},
     evalCycleCount: r.eval_cycle_count as number,
     specVersion: (r.spec_version as number) ?? 0,
+    metadata: (r.metadata as Record<string, unknown>) ?? {},
     createdAt: String(r.created_at),
     completedAt: r.completed_at ? String(r.completed_at) : null,
     cancelledAt: r.cancelled_at ? String(r.cancelled_at) : null,
@@ -141,12 +143,13 @@ export interface TaskListRow {
   strategy: string | null;
   modelTier: string | null;
   createdAt: string;
+  input: Record<string, unknown>; // review screen edits researchQuestion (7.4)
 }
 
 export async function selectTasksByRun(tx: SqlExecutor, runId: string): Promise<TaskListRow[]> {
   const rows = await tx.execute(sql`
     SELECT id, run_id, type, title, status, priority, attempt_count, max_attempts, claimed_by,
-           plan_stage, agent_role, strategy, model_tier, created_at
+           plan_stage, agent_role, strategy, model_tier, created_at, input
     FROM research_tasks WHERE run_id = ${runId} ORDER BY priority DESC, created_at ASC`);
   return [...rows].map((r) => ({
     id: r.id as string,
@@ -163,6 +166,7 @@ export async function selectTasksByRun(tx: SqlExecutor, runId: string): Promise<
     strategy: (r.strategy as string | null) ?? null,
     modelTier: (r.model_tier as string | null) ?? null,
     createdAt: String(r.created_at),
+    input: (r.input as Record<string, unknown>) ?? {},
   }));
 }
 

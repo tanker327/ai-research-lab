@@ -19,6 +19,7 @@ import {
   selectAttemptsByRun,
   selectCheckpointsByRun,
   selectEventsAfter,
+  selectLatestSpec,
   selectLiveClaimEvidence,
   selectLiveClaims,
   selectModelCallsByAttempt,
@@ -91,6 +92,12 @@ export function createApp({ db, bus, log, artifacts, maxEvalCycles = 3 }: ApiDep
   app.get("/runs/:id", async (c) => {
     const run = await selectRun(db, c.req.param("id"));
     return run ? c.json(run) : c.json({ error: "not found" }, 404);
+  });
+
+  // Latest research spec (7.4): the review screen displays it read-only.
+  app.get("/runs/:id/spec", async (c) => {
+    const spec = await selectLatestSpec(db, c.req.param("id"));
+    return spec ? c.json(spec) : c.json({ error: "no spec yet" }, 404);
   });
 
   app.get("/runs/:id/tasks", async (c) => {

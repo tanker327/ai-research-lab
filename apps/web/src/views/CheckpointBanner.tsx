@@ -5,6 +5,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { navigate } from "../App";
 import { type CheckpointRow, resolveCheckpoint } from "../api";
 
 const RETRYABLE = new Set(["analysis_failed", "synthesis_failed"]);
@@ -41,6 +42,11 @@ export function CheckpointBanner({ runId, cp }: { runId: string; cp: CheckpointR
           placeholder="rationale (recorded on the decision)"
           className="min-w-56 flex-1 rounded-md border bg-card px-2.5 py-1.5 text-[0.78rem] placeholder:text-muted-foreground"
         />
+        {cp.reason === "plan_review" && (
+          <Button size="sm" onClick={() => navigate(`/run/${runId}/review`)}>
+            Open plan review →
+          </Button>
+        )}
         {RETRYABLE.has(cp.reason) && (
           <Button size="sm" disabled={busy} onClick={() => act("retry")}>
             Retry
