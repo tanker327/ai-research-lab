@@ -18,6 +18,22 @@
 
 ## Findings during the phase (append-only)
 
+**Gate hardening (2026-08-19, ~16 live gate runs → 12 real fixes).** The live gate surfaced a finding per run; each is a commit on main:
+
+- **Firecrawl replaces raw SearXNG (D4 final):** self-hosted Firecrawl (192.168.10.120:3002) backs `web_search` (/v2/search) AND `web_fetch` (clean-markdown /v2/scrape, direct fetch as fallback).
+- **The AI SDK silently drops `response_format` for non-structuredOutputs providers** — its strict parser then dies on fenced/prefaced JSON. json_object mode is parsed by OUR client (fence-strip → outermost object → Zod).
+- **Reasoning-token exhaustion, twice:** fast-tier deepseek burned a 14k budget entirely on reasoning under a verbose system prompt (content empty, finishReason=length). NORM: fast-tier prompts are TERSE ('work quickly and directly'); output budgets carry real reasoning headroom (planner 12k / researcher 14k / extractor 16k).
+- **Bound the output size, not just the schema:** over-extraction (20+ claims) truncated JSON mid-array. Prompt asks for ≤12 claims/15 evidence; schema caps 20/30.
+- **Degenerate strings, not just arrays:** forced past a 600-char note minimum the local model looped one phrase to 20k chars. `looksDegenerate` (shingle uniqueness) rejects as SCHEMA_FAILURE; note floor 600 blocks lazy header-only finishes at decode time.
+- **web_fetch pages long documents:** `startChar` windows (16k chars each) — reference pages larger than one window had dead-ended honest researchers.
+- **SCHEMA_FAILURE retries every role** at the same configuration (cap-bounded), not just extract — constrained-decoding hiccups are transient-shaped.
+- **Out-of-range evidenceRefs are dropped, not fatal;** invented URLs stay hard failures (fabrication vs sloppiness).
+- **published_at crosses the raw sql template as ISO text** — postgres-js rejects Date instances.
+- **Canonicalization runs BEFORE the completion sweep** in the control tick, or the staged-planning driver sees zero claims on the tick that completes the run.
+- **Failure-tolerant completion (ADR-010):** live claims + ≥1 DONE task → COMPLETED with a RUN_DEGRADED warn even when leaves failed; the stage driver also fires despite failed leaves. All-or-nothing was a Phase-1 fake-task placeholder.
+- **Vendor check advisory; 16k excerpts; content-page seeds** (earlier findings, see below).
+
+
 - **Dark frontier hard-fails escalation routes (3.7 live run):** the researcher's attempt-3 `frontier` escalation hit the hub's invalid keys (401 PERMANENT_INFRA) and failed the task. D3 extended: `FRONTIER_ENABLED=0` (default while keys are pending) loudly downgrades ANY frontier-resolved route to strong_local with a `TIER_DOWNGRADED` warn event. Set to 1 when the keys land — required before P4's real escalation ladder.
 - **No `z.record` in agent output schemas (3.7 live run):** vLLM guided decoding returns upstream 500 on open-keyed objects (`additionalProperties` schemas). PlannedTask.input became a CLOSED, fully-bounded nullable-field object; the interpreter builds the task's input record dropping nulls. NORM alongside the bounded-arrays rule: agent schemas contain no records/open maps.
 - **Merge direction must be deterministic (3.5):** naive trigram merging ping-pongs two near-dup subjects across re-runs (each folds into the other). Rule: only merge INTO a subject that sorts lexicographically earlier — re-runs converge on one row, keeping canonical rows a pure function of the live set.
