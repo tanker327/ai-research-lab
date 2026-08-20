@@ -31,9 +31,7 @@
     "maxEvalCycles": 3
   },
   "maxEvalCycles": 3,
-  "checkpointReasons": [
-    "analysis_failed"
-  ],
+  "checkpointReasons": ["analysis_failed"],
   "cycleGuardEvents": 0,
   "verdicts": [
     {
@@ -49,9 +47,7 @@
     }
   ],
   "report": null,
-  "assertionFailures": [
-    "run ended WAITING_HUMAN, not COMPLETED"
-  ],
+  "assertionFailures": ["run ended WAITING_HUMAN, not COMPLETED"],
   "divergences": [],
   "humanVerdict": "pending",
   "humanNote": null,
