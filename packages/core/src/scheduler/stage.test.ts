@@ -112,6 +112,34 @@ describe("staged-planning driver in sweepRunCompletion", () => {
     void planId;
   });
 
+  it("failed leaf + live claims → run completes DEGRADED, not FAILED (ADR-010)", async () => {
+    const { runId } = await seedStageOneRun(true);
+    await seedTask(db, {
+      id: newId(),
+      runId,
+      status: "FAILED",
+      type: "research",
+      title: "hard question",
+    });
+    // stage cap reached so the driver doesn't fire
+    await insertPlanStage(db, {
+      id: newId(),
+      runId,
+      stage: 2,
+      specVersion: 1,
+      delta: {},
+      rationale: "stage 2",
+    });
+    const result = await sweepRunCompletion(db);
+    expect(result.completed).toContain(runId);
+    const events = [
+      ...(await db.execute(
+        sql`SELECT kind FROM events WHERE run_id = ${runId} AND type = 'RUN_DEGRADED'`,
+      )),
+    ];
+    expect(events[0]?.kind).toBe("warn");
+  });
+
   it("no live claims after stage 1 → run just completes (nothing to plan against)", async () => {
     const { runId } = await seedStageOneRun(false);
     const result = await sweepRunCompletion(db);

@@ -157,17 +157,19 @@ export async function sweepRunCompletion(
       const terminal = (counts.DONE ?? 0) + (counts.FAILED ?? 0) + (counts.CANCELLED ?? 0);
       if (terminal < total) return; // work still in flight
 
+      const liveClaims = await countLiveClaims(tx, run.id);
+
       // Staged-planning driver (3.7, ADR-011): all work is done, the last
       // plan stage produced live claims, and stages remain → enqueue the
-      // next plan task instead of completing. The Planner reads the claim
-      // digest and writes the deep wave with concrete inputs (design §7).
-      if ((counts.FAILED ?? 0) === 0 && (counts.CANCELLED ?? 0) === 0) {
+      // next plan task instead of completing. Failed leaf tasks do NOT stop
+      // the next stage (ADR-010) — the claims that exist are real material.
+      {
         const lastStage = await selectMaxPlanStage(tx, run.id);
         if (
           lastStage > 0 &&
           lastStage < maxPlanStages &&
           !(await existsPlanTaskForStage(tx, run.id, lastStage + 1)) &&
-          (await countLiveClaims(tx, run.id)) > 0
+          liveClaims > 0
         ) {
           const nextStage = lastStage + 1;
           const planTaskId = newId();
@@ -199,7 +201,12 @@ export async function sweepRunCompletion(
         }
       }
 
-      if ((counts.FAILED ?? 0) > 0 || (counts.CANCELLED ?? 0) > 0) {
+      // ADR-010: failure is normal. A run with live claims and at least one
+      // DONE task completes even when some leaf tasks failed — the failures
+      // stay visible (RUN_DEGRADED warn; the P4 Evaluator will judge them).
+      // No claims to show for it → the run failed.
+      const failedOrCancelled = (counts.FAILED ?? 0) + (counts.CANCELLED ?? 0);
+      if (failedOrCancelled > 0 && !((counts.DONE ?? 0) > 0 && liveClaims > 0)) {
         assertRunTransition(locked.status, "FAILED");
         await updateRunStatus(tx, run.id, "FAILED");
         await emitEvent(tx, {
@@ -211,6 +218,15 @@ export async function sweepRunCompletion(
         });
         result.failed.push(run.id);
         return;
+      }
+      if ((counts.FAILED ?? 0) > 0) {
+        await emitEvent(tx, {
+          runId: run.id,
+          type: "RUN_DEGRADED",
+          kind: "warn",
+          actor: ACTOR,
+          payload: { counts, liveClaims },
+        });
       }
       await advanceRun(tx, run.id, locked.status, "COMPLETED");
       result.completed.push(run.id);
