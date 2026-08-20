@@ -965,6 +965,17 @@ GET /api/runs/:runId/events/stream                 # SSE tail for live runs
 
 The SSE stream is a tail over the existing event write path — it powers the live-run view with zero new state. Transcript responses paginate by stage to bound payloads.
 
+> **Amended 2026-08-20 (P6):** the surface grew two endpoints —
+> `GET /api/runs/:runId/metrics` (one-round-trip dashboard aggregates: task/attempt
+> counts, retry/escalation counts, live evidence/claims, frontier-vs-local call
+> split + spend, tool latency, eval cycles vs cap) and
+> `POST /api/runs/:runId/checkpoints/:checkpointId/resolve` (human verbs
+> retry/accept/stop; the Control Plane interprets — see phase-6-plan D5).
+> The SSE stream also writes every event twice: the named frame above plus a
+> default `message` frame, so clients listen generically (`es.onmessage`)
+> instead of hardcoding event-type names (P6 finding: a hardcoded list froze
+> the timeline for every event type added after Phase 1).
+
 ## 24.6 UI Specification (the mockup is normative)
 
 `research-lab-console.html` (meta group `ai-research-lab`) is the reference implementation for P6. Its decisions are recorded here so the real build doesn't relitigate them. (Implementation note, 2026-08-19: the console implements this spec with Tailwind v4 + shadcn/ui — the mockup's palette, type stacks, and interactions remain normative; its CSS *tokens* are mapped onto shadcn's semantic theme variables rather than ported class-for-class. See implementation-plan §2.)

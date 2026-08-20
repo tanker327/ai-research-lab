@@ -1,6 +1,16 @@
 // Ticket 1.8 acceptance: route tests via Hono app.request against real
 // Postgres — create, read, events, cancel, and the validation/error edges.
-import { createArtifactStore, createDb, deleteRun, seedAttempt, seedRun, seedTask } from "@lab/db";
+import {
+  createArtifactStore,
+  createDb,
+  deleteRun,
+  insertDecisionRecord,
+  insertModelCall,
+  insertToolCall,
+  seedAttempt,
+  seedRun,
+  seedTask,
+} from "@lab/db";
 import { newId } from "@lab/schemas";
 import { pino } from "pino";
 import { afterAll, afterEach, describe, expect, it } from "vitest";
@@ -246,29 +256,116 @@ describe("Phase 5 read surface (5.3)", () => {
 });
 
 describe("Phase 6 read surface (6.2)", () => {
-  it("GET /runs/:id/metrics aggregates the dashboard in one call", async () => {
+  it("GET /runs/:id/metrics aggregates every dashboard dimension in one call", async () => {
     const runId = newId();
     const taskId = newId();
+    const attemptId = newId();
+    const evalTaskId = newId();
     cleanup.push(runId);
     await seedRun(db, runId, "metrics test");
     await seedTask(db, { id: taskId, runId, status: "DONE", type: "research", title: "r" });
     await seedTask(db, { id: newId(), runId, status: "FAILED", type: "analyze", title: "a" });
-    await seedAttempt(db, { id: newId(), taskId, runId, status: "ACCEPTED" });
+    await seedTask(db, { id: evalTaskId, runId, status: "DONE", type: "evaluate", title: "e" });
+    await seedAttempt(db, { id: attemptId, taskId, runId, status: "ACCEPTED" });
+    // Accepted evaluate attempt = one evaluation cycle.
+    await seedAttempt(db, { id: newId(), taskId: evalTaskId, runId, status: "ACCEPTED" });
+    // Retry-ladder history: one plain intelligence retry, one tier escalation.
+    await insertDecisionRecord(db, {
+      id: newId(),
+      runId,
+      taskId,
+      attemptId,
+      type: "retry_ladder",
+      decision: "intelligence_retry",
+      rationale: "strategy fallback",
+      createdBy: "retry_coordinator",
+    });
+    await insertDecisionRecord(db, {
+      id: newId(),
+      runId,
+      taskId,
+      attemptId,
+      type: "retry_ladder",
+      decision: "intelligence_retry",
+      rationale: "tier escalation",
+      createdBy: "retry_coordinator",
+      metadata: { tier: "frontier" },
+    });
+    // Frontier + local model calls, and one tool call with latency.
+    await insertModelCall(db, {
+      id: newId(),
+      runId,
+      attemptId,
+      model: "deepseek/deepseek-v4-pro",
+      modelTier: "frontier",
+      purpose: "agent",
+      inputTokens: 100,
+      outputTokens: 50,
+      costUsd: 0.03,
+      latencyMs: 900,
+      finishReason: "stop",
+      reasoningArtifactId: null,
+    });
+    await insertModelCall(db, {
+      id: newId(),
+      runId,
+      attemptId,
+      model: "default",
+      modelTier: "strong_local",
+      purpose: "agent",
+      inputTokens: 100,
+      outputTokens: 50,
+      costUsd: null,
+      latencyMs: 400,
+      finishReason: "stop",
+      reasoningArtifactId: null,
+    });
+    await insertToolCall(db, {
+      id: newId(),
+      runId,
+      attemptId,
+      seq: 1,
+      toolName: "web_fetch",
+      request: { url: "https://example.com" },
+      responseSnippet: "ok",
+      responseArtifactId: null,
+      error: null,
+      latencyMs: 1200,
+    });
+
     const res = await app.request(`/runs/${runId}/metrics`);
     expect(res.status).toBe(200);
     const m = (await res.json()) as Record<string, number>;
     expect(m).toMatchObject({
-      tasksTotal: 2,
-      tasksDone: 1,
+      tasksTotal: 3,
+      tasksDone: 2,
       tasksFailed: 1,
       tasksResearch: 1,
-      tasksControl: 1,
-      attemptsTotal: 1,
+      tasksControl: 2,
+      attemptsTotal: 2,
+      intelligenceRetries: 2,
+      tierEscalations: 1,
       liveEvidence: 0,
-      evalCycles: 0,
+      modelCalls: 2,
+      frontierCalls: 1,
+      frontierSpendUsd: 0.03,
+      toolCalls: 1,
+      toolLatencyMs: 1200,
+      evalCycles: 1,
       maxEvalCycles: 3,
     });
     expect(m.wallClockSeconds).toBeGreaterThanOrEqual(0);
+  });
+
+  it("GET /runs/:id/tasks carries the staged-board fields (6.1)", async () => {
+    const id = await createRun();
+    const tasks = (await (await app.request(`/runs/${id}/tasks`)).json()) as Array<
+      Record<string, unknown>
+    >;
+    expect(tasks[0]).toMatchObject({ planStage: 1, agentRole: "researcher" });
+    expect(typeof tasks[0]?.createdAt).toBe("string");
+    expect(tasks[0]).toHaveProperty("strategy");
+    expect(tasks[0]).toHaveProperty("modelTier");
   });
 });
 
