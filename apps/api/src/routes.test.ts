@@ -1,6 +1,6 @@
 // Ticket 1.8 acceptance: route tests via Hono app.request against real
 // Postgres — create, read, events, cancel, and the validation/error edges.
-import { createDb, deleteRun } from "@lab/db";
+import { createArtifactStore, createDb, deleteRun, seedAttempt, seedRun, seedTask } from "@lab/db";
 import { newId } from "@lab/schemas";
 import { pino } from "pino";
 import { afterAll, afterEach, describe, expect, it } from "vitest";
@@ -11,7 +11,8 @@ const url = process.env.DATABASE_URL ?? "postgres://lab:lab@localhost:5434/resea
 const { db, close } = createDb(url);
 // Routes under test never wake on events — a no-op bus keeps the test hermetic.
 const bus: EventBus = { subscribe: () => () => {}, stop: async () => {} };
-const app = createApp({ db, bus, log: pino({ level: "silent" }) });
+const artifacts = createArtifactStore(process.env.ARTIFACT_ROOT ?? "./data/artifacts-test");
+const app = createApp({ db, bus, log: pino({ level: "silent" }), artifacts });
 
 const cleanup: string[] = [];
 afterEach(async () => {
@@ -151,5 +152,95 @@ describe("Phase 3 console surface (3.7)", () => {
     const id = await createRun();
     const claims = (await (await app.request(`/runs/${id}/claims`)).json()) as unknown[];
     expect(claims).toEqual([]);
+  });
+});
+
+describe("Phase 5 read surface (5.3)", () => {
+  async function seedReportedRun() {
+    const runId = newId();
+    const taskId = newId();
+    const attemptId = newId();
+    cleanup.push(runId);
+    await seedRun(db, runId, "report surface test");
+    await seedTask(db, {
+      id: taskId,
+      runId,
+      status: "DONE",
+      type: "synthesize",
+      title: "Synthesize report",
+    });
+    await seedAttempt(db, {
+      id: attemptId,
+      taskId,
+      runId,
+      status: "ACCEPTED",
+      output: {
+        title: "The Report",
+        reportMarkdown: "The claim holds. [c1]",
+        citationMap: { c1: [newId()] },
+      },
+    });
+    await artifacts.save(db, {
+      id: newId(),
+      runId,
+      taskId,
+      attemptId,
+      type: "report",
+      name: "report.md",
+      content: "# The Report\n\nThe claim holds. [c1]",
+      createdBy: "synthesizer/v1",
+    });
+    return { runId, taskId, attemptId };
+  }
+
+  it("GET /runs/:id/report serves title, markdown from the artifact, and the citationMap", async () => {
+    const { runId, attemptId } = await seedReportedRun();
+    const res = await app.request(`/runs/${runId}/report`);
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as Record<string, unknown>;
+    expect(body.attemptId).toBe(attemptId);
+    expect(body.title).toBe("The Report");
+    expect(String(body.markdown)).toContain("# The Report");
+    expect(Object.keys(body.citationMap as Record<string, unknown>)).toEqual(["c1"]);
+  });
+
+  it("GET /runs/:id/report 404s before any synthesis is accepted", async () => {
+    const runId = newId();
+    cleanup.push(runId);
+    await seedRun(db, runId, "no report yet");
+    expect((await app.request(`/runs/${runId}/report`)).status).toBe(404);
+  });
+
+  it("GET /runs/:id/report/citations resolves chips to claims (unknown ids resolve null)", async () => {
+    const { runId } = await seedReportedRun();
+    const res = await app.request(`/runs/${runId}/report/citations`);
+    expect(res.status).toBe(200);
+    const rows = (await res.json()) as Array<{
+      chip: string;
+      claims: Array<{ statement: unknown }>;
+    }>;
+    expect(rows[0]?.chip).toBe("c1");
+    expect(rows[0]?.claims[0]?.statement).toBeNull(); // id not a live claim here
+  });
+
+  it("GET trace + transcript serve the §24.2 block sequence in staged order", async () => {
+    const { runId, attemptId } = await seedReportedRun();
+    const trace = (await (
+      await app.request(`/runs/${runId}/attempts/${attemptId}/trace`)
+    ).json()) as { attempt: { id: string }; blocks: Array<{ kind: string }> };
+    expect(trace.attempt.id).toBe(attemptId);
+    const kinds = trace.blocks.map((b) => b.kind);
+    expect(kinds[0]).toBe("context_in");
+    expect(kinds).toContain("output");
+    const transcript = (await (await app.request(`/runs/${runId}/transcript`)).json()) as {
+      stage: number;
+      traces: Array<{ attempt: { id: string } }>;
+    };
+    expect(transcript.traces.map((t) => t.attempt.id)).toContain(attemptId);
+    // A wrong-run trace lookup 404s (no cross-run leakage).
+    const otherRun = newId();
+    cleanup.push(otherRun);
+    await seedRun(db, otherRun, "other");
+    expect((await app.request(`/runs/${otherRun}/attempts/${attemptId}/trace`)).status).toBe(404);
   });
 });

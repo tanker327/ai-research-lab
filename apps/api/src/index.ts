@@ -2,7 +2,7 @@
 // scheduler lives here, one per deployment). API_BOOT_ONLY=1 boots, connects,
 // and exits (gate scripts).
 import { createLogger, emitEvent, loadConfig, startScheduler } from "@lab/core";
-import { createDb } from "@lab/db";
+import { createArtifactStore, createDb } from "@lab/db";
 import { canonicalizeRun, createModelMergeConfirmer } from "@lab/evidence";
 import { createModelClient } from "@lab/model";
 import { createApp } from "./app";
@@ -52,7 +52,7 @@ export async function serve() {
       }
     },
   });
-  const app = createApp({ db, bus, log });
+  const app = createApp({ db, bus, log, artifacts: createArtifactStore(config.ARTIFACT_ROOT) });
   const server = Bun.serve({ fetch: app.fetch, port: config.API_PORT });
   log.info({ port: config.API_PORT }, "api listening");
 

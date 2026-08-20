@@ -3,7 +3,7 @@
 // cursor; a missed NOTIFY (row inserted without the doorbell) is recovered by
 // the fallback poll — nothing is lost, only delayed.
 import { emitEvent } from "@lab/core";
-import { createDb, deleteRun, seedRun } from "@lab/db";
+import { createArtifactStore, createDb, deleteRun, seedRun } from "@lab/db";
 import { newId } from "@lab/schemas";
 import { pino } from "pino";
 import postgres from "postgres";
@@ -53,7 +53,7 @@ async function collect(
     timeoutMs = 5_000,
   }: { headers?: Record<string, string>; timeoutMs?: number } = {},
 ): Promise<SseEvent[]> {
-  const app = createApp({ db, bus, log });
+  const app = createApp({ db, bus, log, artifacts: createArtifactStore("./data/artifacts-test") });
   const controller = new AbortController();
   const res = await app.request(path, { headers, signal: controller.signal });
   expect(res.status).toBe(200);

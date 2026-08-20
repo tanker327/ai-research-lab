@@ -1,9 +1,13 @@
 // Hono app. Ticket 1.6 lands the SSE stream; the rest of the API surface is
 // ticket 1.8.
 import { cancelRun, startRun } from "@lab/core";
-import type { Db } from "@lab/db";
+import type { ArtifactStore, Db } from "@lab/db";
 import {
+  assembleAttemptTrace,
+  assembleTranscriptPage,
+  selectAcceptedSynthesis,
   selectAgentVerdicts,
+  selectArtifactRefsByAttempt,
   selectAttemptsByRun,
   selectCheckpointsByRun,
   selectEventsAfter,
@@ -26,9 +30,10 @@ export interface ApiDeps {
   db: Db;
   bus: EventBus;
   log: Logger;
+  artifacts: ArtifactStore; // report/artifact content reads (5.3)
 }
 
-export function createApp({ db, bus, log }: ApiDeps): Hono {
+export function createApp({ db, bus, log, artifacts }: ApiDeps): Hono {
   const app = new Hono();
 
   app.get("/health", (c) => c.json({ ok: true }));
@@ -136,6 +141,95 @@ export function createApp({ db, bus, log }: ApiDeps): Hono {
 
   app.get("/runs/:id/attempts", async (c) => {
     return c.json(await selectAttemptsByRun(db, c.req.param("id")));
+  });
+
+  // Assembled AttemptTrace (§24.2/§24.5): deterministic block sequence —
+  // context_in, reasoning refs, tool calls by seq, output, control. Shows
+  // superseded/rejected attempts as they ran (the assembler is the rule-5
+  // sanctioned base-table reader).
+  app.get("/runs/:id/attempts/:attemptId/trace", async (c) => {
+    const trace = await assembleAttemptTrace(db, c.req.param("attemptId"));
+    if (!trace || trace.attempt.runId !== c.req.param("id")) {
+      return c.json({ error: "attempt not found in this run" }, 404);
+    }
+    return c.json(trace);
+  });
+
+  // Transcript in staged order, paginated by plan stage (§24.5).
+  app.get("/runs/:id/transcript", async (c) => {
+    const stageParam = c.req.query("stage");
+    const stage = stageParam === undefined ? undefined : Number(stageParam);
+    if (stage !== undefined && !Number.isInteger(stage)) {
+      return c.json({ error: "stage must be an integer" }, 400);
+    }
+    const page = await assembleTranscriptPage(db, c.req.param("id"), stage);
+    if (!page) return c.json({ error: "run has no tasks" }, 404);
+    return c.json(page);
+  });
+
+  // The run's report (5.3): accepted synthesis output + the report artifact's
+  // markdown. 404 until a synthesis is accepted.
+  app.get("/runs/:id/report", async (c) => {
+    const runId = c.req.param("id");
+    const synthesis = await selectAcceptedSynthesis(db, runId);
+    if (!synthesis) return c.json({ error: "no accepted report for this run" }, 404);
+    const refs = await selectArtifactRefsByAttempt(db, synthesis.attemptId);
+    const reportRef = refs.find((a) => a.type === "report");
+    let markdown: string | null = null;
+    if (reportRef) {
+      const { content } = await artifacts.read(reportRef.id, db);
+      markdown = content.toString("utf8");
+    }
+    return c.json({
+      attemptId: synthesis.attemptId,
+      title: (synthesis.output.title as string | undefined) ?? null,
+      markdown: markdown ?? (synthesis.output.reportMarkdown as string | undefined) ?? null,
+      citationMap: (synthesis.output.citationMap as Record<string, string[]> | undefined) ?? {},
+      artifactId: reportRef?.id ?? null,
+    });
+  });
+
+  // Citation map with resolved targets (§24.5): chip → claims → live
+  // evidence. Powers the console's chip-jump; reads live_* views only.
+  app.get("/runs/:id/report/citations", async (c) => {
+    const runId = c.req.param("id");
+    const synthesis = await selectAcceptedSynthesis(db, runId);
+    if (!synthesis) return c.json({ error: "no accepted report for this run" }, 404);
+    const citationMap =
+      (synthesis.output.citationMap as Record<string, string[]> | undefined) ?? {};
+    const [claims, evidence] = await Promise.all([
+      selectLiveClaims(db, runId),
+      selectLiveClaimEvidence(db, runId),
+    ]);
+    const claimById = new Map(claims.map((cl) => [cl.id, cl]));
+    const evidenceByClaim = new Map<string, typeof evidence>();
+    for (const e of evidence) {
+      evidenceByClaim.set(e.canonicalClaimId, [
+        ...(evidenceByClaim.get(e.canonicalClaimId) ?? []),
+        e,
+      ]);
+    }
+    return c.json(
+      Object.entries(citationMap).map(([chip, ids]) => ({
+        chip,
+        claims: ids.map((id) => {
+          const claim = claimById.get(id);
+          return {
+            id,
+            statement: claim?.statement ?? null,
+            status: claim?.status ?? null,
+            subjectKey: claim?.subjectKey ?? null,
+            evidence: (evidenceByClaim.get(id) ?? []).map((e) => ({
+              excerpt: e.excerpt,
+              sourceUrl: e.sourceUrl,
+              sourceClass: e.sourceClass,
+              vendorAffiliated: e.vendorAffiliated,
+              retrievedAt: e.retrievedAt,
+            })),
+          };
+        }),
+      })),
+    );
   });
 
   app.get("/attempts/:id/calls", async (c) => {

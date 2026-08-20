@@ -171,6 +171,7 @@ try {
     db,
     bus: { subscribe: () => () => {}, stop: async () => {} },
     log: pino({ level: "silent" }),
+    artifacts: store,
   });
   const attempts = (await (await app.request(`/runs/${runId}/attempts`)).json()) as Array<{
     id: string;
