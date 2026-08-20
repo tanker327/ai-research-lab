@@ -10,6 +10,7 @@ export interface RoleBudgets {
   researcher: number;
   extractor: number;
   analyst: number;
+  synthesizer: number;
 }
 
 // Comfortably inside strong_local's context while leaving room for the
@@ -19,6 +20,7 @@ export const DEFAULT_BUDGETS: RoleBudgets = {
   researcher: 6_000,
   extractor: 12_000,
   analyst: 24_000, // whole-run claim bundle — the largest context in the system
+  synthesizer: 24_000, // approved analysis + citation-ready claim bundle (P5)
 };
 
 export function estimateTokens(text: string): number {

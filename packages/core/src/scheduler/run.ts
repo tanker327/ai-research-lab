@@ -222,15 +222,18 @@ export async function sweepRunCompletion(
         const loopTasks = await selectAnalysisLoopTasks(tx, run.id);
         const failedLoop = loopTasks.filter((t) => t.status === "FAILED" || t.status === "BLOCKED");
         if (failedLoop.length > 0) {
-          // An un-analyzable run is a human's call, not a silent FAILED
-          // (ADR-010 at run scope): the claims collected are real material.
+          // An un-analyzable (or un-synthesizable, 5.1) run is a human's
+          // call, not a silent FAILED (ADR-010 at run scope): the claims —
+          // and past SYNTHESIZING, the accepted analysis — are real material.
+          const synthesisFailed = failedLoop.some((t) => t.type === "synthesize");
           await insertHumanCheckpoint(tx, {
             id: newId(),
             runId: run.id,
             taskId: failedLoop[0]?.id ?? null,
-            reason: "analysis_failed",
-            question:
-              "The analysis/evaluation loop failed after all retries. Retry it, accept the claims as-is, or stop the run?",
+            reason: synthesisFailed ? "synthesis_failed" : "analysis_failed",
+            question: synthesisFailed
+              ? "Report synthesis failed after all retries. The accepted analysis and claims survive — retry synthesis, accept without a report, or stop the run?"
+              : "The analysis/evaluation loop failed after all retries. Retry it, accept the claims as-is, or stop the run?",
           });
           assertRunTransition(locked.status, "WAITING_HUMAN");
           await updateRunStatus(tx, run.id, "WAITING_HUMAN");
@@ -239,10 +242,49 @@ export async function sweepRunCompletion(
             type: "RUN_WAITING_HUMAN",
             kind: "warn",
             actor: ACTOR,
-            payload: { reason: "analysis_failed", failedTaskIds: failedLoop.map((t) => t.id) },
+            payload: {
+              reason: synthesisFailed ? "synthesis_failed" : "analysis_failed",
+              failedTaskIds: failedLoop.map((t) => t.id),
+            },
           });
           result.waiting.push(run.id);
           return;
+        }
+        // SYNTHESIZING with every task terminal and none failed means the
+        // synthesize task was cancelled/superseded — re-enqueue it (5.1);
+        // completion belongs to acceptSynthesisAttempt, never this sweep.
+        if (locked.status === "SYNTHESIZING") {
+          const liveSynthesize = loopTasks.some(
+            (t) => t.type === "synthesize" && t.status !== "CANCELLED",
+          );
+          if (!liveSynthesize) {
+            const synthesizeTaskId = newId();
+            await insertPlannedTaskRow(tx, {
+              id: synthesizeTaskId,
+              runId: run.id,
+              planStage: Math.max(await selectMaxPlanStage(tx, run.id), 1),
+              specVersion: locked.specVersion,
+              type: "synthesize",
+              title: "Synthesize report",
+              description: "",
+              priority: 95,
+              agentRole: "synthesizer",
+              modelTier: null,
+              strategy: null,
+              input: { reEnqueued: true },
+              successCriteria: [],
+              maxAttempts: 3,
+            });
+            await emitEvent(tx, {
+              runId: run.id,
+              taskId: synthesizeTaskId,
+              type: "SYNTHESIZE_TASK_CREATED",
+              kind: "info",
+              actor: ACTOR,
+              payload: { reason: "re_enqueued" },
+            });
+          }
+          return; // synthesis owns completion from here
         }
         // CANCELLED loop tasks don't count toward the invariant — an
         // operator-cancelled (or superseded) analysis must be re-enqueued.

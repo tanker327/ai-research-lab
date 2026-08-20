@@ -11,6 +11,7 @@ import {
   insertEvaluation,
   insertHumanCheckpoint,
   insertPlannedTaskRow,
+  insertTaskDependency,
   selectAcceptedEvaluationCycles,
   selectAttemptInput,
   selectAttemptOutput,
@@ -27,7 +28,8 @@ const ACTOR = "decision_interpreter";
 
 export interface DecisionApplication {
   outcome:
-    | "completed"
+    | "completed" // legacy/fake runs only — real ACCEPT enqueues synthesis (5.1)
+    | "synthesis_enqueued"
     | "followups_created"
     | "replanned"
     | "reanalyze"
@@ -76,8 +78,9 @@ export async function applyEvaluatorDecision(
     // Persist the verdict with the coverage the Evaluator actually saw (R13):
     // the attempt input is the verbatim context — never recomputed.
     const input = await selectAttemptInput(tx, c.attemptId);
+    const evalId = newId();
     await insertEvaluation(tx, {
-      id: newId(),
+      id: evalId,
       runId: c.runId,
       targetType: "run",
       targetId: c.runId,
@@ -107,8 +110,40 @@ export async function applyEvaluatorDecision(
     const canWalk = runStatus === "EVALUATING"; // fake/legacy runs skip the walk
 
     if (out.decision === "ACCEPT") {
-      if (canWalk) await walkRun(tx, c.runId, "EVALUATING", ["SYNTHESIZING", "COMPLETED"]);
-      return { outcome: "completed" as const, createdTaskIds: [] };
+      // 5.1 (phase-5-plan D4): ACCEPT no longer completes the run — it
+      // enqueues the ONE synthesize task (input fully concrete, ADR-011) and
+      // parks the run at SYNTHESIZING. Only an accepted, validator-passing
+      // synthesis completes a run (acceptSynthesisAttempt). Legacy/fake runs
+      // (no walkable status) keep the old terminal outcome.
+      if (!canWalk) return { outcome: "completed" as const, createdTaskIds: [] };
+      const synthesizeTaskId = newId();
+      await insertPlannedTaskRow(tx, {
+        id: synthesizeTaskId,
+        runId: c.runId,
+        planStage: Math.max(await selectMaxPlanStage(tx, c.runId), 1),
+        specVersion: run?.specVersion ?? 1,
+        type: "synthesize",
+        title: "Synthesize report",
+        description: "",
+        priority: 95,
+        agentRole: "synthesizer",
+        modelTier: null,
+        strategy: null,
+        input: { evaluationId: evalId, cycle },
+        successCriteria: [],
+        maxAttempts: maxAttemptsDefault,
+      });
+      await insertTaskDependency(tx, synthesizeTaskId, c.taskId);
+      await emitEvent(tx, {
+        runId: c.runId,
+        taskId: synthesizeTaskId,
+        type: "SYNTHESIZE_TASK_CREATED",
+        kind: "info",
+        actor: ACTOR,
+        payload: { cycle, evaluateTaskId: c.taskId },
+      });
+      await walkRun(tx, c.runId, "EVALUATING", ["SYNTHESIZING"]);
+      return { outcome: "synthesis_enqueued" as const, createdTaskIds: [synthesizeTaskId] };
     }
 
     // ADR-016: deterministic guard, checked BEFORE interpreting the demand.

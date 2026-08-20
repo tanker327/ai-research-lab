@@ -99,8 +99,8 @@ async function runStatus(runId: string): Promise<string> {
 }
 
 describe("applyEvaluatorDecision", () => {
-  it("ACCEPT → run COMPLETED; verdict persisted with the coverage the model saw", async () => {
-    const { runId, candidate, attemptId } = await seedEvaluatingRun({
+  it("ACCEPT → synthesize task enqueued, run SYNTHESIZING; verdict persisted with the coverage the model saw", async () => {
+    const { runId, taskId, candidate, attemptId } = await seedEvaluatingRun({
       ...VERDICT,
       decision: "ACCEPT",
       requiredActions: [],
@@ -108,8 +108,25 @@ describe("applyEvaluatorDecision", () => {
       acceptedUncertainties: ["community reports not exhaustively sampled"],
     });
     const result = await applyEvaluatorDecision(db, candidate, 3, 3);
-    expect(result.outcome).toBe("completed");
-    expect(await runStatus(runId)).toBe("COMPLETED");
+    // 5.1 (phase-5-plan D4): completion belongs to synthesis now.
+    expect(result.outcome).toBe("synthesis_enqueued");
+    expect(result.createdTaskIds).toHaveLength(1);
+    expect(await runStatus(runId)).toBe("SYNTHESIZING");
+    const tasks = [
+      ...(await db.execute(sql`
+        SELECT id, status, agent_role, input FROM research_tasks
+        WHERE run_id = ${runId} AND type = 'synthesize'`)),
+    ];
+    expect(tasks).toHaveLength(1);
+    expect(tasks[0]?.agent_role).toBe("synthesizer");
+    const taskInput = tasks[0]?.input as Record<string, unknown>;
+    expect(taskInput.cycle).toBe(1);
+    expect(typeof taskInput.evaluationId).toBe("string"); // concrete input (ADR-011)
+    const deps = [
+      ...(await db.execute(sql`
+        SELECT depends_on_task_id FROM task_dependencies WHERE task_id = ${tasks[0]?.id}`)),
+    ];
+    expect(deps.map((d) => d.depends_on_task_id)).toContain(taskId);
     const evals = [
       ...(await db.execute(sql`
         SELECT decision, metadata FROM evaluations

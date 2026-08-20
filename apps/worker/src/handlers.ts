@@ -3,7 +3,14 @@
 // dispatch (implementation-plan §5.5) starts with the Planner (ticket 3.2) —
 // Researcher/Extractor land with 3.3/3.4. A handler either returns (attempt
 // SUCCEEDED) or throws a CategorizedError (attempt FAILED with that category).
-import { analystV1, evaluatorV1, extractorV1, plannerV1, researcherV1 } from "@lab/agents";
+import {
+  analystV1,
+  evaluatorV1,
+  extractorV1,
+  plannerV1,
+  researcherV1,
+  synthesizerV1,
+} from "@lab/agents";
 import type { ContextBuilder } from "@lab/context";
 import { type ClaimedWork, type Config, emitEvent } from "@lab/core";
 import {
@@ -98,7 +105,7 @@ function agentContext(
   deps: AgentDeps,
   db: Db,
   work: ClaimedWork,
-  role: "planner" | "researcher" | "extractor" | "analyst" | "evaluator",
+  role: "planner" | "researcher" | "extractor" | "analyst" | "evaluator" | "synthesizer",
   route: ReturnType<typeof resolveRoute>,
 ) {
   return {
@@ -141,7 +148,7 @@ async function guardDarkFrontier(
   deps: AgentDeps,
   db: Db,
   work: ClaimedWork,
-  role: "planner" | "researcher" | "extractor" | "analyst" | "evaluator",
+  role: "planner" | "researcher" | "extractor" | "analyst" | "evaluator" | "synthesizer",
   route: ReturnType<typeof resolveRoute>,
 ): Promise<ReturnType<typeof resolveRoute>> {
   if (route.tier !== "frontier" || deps.config.FRONTIER_ENABLED === 1) return route;
@@ -421,6 +428,42 @@ function evaluatorHandler(deps: AgentDeps): TaskHandler {
   };
 }
 
+// 5.1: one frontier call, NO tools (§18 — the synthesizer cannot import
+// uncited facts; nothing here ever hands it the tool registry). The report
+// markdown is persisted as the run's `report` artifact; the citationMap rides
+// the attempt output for the validator (5.2) and the citations API (5.3).
+function synthesizerHandler(deps: AgentDeps): TaskHandler {
+  return async (db, work) => {
+    const input = await deps.context.forSynthesizer(work.task.runId);
+    await updateAttemptInput(db, work.attempt.id, input); // R12: verbatim
+
+    const route = await guardDarkFrontier(
+      deps,
+      db,
+      work,
+      "synthesizer",
+      resolveRoute(
+        "synthesizer",
+        work.attempt.attemptNumber,
+        tierModels(deps.config),
+        taskTierOverride(deps, work),
+        tierModes(deps.config),
+      ),
+    );
+    const ctx = agentContext(deps, db, work, "synthesizer", route);
+    const output = synthesizerV1.outputSchema.parse(await synthesizerV1.run(input, ctx));
+
+    await ctx.saveArtifact({
+      type: "report",
+      name: "report.md",
+      mediaType: "text/markdown",
+      content: output.reportMarkdown,
+      createdBy: "synthesizer/v1",
+    });
+    await updateAttemptOutput(db, work.attempt.id, output);
+  };
+}
+
 function notYetImplemented(type: string, ticket: string): TaskHandler {
   return async () => {
     throw new CategorizedError(
@@ -459,7 +502,7 @@ export function createHandlerRegistry(deps?: AgentDeps): Record<TaskType, TaskHa
     extract: withFakeEscape(extractorHandler(deps)),
     analyze: withFakeEscape(analystHandler(deps)),
     evaluate: withFakeEscape(evaluatorHandler(deps)),
-    synthesize: withFakeEscape(notYetImplemented("synthesize", "5.x")),
+    synthesize: withFakeEscape(synthesizerHandler(deps)),
     human_review: withFakeEscape(notYetImplemented("human_review", "4.x")),
   };
 }

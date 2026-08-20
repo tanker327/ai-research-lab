@@ -57,6 +57,7 @@
         "@lab/context": "workspace:*",
         "@lab/core": "workspace:*",
         "@lab/db": "workspace:*",
+        "@lab/evidence": "workspace:*",
         "@lab/model": "workspace:*",
         "@lab/schemas": "workspace:*",
         "@lab/tools": "workspace:*",

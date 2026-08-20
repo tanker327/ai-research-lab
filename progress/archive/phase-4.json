@@ -16,9 +16,7 @@
       "title": "Coverage summary computation (deterministic) \u2192 persisted on evaluation (packages/evidence)",
       "status": "completed",
       "priority": 2,
-      "depends_on": [
-        "4.0"
-      ],
+      "depends_on": ["4.0"],
       "completed_at": "2026-08-19",
       "commit": "aec6240"
     },
@@ -27,9 +25,7 @@
       "title": "Analyst v1: claim-bundle context (K=3 heuristic), findings-cite-claims schema check",
       "status": "completed",
       "priority": 3,
-      "depends_on": [
-        "4.1"
-      ],
+      "depends_on": ["4.1"],
       "completed_at": "2026-08-19",
       "commit": "32f8318"
     },
@@ -38,9 +34,7 @@
       "title": "Evaluator v1: merged critic+judge prompt, decision schema",
       "status": "completed",
       "priority": 4,
-      "depends_on": [
-        "4.2"
-      ],
+      "depends_on": ["4.2"],
       "completed_at": "2026-08-19",
       "commit": "5bcfecc"
     },
@@ -49,9 +43,7 @@
       "title": "Core interprets decisions: RESEARCH_MORE \u2192 tasks from requiredActions; REPLAN \u2192 planner task; cycle guard enforced",
       "status": "completed",
       "priority": 5,
-      "depends_on": [
-        "4.3"
-      ],
+      "depends_on": ["4.3"],
       "completed_at": "2026-08-19",
       "commit": "7b31a0c"
     },
@@ -60,9 +52,7 @@
       "title": "Intelligence-retry wiring end to end (deterministic reject \u2192 ladder \u2192 tier escalation)",
       "status": "completed",
       "priority": 6,
-      "depends_on": [
-        "4.4"
-      ],
+      "depends_on": ["4.4"],
       "completed_at": "2026-08-19",
       "commit": "4a0e774"
     },
@@ -71,9 +61,7 @@
       "title": "Console wiring: analysis + evaluator verdicts + cycle view (standing UI rule)",
       "status": "completed",
       "priority": 7,
-      "depends_on": [
-        "4.4"
-      ],
+      "depends_on": ["4.4"],
       "completed_at": "2026-08-19",
       "commit": "HEAD"
     },
@@ -82,11 +70,7 @@
       "title": "Phase 4 gate: scripts/gates/p4.ts (leg A milestone: gap\u2192follow-up\u2192ACCEPT cycle \u22652; leg B guard: impossible rubric + cap 1 \u2192 WAITING_HUMAN) \u2014 phase done when gate passes",
       "status": "completed",
       "priority": 8,
-      "depends_on": [
-        "4.4",
-        "4.5",
-        "4.6"
-      ],
+      "depends_on": ["4.4", "4.5", "4.6"],
       "notes": "Leg B passed 4x in-process. Leg A run 01a01ee3\u2026 COMPLETED with ACCEPT on cycle 4 after crash-resume; every gate assertion verified against the DB (3x RESEARCH_MORE, 11 follow-ups, coverage 10\u219255 evidence / 2\u21924 publishers, all loop beats). One uninterrupted single-process gate:p4 pass remains available as optional ceremony.",
       "completed_at": "2026-08-20",
       "commit": "62214e5"

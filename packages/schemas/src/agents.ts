@@ -407,3 +407,35 @@ export const EvaluatorOutput = z.object({
   acceptedUncertainties: z.array(shortText).max(10).default([]), // surfaced in the report (P5)
 });
 export type EvaluatorOutput = z.infer<typeof EvaluatorOutput>;
+
+// ---- Synthesizer (design §6.6, §24.4, ticket 5.1, phase-5-plan D1/D2/D5) ----
+// Frontier, ONE call per run, NO tools (§18: no web — cannot import uncited
+// facts). The agent writes report markdown with inline [cN] chips plus a
+// citationMap; the deterministic citation validator (5.2, ADR-020) gates
+// acceptance — every body sentence outside Uncertainties must cite.
+
+export const SynthesizerInput = z.object({
+  specification: ResearchSpecification,
+  // The judgment the run completed under — approved material ONLY (D5).
+  analysis: AnalysisOutput,
+  claimBundle: z.array(CanonicalClaimView).max(300), // K=2 citation-ready refs
+  openContests: z.array(ContestedClaimView).max(50),
+  // From the final ACCEPT verdict — each MUST appear in the report's
+  // Uncertainties section (§6.6: a promise to the user, not a footnote).
+  acceptedUncertainties: z.array(shortText).max(10),
+  timeContext: z.string().max(500),
+});
+export type SynthesizerInput = z.infer<typeof SynthesizerInput>;
+
+export const SynthesizerOutput = z.object({
+  title: z.string().min(1).max(300),
+  // Markdown with [c1], [c2]… chip tokens at the ends of cited sentences.
+  // The worker persists this as the run's `report` artifact (D2).
+  reportMarkdown: z.string().min(1).max(120_000),
+  // chipId (without brackets, e.g. "c1") → canonical claim ids it cites.
+  citationMap: z.record(
+    z.string().min(1).max(20),
+    z.array(z.string().min(1).max(40)).min(1).max(20),
+  ),
+});
+export type SynthesizerOutput = z.infer<typeof SynthesizerOutput>;

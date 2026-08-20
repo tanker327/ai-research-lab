@@ -40,6 +40,7 @@ import { applyAcceptedPlan } from "../plan";
 import { rejectSucceededAttempt } from "../quality";
 import { decideRetry, enforceAttemptCap, type RetryVerdict } from "../retry";
 import { assertTaskTransition } from "../state/task";
+import { acceptSynthesisAttempt } from "../synthesis";
 
 const ACTOR = "retry_coordinator";
 
@@ -130,6 +131,14 @@ export async function sweepEvaluations(
       }
       if (c.taskType === "evaluate") {
         await applyEvaluatorDecision(db, c, maxAttemptsDefault, maxEvalCycles);
+        result.accepted.push(c.taskId);
+        recordAcceptedRun(result, c);
+        continue;
+      }
+      // Synthesis accept completes the run in the same tx (5.1); the
+      // citation validator (5.2) ran above as a pre-accept check.
+      if (c.taskType === "synthesize") {
+        await acceptSynthesisAttempt(db, c);
         result.accepted.push(c.taskId);
         recordAcceptedRun(result, c);
         continue;

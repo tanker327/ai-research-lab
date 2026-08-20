@@ -13,3 +13,4 @@ export * from "./quality";
 export * from "./retry";
 export * from "./scheduler";
 export * from "./state";
+export * from "./synthesis";

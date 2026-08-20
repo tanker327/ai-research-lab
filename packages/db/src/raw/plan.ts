@@ -164,8 +164,9 @@ export async function selectAttemptInput(
   return ([...rows][0]?.input as Record<string, unknown> | undefined) ?? null;
 }
 
-// Endgame reads (ticket 4.4): the analysis-loop driver decides from the
-// analyze/evaluate task population — see sweepRunCompletion.
+// Endgame reads (ticket 4.4, +synthesize in 5.1): the analysis-loop driver
+// decides from the analyze/evaluate/synthesize task population — see
+// sweepRunCompletion.
 export interface TaskTypeRow {
   id: string;
   type: string;
@@ -178,7 +179,7 @@ export async function selectAnalysisLoopTasks(
 ): Promise<TaskTypeRow[]> {
   const rows = await tx.execute(sql`
     SELECT id, type, status FROM research_tasks
-    WHERE run_id = ${runId} AND type IN ('analyze', 'evaluate')
+    WHERE run_id = ${runId} AND type IN ('analyze', 'evaluate', 'synthesize')
     ORDER BY created_at`);
   return [...rows].map((r) => ({
     id: r.id as string,

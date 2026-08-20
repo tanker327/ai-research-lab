@@ -6,6 +6,7 @@
 import type { Db } from "@lab/db";
 import {
   selectDoneTasksWithOutput,
+  selectFinalAcceptMetadata,
   selectLatestAcceptedAnalysis,
   selectLatestSpec,
   selectLiveClaimEvidence,
@@ -30,6 +31,7 @@ import {
   PlannerInput,
   ResearcherInput,
   ResearchStrategy,
+  SynthesizerInput,
 } from "@lab/schemas";
 import { DEFAULT_BUDGETS, estimateTokens, fitToBudget, type RoleBudgets } from "./budget";
 import {
@@ -54,6 +56,7 @@ export interface ContextBuilder {
   forExtractor(taskId: string): Promise<ExtractorInput>;
   forAnalyst(runId: string): Promise<AnalystInput>;
   forEvaluator(runId: string, maxCycles: number): Promise<EvaluatorInput>;
+  forSynthesizer(runId: string): Promise<SynthesizerInput>;
 }
 
 export interface ContextBuilderDeps {
@@ -343,6 +346,98 @@ export function createContextBuilder(deps: ContextBuilderDeps): ContextBuilder {
         runMetrics,
         maxCycles,
         timeContext: `Current date: ${date}. Judge evidence recency against this date.`,
+      });
+    },
+
+    // Synthesizer sees APPROVED material only (design §6.6, phase-5-plan D5):
+    // the latest accepted analysis, live claims with K=2 citation-ready
+    // evidence refs, and the final ACCEPT verdict's acceptedUncertainties —
+    // which the report must reproduce. Never reasoning artifacts (ADR-018),
+    // never rejected analyses, never raw research notes.
+    async forSynthesizer(runId) {
+      const specRow = await selectLatestSpec(deps.db, runId);
+      if (!specRow) {
+        throw new CategorizedError(
+          "PERMANENT_INFRA",
+          `context: forSynthesizer on run ${runId} with no research spec`,
+        );
+      }
+      const analysisRaw = await selectLatestAcceptedAnalysis(deps.db, runId);
+      const analysis = AnalysisOutput.safeParse(analysisRaw);
+      if (!analysis.success) {
+        throw new CategorizedError(
+          "PERMANENT_INFRA",
+          `context: forSynthesizer on run ${runId} with no accepted analysis — synthesis before analysis`,
+        );
+      }
+      const verdictMeta = await selectFinalAcceptMetadata(deps.db, runId);
+      const acceptedUncertainties = Array.isArray(verdictMeta?.acceptedUncertainties)
+        ? (verdictMeta.acceptedUncertainties as string[]).map((u) => String(u).slice(0, 2000))
+        : [];
+
+      const claims = await selectLiveClaims(deps.db, runId);
+      const evidence = await selectLiveClaimEvidence(deps.db, runId);
+      const byClaim = new Map<string, typeof evidence>();
+      for (const e of evidence) {
+        byClaim.set(e.canonicalClaimId, [...(byClaim.get(e.canonicalClaimId) ?? []), e]);
+      }
+      const renderBundle = (evidenceK: number, excerptChars: number): CanonicalClaimView[] =>
+        claims.slice(0, 300).map((c) => ({
+          id: c.id,
+          subjectKey: c.subjectKey.slice(0, 200),
+          predicateKey: c.predicateKey.slice(0, 200),
+          statement: c.statement.slice(0, 1000),
+          status: c.status,
+          contestNote: c.contestNote ? c.contestNote.slice(0, 2000) : null,
+          evidence: pickStrongest(byClaim.get(c.id) ?? [], evidenceK).map((e) => ({
+            relation: e.relation.slice(0, 40),
+            sourceClass: e.sourceClass.slice(0, 40),
+            sourceUrl: e.sourceUrl ? e.sourceUrl.slice(0, 2000) : null,
+            vendorAffiliated: e.vendorAffiliated,
+            benchmarkOrigin: e.benchmarkOrigin ? e.benchmarkOrigin.slice(0, 200) : null,
+            excerpt: e.excerpt.slice(0, excerptChars),
+          })),
+        }));
+      const openContests: ContestedClaimView[] = claims
+        .filter((c) => c.status === "contested" && c.contestNote)
+        .slice(0, 50)
+        .map((c) => ({
+          claimId: c.id,
+          statement: c.statement.slice(0, 1000),
+          contestNote: (c.contestNote ?? "").slice(0, 2000),
+        }));
+
+      // Spec, analysis, contests, and uncertainties are hard content — the
+      // ladder only degrades evidence richness on the claim bundle.
+      const hard =
+        estimateTokens(JSON.stringify(specRow)) +
+        estimateTokens(JSON.stringify(analysis.data)) +
+        estimateTokens(JSON.stringify(openContests)) +
+        estimateTokens(JSON.stringify(acceptedUncertainties));
+      const variants: Array<[string, CanonicalClaimView[]]> = [
+        ["k2", renderBundle(2, 300)],
+        ["k1", renderBundle(1, 300)],
+        ["claims-only", renderBundle(0, 0)],
+      ];
+      const fit = fitToBudget({
+        role: "synthesizer",
+        budgetTokens: budgets.synthesizer,
+        hardTokens: hard,
+        renderings: variants.map(([label, value]) => ({
+          label,
+          value,
+          tokens: estimateTokens(JSON.stringify(value)),
+        })),
+      });
+
+      const date = now().toISOString().slice(0, 10);
+      return SynthesizerInput.parse({
+        specification: specRow,
+        analysis: analysis.data,
+        claimBundle: fit.value,
+        openContests,
+        acceptedUncertainties,
+        timeContext: `Current date: ${date}. The report is written as of this date.`,
       });
     },
   };

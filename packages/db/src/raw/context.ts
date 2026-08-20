@@ -190,3 +190,18 @@ export async function selectLatestAcceptedAnalysis(
     ORDER BY a.completed_at DESC NULLS LAST, a.attempt_number DESC LIMIT 1`);
   return ([...rows][0]?.output as Record<string, unknown> | undefined) ?? null;
 }
+
+// Final ACCEPT verdict's metadata (acceptedUncertainties etc.) for the
+// Synthesizer's context (ticket 5.1) — the report must reproduce every
+// accepted uncertainty (§6.6).
+export async function selectFinalAcceptMetadata(
+  tx: SqlExecutor,
+  runId: string,
+): Promise<Record<string, unknown> | null> {
+  const rows = await tx.execute(sql`
+    SELECT metadata FROM evaluations
+    WHERE run_id = ${runId} AND target_type = 'run' AND evaluator_type = 'agent'
+      AND decision = 'ACCEPT'
+    ORDER BY created_at DESC LIMIT 1`);
+  return ([...rows][0]?.metadata as Record<string, unknown> | undefined) ?? null;
+}

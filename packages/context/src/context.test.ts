@@ -416,3 +416,70 @@ describe("forEvaluator", () => {
     await expect(builder.forEvaluator(g.runId, 3)).rejects.toThrow(/computeCoverage/);
   });
 });
+
+describe("forSynthesizer", () => {
+  async function seedAccepted() {
+    const g = await seedGraph();
+    await seedSpec(db, {
+      id: newId(),
+      runId: g.runId,
+      objective: "compare quantization options",
+      successCriteria: ["covers GGUF and AWQ"],
+    });
+    const analyzeTask = newId();
+    await seedTask(db, {
+      id: analyzeTask,
+      runId: g.runId,
+      status: "DONE",
+      type: "analyze",
+      title: "analysis",
+    });
+    await seedAttempt(db, {
+      id: newId(),
+      taskId: analyzeTask,
+      runId: g.runId,
+      status: "ACCEPTED",
+      output: {
+        findings: [
+          { statement: "27B confirmed", canonicalClaimIds: [g.claimId], implication: null },
+        ],
+        comparisons: [],
+        unresolvedQuestions: [],
+        confidenceNote: "thin but consistent",
+      },
+    });
+    await db.execute(sql`
+      INSERT INTO evaluations (id, run_id, target_type, target_id, evaluator_type,
+                               evaluator_name, decision, reasons, metadata)
+      VALUES (${newId()}, ${g.runId}, 'run', ${g.runId}, 'agent', 'evaluator/v1',
+              'ACCEPT', ${JSON.stringify(["good enough"])}::jsonb,
+              ${JSON.stringify({ cycle: 1, acceptedUncertainties: ["FP8 numbers unsampled"] })}::jsonb)`);
+    return g;
+  }
+
+  it("builds approved material: spec + accepted analysis + K≤2 bundle + verdict uncertainties", async () => {
+    const g = await seedAccepted();
+    const builder = createContextBuilder({ db, capabilities: CAPS });
+    const input = await builder.forSynthesizer(g.runId);
+    expect(input.specification.objective).toBe("compare quantization options");
+    expect(input.analysis.findings[0]?.canonicalClaimIds).toEqual([g.claimId]);
+    expect(input.acceptedUncertainties).toEqual(["FP8 numbers unsampled"]);
+    for (const c of input.claimBundle) expect(c.evidence.length).toBeLessThanOrEqual(2);
+    expect(input.openContests).toHaveLength(1);
+  });
+
+  it("fails loudly with no accepted analysis (synthesis before analysis)", async () => {
+    const g = await seedGraph();
+    await seedSpec(db, { id: newId(), runId: g.runId, objective: "obj" });
+    const builder = createContextBuilder({ db, capabilities: CAPS });
+    await expect(builder.forSynthesizer(g.runId)).rejects.toThrow(/no accepted analysis/);
+  });
+
+  it("tolerates a missing ACCEPT verdict (fake/legacy runs): empty uncertainties", async () => {
+    const g = await seedAccepted();
+    await db.execute(sql`DELETE FROM evaluations WHERE run_id = ${g.runId}`);
+    const builder = createContextBuilder({ db, capabilities: CAPS });
+    const input = await builder.forSynthesizer(g.runId);
+    expect(input.acceptedUncertainties).toEqual([]);
+  });
+});

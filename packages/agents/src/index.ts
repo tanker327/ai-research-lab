@@ -5,4 +5,5 @@ export { evaluatorV1 } from "./evaluator/v1";
 export { extractorV1 } from "./extractor/v1";
 export { plannerV1 } from "./planner/v1";
 export { type ResearcherAgentResult, researcherV1 } from "./researcher/v1";
+export { synthesizerV1 } from "./synthesizer/v1";
 export type { Agent, AgentContext } from "./types";
