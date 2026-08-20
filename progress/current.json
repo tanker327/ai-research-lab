@@ -45,10 +45,12 @@
     {
       "id": "5.4",
       "title": "Console wiring: report with citation-chip jumps + transcript reading mode (standing UI rule)",
-      "status": "in_progress",
+      "status": "completed",
       "priority": 5,
       "depends_on": ["5.2", "5.3"],
-      "started_at": "2026-08-20"
+      "started_at": "2026-08-20",
+      "completed_at": "2026-08-20",
+      "commit": "f6e0946"
     }
   ],
   "known_issues": [

@@ -112,6 +112,8 @@ export async function selectLiveClaims(tx: SqlExecutor, runId: string): Promise<
 export interface LiveClaimEvidenceRow {
   canonicalClaimId: string;
   relation: string;
+  evidenceId: string;
+  attemptId: string; // provenance walk terminus (§9.5): every row carries it
   excerpt: string;
   sourceUrl: string | null;
   sourceClass: string;
@@ -125,13 +127,15 @@ export async function selectLiveClaimEvidence(
   runId: string,
 ): Promise<LiveClaimEvidenceRow[]> {
   const rows = await tx.execute(sql`
-    SELECT canonical_claim_id, relation, excerpt, source_url, source_class,
-           vendor_affiliated, benchmark_origin, retrieved_at
+    SELECT canonical_claim_id, relation, id, attempt_id, excerpt, source_url,
+           source_class, vendor_affiliated, benchmark_origin, retrieved_at
     FROM live_claim_evidence WHERE run_id = ${runId}
     ORDER BY canonical_claim_id ASC, retrieved_at DESC`);
   return [...rows].map((r) => ({
     canonicalClaimId: r.canonical_claim_id as string,
     relation: r.relation as string,
+    evidenceId: r.id as string,
+    attemptId: r.attempt_id as string,
     excerpt: r.excerpt as string,
     sourceUrl: (r.source_url as string | null) ?? null,
     sourceClass: r.source_class as string,

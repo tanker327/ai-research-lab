@@ -220,6 +220,8 @@ export function createApp({ db, bus, log, artifacts }: ApiDeps): Hono {
             status: claim?.status ?? null,
             subjectKey: claim?.subjectKey ?? null,
             evidence: (evidenceByClaim.get(id) ?? []).map((e) => ({
+              evidenceId: e.evidenceId,
+              attemptId: e.attemptId, // §9.5 walk terminus: chip→claim→evidence→attempt
               excerpt: e.excerpt,
               sourceUrl: e.sourceUrl,
               sourceClass: e.sourceClass,
