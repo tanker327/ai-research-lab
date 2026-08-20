@@ -96,7 +96,7 @@ try {
       if (s === "FAILED" || s === "CANCELLED") fail(`run ended ${s}`);
       return s === "COMPLETED" ? true : null;
     },
-    20 * 60_000,
+    35 * 60_000, // frontier-planned runs are bigger (13+ tasks, reasoning models)
   );
   console.log("  ✓ run COMPLETED");
 
