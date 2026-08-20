@@ -290,7 +290,13 @@ export function createApp({ db, bus, log, artifacts, maxEvalCycles = 3 }: ApiDep
         while (open) {
           const rows = await selectEventsAfter(db, runId, cursor);
           for (const e of rows) {
-            await stream.writeSSE({ id: e.id, event: e.type, data: JSON.stringify(e) });
+            const data = JSON.stringify(e);
+            await stream.writeSSE({ id: e.id, event: e.type, data });
+            // 6.3 (phase-6-plan D4, bug G5): EventSource fires only NAMED
+            // listeners, and new event types arrive every phase — a duplicate
+            // default `message` frame lets clients listen generically
+            // (es.onmessage) instead of hardcoding the type list.
+            await stream.writeSSE({ id: e.id, data });
             cursor = e.id;
           }
           if (rows.length > 0) continue; // drain before sleeping

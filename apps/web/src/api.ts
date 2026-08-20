@@ -93,6 +93,9 @@ export const useEvents = (runId: string) =>
   useQuery({
     queryKey: ["events", runId],
     queryFn: () => get<EventRow[]>(`/runs/${runId}/events`),
+    // Belt for the SSE tail (6.3): a slow poll catches anything a dropped
+    // stream missed; SSE remains the primary live path.
+    refetchInterval: 15000,
   });
 
 export const useClaims = (runId: string) =>

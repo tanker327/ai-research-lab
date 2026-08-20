@@ -25,17 +25,20 @@
     {
       "id": "6.2",
       "title": "/runs/:id/metrics + overview metric grid + latest-verdict card (D3)",
-      "status": "in_progress",
+      "status": "completed",
       "priority": 3,
       "depends_on": ["6.0"],
-      "started_at": "2026-08-20"
+      "started_at": "2026-08-20",
+      "completed_at": "2026-08-20",
+      "commit": "f71684a"
     },
     {
       "id": "6.3",
       "title": "SSE generic-message fix + timeline robustness (D4, bug G5)",
-      "status": "pending",
+      "status": "in_progress",
       "priority": 4,
-      "depends_on": ["6.0"]
+      "depends_on": ["6.0"],
+      "started_at": "2026-08-20"
     },
     {
       "id": "6.4",

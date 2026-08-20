@@ -51,7 +51,14 @@ async function collect(
   {
     headers = {},
     timeoutMs = 5_000,
-  }: { headers?: Record<string, string>; timeoutMs?: number } = {},
+    frames = "named",
+  }: {
+    headers?: Record<string, string>;
+    timeoutMs?: number;
+    // Every event is written twice since 6.3 (named + default `message`
+    // frame, D4). "named" keeps the historical assertions; "all" sees both.
+    frames?: "named" | "all";
+  } = {},
 ): Promise<SseEvent[]> {
   const app = createApp({ db, bus, log, artifacts: createArtifactStore("./data/artifacts-test") });
   const controller = new AbortController();
@@ -80,7 +87,7 @@ async function collect(
             ?.slice(name.length + 1)
             .trim();
         const data = field("data");
-        if (data !== undefined) {
+        if (data !== undefined && (frames === "all" || field("event") !== undefined)) {
           events.push({
             id: field("id") ?? "",
             event: field("event") ?? "",
@@ -128,6 +135,16 @@ describe("GET /runs/:id/events/stream", () => {
       headers: { "Last-Event-ID": firstId },
     });
     expect(events.map((e) => e.event)).toEqual(["B", "C"]);
+  });
+
+  it("duplicates every event as a default `message` frame (6.3, G5 fix)", async () => {
+    const pending = collect(`/runs/${runId}/events/stream`, 2, { frames: "all" });
+    await emit("ANY_NEW_TYPE"); // a type no client ever hardcoded
+    const frames = await pending;
+    expect(frames[0]?.event).toBe("ANY_NEW_TYPE");
+    expect(frames[1]?.event).toBe(""); // the generic frame es.onmessage receives
+    expect(frames[1]?.id).toBe(frames[0]?.id);
+    expect(frames[1]?.data).toEqual(frames[0]?.data);
   });
 
   it("recovers a missed NOTIFY via the fallback poll", async () => {

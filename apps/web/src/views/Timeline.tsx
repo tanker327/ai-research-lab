@@ -27,35 +27,14 @@ export function Timeline({ runId }: { runId: string }) {
     const es = new EventSource(eventStreamUrl(runId, lastId.current));
     es.onopen = () => setStreaming(true);
     es.onerror = () => setStreaming(false);
-    const onMessage = (e: MessageEvent) => {
+    // 6.3 (bug G5): the api duplicates every event as a default `message`
+    // frame precisely so this client never hardcodes event-type names again —
+    // a hardcoded list silently froze the timeline for every P4/P5 type.
+    es.onmessage = (e: MessageEvent) => {
       const row = JSON.parse(e.data as string) as EventRow;
       lastId.current = row.id;
       setLiveEvents((prev) => (prev.some((p) => p.id === row.id) ? prev : [...prev, row]));
     };
-    // The api names each SSE event by its lab event type, so listen generically.
-    const generic = (e: Event) => onMessage(e as MessageEvent);
-    const origAdd = es.addEventListener.bind(es);
-    // EventSource only fires named listeners; poll history covers rare unknown types.
-    for (const t of [
-      "RUN_CREATED",
-      "RUN_PHASE_CHANGED",
-      "RUN_COMPLETED",
-      "RUN_FAILED",
-      "RUN_CANCELLED",
-      "TASK_READY",
-      "TASK_BLOCKED",
-      "TASK_CLAIMED",
-      "TASK_CLAIM_EXPIRED",
-      "TASK_RETRY",
-      "TASK_FAILED",
-      "ATTEMPT_SUCCEEDED",
-      "ATTEMPT_FAILED",
-      "ATTEMPT_ACCEPTED",
-      "CANONICALIZATION_ENQUEUED",
-      "BUDGET_WARNING",
-    ]) {
-      origAdd(t, generic);
-    }
     return () => es.close();
   }, [runId, historyLast]);
 
