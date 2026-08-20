@@ -136,8 +136,8 @@ export type PlannedTask = z.infer<typeof PlannedTask>;
 
 export const PlanDelta = z.object({
   addTasks: z.array(PlannedTask).max(30),
-  cancelTaskIds: z.array(z.string().max(60)).max(50),
-  supersedeTaskIds: z.array(z.string().max(60)).max(50),
+  cancelTaskIds: z.array(z.string().max(60)).max(50).default([]),
+  supersedeTaskIds: z.array(z.string().max(60)).max(50).default([]),
   rationale: z.string().min(1).max(4000),
 });
 export type PlanDelta = z.infer<typeof PlanDelta>;
@@ -150,7 +150,10 @@ export type HumanQuestion = z.infer<typeof HumanQuestion>;
 
 export const PlannerOutput = z.object({
   specification: PlannerSpecDraft,
-  clarificationsAssumed: z.array(shortText).max(20),
+  // json_object norm (gate finding): frontier models omit empty arrays —
+  // semantically-optional lists carry .default([]) so an omitted empty list
+  // is not a SCHEMA_FAILURE. Type violations still fail hard.
+  clarificationsAssumed: z.array(shortText).max(20).default([]),
   humanQuestions: z.array(HumanQuestion).max(5).optional(),
   planDelta: PlanDelta,
 });
@@ -326,8 +329,8 @@ export type Comparison = z.infer<typeof Comparison>;
 
 export const AnalysisOutput = z.object({
   findings: z.array(Finding).min(1).max(20),
-  comparisons: z.array(Comparison).max(10),
-  unresolvedQuestions: z.array(shortText).max(15),
+  comparisons: z.array(Comparison).max(10).default([]),
+  unresolvedQuestions: z.array(shortText).max(15).default([]),
   confidenceNote: z.string().min(1).max(2000), // prose calibration, not a fake float
 });
 export type AnalysisOutput = z.infer<typeof AnalysisOutput>;
@@ -397,10 +400,10 @@ export const EvaluatorDecision = z.enum([
 export type EvaluatorDecision = z.infer<typeof EvaluatorDecision>;
 
 export const EvaluatorOutput = z.object({
-  issues: z.array(EvaluatorIssue).max(20), // the "critic" half
+  issues: z.array(EvaluatorIssue).max(20).default([]), // the "critic" half
   decision: EvaluatorDecision,
   reasons: z.array(z.string().min(1).max(2000)).min(1).max(10),
-  requiredActions: z.array(RequiredAction).max(10),
-  acceptedUncertainties: z.array(shortText).max(10), // surfaced in the report (P5)
+  requiredActions: z.array(RequiredAction).max(10).default([]),
+  acceptedUncertainties: z.array(shortText).max(10).default([]), // surfaced in the report (P5)
 });
 export type EvaluatorOutput = z.infer<typeof EvaluatorOutput>;
