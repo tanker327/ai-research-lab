@@ -6,7 +6,8 @@
     {
       "id": "4.0",
       "title": "Draft docs/plans/phase-4-plan.md (decisions: Evaluator tier while frontier dark, CoverageSummary shape, RESEARCH_MORE interpretation) \u2014 review with user before coding",
-      "status": "pending",
+      "status": "in_progress",
+      "started_at": "2026-08-19",
       "priority": 1,
       "depends_on": []
     },
