@@ -12,6 +12,8 @@ import {
   selectAttemptOutput,
   selectEvaluationCandidates,
   selectEvidenceStatsByAttempt,
+  selectFinalAcceptMetadata,
+  selectLiveClaimEvidence,
   selectLiveClaims,
   updateTaskStatus,
 } from "@lab/db";
@@ -23,6 +25,7 @@ import {
   newId,
   ResearcherOutput,
   ResearchStrategy,
+  SynthesizerOutput,
   TaskType,
 } from "@lab/schemas";
 import { acceptAnalysisAttempt } from "../analysis";
@@ -31,6 +34,7 @@ import {
   evaluatorPreAcceptChecks,
   extractorPreAcceptChecks,
   researcherPreAcceptChecks,
+  synthesizerPreAcceptChecks,
 } from "../checks";
 import { applyEvaluatorDecision } from "../evaluation";
 import { emitEvent } from "../events";
@@ -205,9 +209,32 @@ async function preAcceptChecks(
   c: EvaluationCandidate,
   minEvidence: number,
 ): Promise<ReturnType<typeof researcherPreAcceptChecks>> {
-  const checked = ["research", "extract", "analyze", "evaluate"];
+  const checked = ["research", "extract", "analyze", "evaluate", "synthesize"];
   if (!checked.includes(c.taskType)) return [];
   const output = await selectAttemptOutput(db, c.attemptId);
+  // 5.2 (ADR-020): the citation validator gates synthesis — every chip must
+  // resolve to a live evidence-backed claim; fake outputs skip like all
+  // pre-accept checks.
+  if (c.taskType === "synthesize") {
+    const parsed = SynthesizerOutput.safeParse(output);
+    if (!parsed.success) return [];
+    const evidence = await selectLiveClaimEvidence(db, c.runId);
+    const counts = new Map<string, number>();
+    for (const e of evidence) {
+      counts.set(e.canonicalClaimId, (counts.get(e.canonicalClaimId) ?? 0) + 1);
+    }
+    const claims = new Map(
+      (await selectLiveClaims(db, c.runId)).map((cl) => [
+        cl.id,
+        { status: cl.status, liveEvidenceCount: counts.get(cl.id) ?? 0 },
+      ]),
+    );
+    const meta = await selectFinalAcceptMetadata(db, c.runId);
+    const uncertainties = Array.isArray(meta?.acceptedUncertainties)
+      ? (meta.acceptedUncertainties as string[])
+      : [];
+    return synthesizerPreAcceptChecks(parsed.data, claims, uncertainties);
+  }
   if (c.taskType === "research") {
     const parsed = ResearcherOutput.safeParse(output);
     return parsed.success ? researcherPreAcceptChecks(parsed.data) : [];

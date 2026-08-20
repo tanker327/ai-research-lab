@@ -423,6 +423,9 @@ export const SynthesizerInput = z.object({
   // From the final ACCEPT verdict — each MUST appear in the report's
   // Uncertainties section (§6.6: a promise to the user, not a footnote).
   acceptedUncertainties: z.array(shortText).max(10),
+  // Rule-check REJECT reasons from prior attempts of THIS task (5.2): a
+  // citation-validator rejection must be fixable, not replayed.
+  rejectionFeedback: z.array(shortText).max(10).default([]),
   timeContext: z.string().max(500),
 });
 export type SynthesizerInput = z.infer<typeof SynthesizerInput>;

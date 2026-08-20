@@ -49,6 +49,7 @@ const INPUT: SynthesizerInput = {
   ],
   openContests: [],
   acceptedUncertainties: ["community reports not exhaustively sampled"],
+  rejectionFeedback: [],
   timeContext: "Current date: 2026-08-20.",
 };
 

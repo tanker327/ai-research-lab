@@ -434,7 +434,7 @@ function evaluatorHandler(deps: AgentDeps): TaskHandler {
 // the attempt output for the validator (5.2) and the citations API (5.3).
 function synthesizerHandler(deps: AgentDeps): TaskHandler {
   return async (db, work) => {
-    const input = await deps.context.forSynthesizer(work.task.runId);
+    const input = await deps.context.forSynthesizer(work.task.runId, work.task.id);
     await updateAttemptInput(db, work.attempt.id, input); // R12: verbatim
 
     const route = await guardDarkFrontier(

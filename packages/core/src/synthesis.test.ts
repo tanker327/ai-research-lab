@@ -9,6 +9,8 @@ import {
   insertPlanStage,
   seedAttempt,
   seedCanonicalClaim,
+  seedClaimEvidenceLink,
+  seedEvidence,
   seedRawClaim,
   seedRun,
   seedTask,
@@ -17,6 +19,7 @@ import {
 import { newId, type SynthesizerOutput } from "@lab/schemas";
 import { sql } from "drizzle-orm";
 import { afterAll, afterEach, describe, expect, it } from "vitest";
+import { sweepEvaluations } from "./scheduler/evaluate";
 import { sweepRunCompletion } from "./scheduler/run";
 import { acceptSynthesisAttempt } from "./synthesis";
 
@@ -216,4 +219,100 @@ describe("sweepRunCompletion — synthesize endgame (5.1)", () => {
   async function sweepReEnqueueSeed() {
     return seedLoopRun("CANCELLED");
   }
+});
+
+describe("citation validator gates synthesis in the sweep (5.2, ADR-020)", () => {
+  async function seedWithClaim(reportMarkdown: string, citationMap: Record<string, string[]>) {
+    const seeded = await seedSynthesizingRun({
+      title: "Report",
+      reportMarkdown,
+      citationMap,
+    } satisfies SynthesizerOutput);
+    // Liveness matters: the claim/evidence must hang off an ACCEPTED research
+    // attempt — the synthesize attempt itself is only SUCCEEDED.
+    const researchTask = newId();
+    const researchAttempt = newId();
+    await seedTask(db, {
+      id: researchTask,
+      runId: seeded.runId,
+      status: "DONE",
+      type: "research",
+      title: "d1",
+    });
+    await seedAttempt(db, {
+      id: researchAttempt,
+      taskId: researchTask,
+      runId: seeded.runId,
+      status: "ACCEPTED",
+    });
+    const claimId = newId();
+    const evidenceId = newId();
+    await seedCanonicalClaim(db, {
+      id: claimId,
+      runId: seeded.runId,
+      subjectKey: "s",
+      predicateKey: "p",
+      statement: "x",
+    });
+    await seedEvidence(db, {
+      id: evidenceId,
+      runId: seeded.runId,
+      taskId: researchTask,
+      attemptId: researchAttempt,
+      excerpt: "supporting excerpt",
+      sourceClass: "official_docs",
+      sourceUrl: "https://example.com",
+    });
+    await seedClaimEvidenceLink(db, { canonicalClaimId: claimId, evidenceId });
+    await seedRawClaim(db, {
+      id: newId(),
+      runId: seeded.runId,
+      taskId: researchTask,
+      attemptId: researchAttempt,
+      canonicalClaimId: claimId,
+      subjectKey: "s",
+      predicateKey: "p",
+    });
+    return { ...seeded, claimId };
+  }
+
+  it("doctored draft (uncited sentence + unknown claim id) → REJECTED onto the quality ladder", async () => {
+    const { runId, taskId, attemptId } = await seedWithClaim(
+      "This sentence is uncited.\n\nThis cites a ghost. [c1]",
+      { c1: ["not-a-claim"] },
+    );
+    const result = await sweepEvaluations(db);
+    expect(result.retried).toContain(taskId);
+    const attempt = [
+      ...(await db.execute(sql`SELECT status FROM attempts WHERE id = ${attemptId}`)),
+    ];
+    expect(attempt[0]?.status).toBe("REJECTED");
+    const task = [
+      ...(await db.execute(sql`SELECT status FROM research_tasks WHERE id = ${taskId}`)),
+    ];
+    expect(task[0]?.status).toBe("READY"); // attempt 1 of 3 — ladder retries
+    expect(await runStatusOf(runId)).toBe("SYNTHESIZING"); // never completed
+    const checks = [
+      ...(await db.execute(sql`
+        SELECT evaluator_name FROM evaluations
+        WHERE run_id = ${runId} AND decision = 'REJECT' ORDER BY evaluator_name`)),
+    ].map((r) => String(r.evaluator_name));
+    expect(checks).toContain("check:uncited_sentences");
+    expect(checks).toContain("check:chips_cite_live_claims");
+  });
+
+  it("fully cited draft → accepted, run COMPLETED via the sweep", async () => {
+    const { runId, taskId, claimId } = await seedWithClaim("placeholder", { c1: ["x"] });
+    // Rewrite the output now that the claim id exists.
+    await db.execute(sql`
+      UPDATE attempts SET output = ${JSON.stringify({
+        title: "Report",
+        reportMarkdown: "The claim holds. [c1]",
+        citationMap: { c1: [claimId] },
+      })}::jsonb
+      WHERE task_id = ${taskId}`);
+    const result = await sweepEvaluations(db);
+    expect(result.accepted).toContain(taskId);
+    expect(await runStatusOf(runId)).toBe("COMPLETED");
+  });
 });

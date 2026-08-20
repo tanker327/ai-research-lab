@@ -29,6 +29,22 @@ API calls only; the validator demonstrably rejects a doctored uncited draft.
 
 *(populated as we go, same discipline as Phase 4)*
 
+- **2026-08-20 (5.2) — §24.4 "APPROVED claim" has no workflow behind it.** No
+  code path ever stamps `canonical_claims.status = 'approved'`; claims live as
+  proposed/supported/contested. Enforced interpretation: a chip must resolve
+  to a **live** claim that is not `'rejected'` and has ≥1 **live** evidence
+  link; `'contested'` claims are citable only from the Uncertainties section.
+  Semantics preserved (no unprovenanced statements); revisit if an approval
+  workflow ever lands.
+- **2026-08-20 (5.2) — accepted-uncertainty reproduction is a count check.**
+  Verbatim matching would punish faithful restating (an LLM judgment we must
+  not make in code, D3): the deterministic proxy is that the Uncertainties
+  section exists with at least as many entries as the verdict accepted.
+- **2026-08-20 (5.2) — validator rejects must be fixable, not replayed.** The
+  P4 cached-replay lesson applied proactively: rule-check REJECT reasons from
+  prior attempts of the same task are fed into the next synthesize context
+  (`rejectionFeedback`) and rendered as a "previous draft was rejected" block.
+
 ## Design decisions
 
 ### D1 — Synthesizer tier: frontier (deepseek-v4-pro), json_object, NO tools

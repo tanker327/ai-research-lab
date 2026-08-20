@@ -139,3 +139,20 @@ export async function selectCheckpointsByRun(
     createdAt: String(r.created_at),
   }));
 }
+
+// Rule-check REJECT reasons across a task's prior attempts (ticket 5.2):
+// fed back into the next synthesize attempt's context so a citation-validator
+// rejection is fixable instead of replayed.
+export async function selectRejectionReasonsForTask(
+  tx: SqlExecutor,
+  taskId: string,
+  limit = 10,
+): Promise<string[]> {
+  const rows = await tx.execute(sql`
+    SELECT e.reasons FROM evaluations e
+    JOIN attempts a ON a.id = e.target_id
+    WHERE a.task_id = ${taskId} AND e.target_type = 'attempt'
+      AND e.evaluator_type = 'rule' AND e.decision = 'REJECT'
+    ORDER BY e.created_at DESC LIMIT ${limit}`);
+  return [...rows].flatMap((r) => (r.reasons as string[]) ?? []).slice(0, limit);
+}

@@ -11,6 +11,7 @@ import {
   selectLatestSpec,
   selectLiveClaimEvidence,
   selectLiveClaims,
+  selectRejectionReasonsForTask,
   selectRunForContext,
   selectRunMetrics,
   selectTaskForContext,
@@ -56,7 +57,9 @@ export interface ContextBuilder {
   forExtractor(taskId: string): Promise<ExtractorInput>;
   forAnalyst(runId: string): Promise<AnalystInput>;
   forEvaluator(runId: string, maxCycles: number): Promise<EvaluatorInput>;
-  forSynthesizer(runId: string): Promise<SynthesizerInput>;
+  // taskId (when known) pulls prior rejection reasons for THIS task into the
+  // context — a citation-validator reject must be fixable (5.2).
+  forSynthesizer(runId: string, taskId?: string): Promise<SynthesizerInput>;
 }
 
 export interface ContextBuilderDeps {
@@ -354,7 +357,7 @@ export function createContextBuilder(deps: ContextBuilderDeps): ContextBuilder {
     // evidence refs, and the final ACCEPT verdict's acceptedUncertainties —
     // which the report must reproduce. Never reasoning artifacts (ADR-018),
     // never rejected analyses, never raw research notes.
-    async forSynthesizer(runId) {
+    async forSynthesizer(runId, taskId) {
       const specRow = await selectLatestSpec(deps.db, runId);
       if (!specRow) {
         throw new CategorizedError(
@@ -430,6 +433,8 @@ export function createContextBuilder(deps: ContextBuilderDeps): ContextBuilder {
         })),
       });
 
+      const rejectionFeedback = taskId ? await selectRejectionReasonsForTask(deps.db, taskId) : [];
+
       const date = now().toISOString().slice(0, 10);
       return SynthesizerInput.parse({
         specification: specRow,
@@ -437,6 +442,7 @@ export function createContextBuilder(deps: ContextBuilderDeps): ContextBuilder {
         claimBundle: fit.value,
         openContests,
         acceptedUncertainties,
+        rejectionFeedback,
         timeContext: `Current date: ${date}. The report is written as of this date.`,
       });
     },

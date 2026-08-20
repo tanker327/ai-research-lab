@@ -80,6 +80,9 @@ export function buildMessages(input: SynthesizerInput) {
         `## Accepted uncertainties (MUST all appear in ## Uncertainties)\n${input.acceptedUncertainties.map((u) => `- ${u}`).join("\n") || "(none)"}`,
         `## Claim bundle (the only valid claim ids for citationMap)\n${input.claimBundle.map(renderClaim).join("\n") || "(empty)"}`,
         `## Open contests\n${contests}`,
+        input.rejectionFeedback.length
+          ? `## YOUR PREVIOUS DRAFT WAS REJECTED — fix every one of these\n${input.rejectionFeedback.map((r) => `- ${r}`).join("\n")}`
+          : "",
         `## Time context\n${input.timeContext}`,
       ]
         .filter(Boolean)
