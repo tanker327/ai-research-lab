@@ -52,7 +52,13 @@ export async function serve() {
       }
     },
   });
-  const app = createApp({ db, bus, log, artifacts: createArtifactStore(config.ARTIFACT_ROOT) });
+  const app = createApp({
+    db,
+    bus,
+    log,
+    artifacts: createArtifactStore(config.ARTIFACT_ROOT),
+    maxEvalCycles: config.DEFAULT_MAX_EVAL_CYCLES,
+  });
   const server = Bun.serve({ fetch: app.fetch, port: config.API_PORT });
   log.info({ port: config.API_PORT }, "api listening");
 

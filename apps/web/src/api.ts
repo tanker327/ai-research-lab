@@ -351,3 +351,34 @@ export const useTrace = (runId: string, attemptId: string | null) =>
     queryFn: () => get<TraceDto>(`/runs/${runId}/attempts/${attemptId}/trace`),
     enabled: attemptId !== null,
   });
+
+// ---- Phase 6 (6.2): dashboard metrics ----
+
+export interface MetricsDto {
+  tasksTotal: number;
+  tasksDone: number;
+  tasksFailed: number;
+  tasksResearch: number;
+  tasksControl: number;
+  attemptsTotal: number;
+  intelligenceRetries: number;
+  tierEscalations: number;
+  liveEvidence: number;
+  liveClaims: number;
+  contestedClaims: number;
+  modelCalls: number;
+  frontierCalls: number;
+  frontierSpendUsd: number | null;
+  toolCalls: number;
+  toolLatencyMs: number;
+  evalCycles: number;
+  wallClockSeconds: number;
+  maxEvalCycles: number;
+}
+
+export const useMetrics = (runId: string) =>
+  useQuery({
+    queryKey: ["metrics", runId],
+    queryFn: () => get<MetricsDto>(`/runs/${runId}/metrics`),
+    refetchInterval: 5000,
+  });

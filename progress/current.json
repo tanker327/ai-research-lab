@@ -15,17 +15,20 @@
     {
       "id": "6.1",
       "title": "Staged task board + inspector drawer + shared trace viewer (D1/D2)",
-      "status": "in_progress",
+      "status": "completed",
       "started_at": "2026-08-20",
       "priority": 2,
-      "depends_on": ["6.0"]
+      "depends_on": ["6.0"],
+      "completed_at": "2026-08-20",
+      "commit": "9436f8a"
     },
     {
       "id": "6.2",
       "title": "/runs/:id/metrics + overview metric grid + latest-verdict card (D3)",
-      "status": "pending",
+      "status": "in_progress",
       "priority": 3,
-      "depends_on": ["6.0"]
+      "depends_on": ["6.0"],
+      "started_at": "2026-08-20"
     },
     {
       "id": "6.3",

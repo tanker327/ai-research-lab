@@ -10,6 +10,7 @@ import { navigate } from "../App";
 import { cancelRun, useCheckpoints, useRun, useTasks } from "../api";
 import { AttemptsView } from "./Attempts";
 import { ClaimsView } from "./Claims";
+import { OverviewMetrics } from "./OverviewMetrics";
 import { ReportView } from "./Report";
 import { TaskBoard } from "./TaskBoard";
 import { Timeline } from "./Timeline";
@@ -160,6 +161,7 @@ export function RunDetail({ runId, tab }: { runId: string; tab: string }) {
                 </div>
               </CardContent>
             </Card>
+            <OverviewMetrics runId={runId} />
             <Card>
               <CardHeader>Tasks</CardHeader>
               <CardContent className="flex flex-wrap items-center gap-1.5">

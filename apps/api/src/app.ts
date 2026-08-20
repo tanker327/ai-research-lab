@@ -15,6 +15,7 @@ import {
   selectLiveClaims,
   selectModelCallsByAttempt,
   selectRun,
+  selectRunDashboard,
   selectRuns,
   selectTasksByRun,
   selectToolCallsByAttempt,
@@ -31,9 +32,10 @@ export interface ApiDeps {
   bus: EventBus;
   log: Logger;
   artifacts: ArtifactStore; // report/artifact content reads (5.3)
+  maxEvalCycles?: number; // cycle-guard headroom on the dashboard (6.2)
 }
 
-export function createApp({ db, bus, log, artifacts }: ApiDeps): Hono {
+export function createApp({ db, bus, log, artifacts, maxEvalCycles = 3 }: ApiDeps): Hono {
   const app = new Hono();
 
   app.get("/health", (c) => c.json({ ok: true }));
@@ -133,6 +135,12 @@ export function createApp({ db, bus, log, artifacts }: ApiDeps): Hono {
         createdAt: v.createdAt,
       })),
     });
+  });
+
+  // Dashboard aggregates in one round trip (6.2, §24.6 metric grid).
+  app.get("/runs/:id/metrics", async (c) => {
+    const dashboard = await selectRunDashboard(db, c.req.param("id"));
+    return c.json({ ...dashboard, maxEvalCycles });
   });
 
   app.get("/runs/:id/checkpoints", async (c) => {

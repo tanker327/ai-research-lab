@@ -244,3 +244,30 @@ describe("Phase 5 read surface (5.3)", () => {
     expect((await app.request(`/runs/${otherRun}/attempts/${attemptId}/trace`)).status).toBe(404);
   });
 });
+
+describe("Phase 6 read surface (6.2)", () => {
+  it("GET /runs/:id/metrics aggregates the dashboard in one call", async () => {
+    const runId = newId();
+    const taskId = newId();
+    cleanup.push(runId);
+    await seedRun(db, runId, "metrics test");
+    await seedTask(db, { id: taskId, runId, status: "DONE", type: "research", title: "r" });
+    await seedTask(db, { id: newId(), runId, status: "FAILED", type: "analyze", title: "a" });
+    await seedAttempt(db, { id: newId(), taskId, runId, status: "ACCEPTED" });
+    const res = await app.request(`/runs/${runId}/metrics`);
+    expect(res.status).toBe(200);
+    const m = (await res.json()) as Record<string, number>;
+    expect(m).toMatchObject({
+      tasksTotal: 2,
+      tasksDone: 1,
+      tasksFailed: 1,
+      tasksResearch: 1,
+      tasksControl: 1,
+      attemptsTotal: 1,
+      liveEvidence: 0,
+      evalCycles: 0,
+      maxEvalCycles: 3,
+    });
+    expect(m.wallClockSeconds).toBeGreaterThanOrEqual(0);
+  });
+});
