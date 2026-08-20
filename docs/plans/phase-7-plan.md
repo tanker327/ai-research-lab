@@ -121,4 +121,11 @@ review screen when the pending reason is plan_review.
 
 ## Findings during the phase (append-only)
 
-*(populated as we go)*
+- **2026-08-20 (gate, API leg) — PASSED first run.** The review run parked at
+  plan_review with its research task held CREATED (hold verified under a live
+  scheduler); a question rewrite, a task add, a task remove, and an
+  analyst→frontier re-route all landed with audit records; after approve the
+  run COMPLETED and the edits proved real: the edited question was the
+  researcher's verbatim attempt input (R12), the removed task ended CANCELLED
+  with zero attempts, the added task ran, and the analyst's model_calls were
+  tier `frontier`. Remaining: the console review leg with the user.
