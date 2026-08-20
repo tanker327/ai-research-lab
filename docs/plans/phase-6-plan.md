@@ -137,6 +137,10 @@ these three verbs; richer semantics stay deferred (§22).
 - **2026-08-20 (6.0) — Timeline SSE was silently frozen for P4/P5 events**
   (hardcoded Phase-1 event-name list + no history refetch). Filed as G5/6.3;
   load-bearing for the gate.
+- **2026-08-20 (gate, human leg) — SIGNED OFF by user.** Live watch session:
+  a 25-task run with staged board, live timeline, three evaluation cycles, and
+  a genuine cycle-guard trip surfaced in the new checkpoint banner. User
+  verdict: "it all good". **Phase 6 gate fully passed.**
 - **2026-08-20 (gate, scripted leg) — PASSED first run.** The api process
   (scheduler included) was SIGTERMed after the run's first model call and
   restarted; the run COMPLETED across the restart (ADR-017). The live run

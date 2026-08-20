@@ -1,78 +1,66 @@
 {
-  "current_phase": "Phase 6 — Console UI completion (not started)",
-  "plan": "docs/implementation-plan.md §6 Phase 6 (amended: console built incrementally since P2 — this phase closes remaining gaps vs the normative mockup, ADR-019/§24.6); draft docs/plans/phase-6-plan.md before coding",
-  "gate": "Watch a live run end-to-end in the console; open a superseded attempt's trace after an API restart (verifies ADR-017 + §24.9).",
+  "current_phase": "Phase 7 — Interactive Plan Review + Per-Role Model Routing (started)",
+  "plan": "docs/plans/phase-7-plan.md (approved at proposal level 2026-08-20: stage-1-only pause; tiers not raw models; spec editing deferred)",
+  "gate": "Run with reviewPlan pauses at plan_review after stage-1; API leg edits a task + removes one + adds one + sets a role tier → approve → run completes; edited question is the researcher's actual input; re-routed role's model_calls carry the chosen tier. Console leg: same interactively.",
   "tasks": [
     {
-      "id": "6.0",
-      "title": "Draft docs/plans/phase-6-plan.md — inventory remaining mockup gaps vs the built console (runs list, new-research, overview rail, task graph, inspector drawer, SSE tail, report, transcript all exist in some form); review with user before coding",
+      "id": "7.0",
+      "title": "Phase-7 plan drafted + approved; tracker seeded",
       "status": "completed",
+      "completed_at": "2026-08-20",
+      "commit": "50093bd",
       "priority": 1,
-      "depends_on": [],
-      "completed_at": "2026-08-20",
-      "commit": "00a9565"
+      "depends_on": []
     },
     {
-      "id": "6.1",
-      "title": "Staged task board + inspector drawer + shared trace viewer (D1/D2)",
-      "status": "completed",
-      "started_at": "2026-08-20",
+      "id": "7.1",
+      "title": "roleTiers end to end: CreateRunRequest field, run metadata, worker tier resolution (task override > run map > policy), creation-form selects",
+      "status": "pending",
       "priority": 2,
-      "depends_on": ["6.0"],
-      "completed_at": "2026-08-20",
-      "commit": "9436f8a"
+      "depends_on": ["7.0"]
     },
     {
-      "id": "6.2",
-      "title": "/runs/:id/metrics + overview metric grid + latest-verdict card (D3)",
-      "status": "completed",
+      "id": "7.2",
+      "title": "Review pause: reviewPlan flag, plan_review checkpoint on stage-1 accept, readiness-sweep WAITING_HUMAN hold, approve verb",
+      "status": "pending",
       "priority": 3,
-      "depends_on": ["6.0"],
-      "started_at": "2026-08-20",
-      "completed_at": "2026-08-20",
-      "commit": "f71684a"
+      "depends_on": ["7.0"]
     },
     {
-      "id": "6.3",
-      "title": "SSE generic-message fix + timeline robustness (D4, bug G5)",
-      "status": "completed",
+      "id": "7.3",
+      "title": "Plan-edit endpoints: PATCH/POST/DELETE task + PATCH routing, legality guards, audit trail (PLAN_EDITED events + DecisionRecords)",
+      "status": "pending",
       "priority": 4,
-      "depends_on": ["6.0"],
-      "started_at": "2026-08-20",
-      "completed_at": "2026-08-20",
-      "commit": "cfb79d0"
+      "depends_on": ["7.2"]
     },
     {
-      "id": "6.4",
-      "title": "Checkpoint resolution: resolve endpoint + banner actions (D5)",
-      "status": "completed",
+      "id": "7.4",
+      "title": "Console: Plan Review screen (#/run/:id/review) + New Research form review toggle and tier selects",
+      "status": "pending",
       "priority": 5,
-      "depends_on": ["6.0"],
-      "started_at": "2026-08-20",
-      "completed_at": "2026-08-20",
-      "commit": "ae5ef4d"
+      "depends_on": ["7.1", "7.3"]
     },
     {
-      "id": "6.5",
-      "title": "Chip jump-and-flash, keyboard nav, sidebar cleanup (D6)",
-      "status": "completed",
+      "id": "7.5",
+      "title": "scripts/gates/p7.ts (API leg) + console leg with user",
+      "status": "pending",
       "priority": 6,
-      "depends_on": ["6.1"],
-      "started_at": "2026-08-20",
-      "completed_at": "2026-08-20",
-      "commit": "7e9073c"
+      "depends_on": ["7.4"]
     }
   ],
   "known_issues": [
     "OPTIONAL: openai/xai hub keys upgrade the frontier beyond deepseek-v4-pro — alias swap + FRONTIER_STRUCTURED_MODE=json_schema.",
-    "gate:p4 single-process end-to-end pass still outstanding (all assertions verified manually after crash-resume); gate:p5 passed single-process first try."
+    "gate:p4 single-process end-to-end pass still outstanding (all assertions verified manually) — optional ceremony.",
+    "Watch run 01a01fab-cb49 still parked at its cycle_guard checkpoint — user may accept/stop from the console banner or leave it.",
+    "Background dev-stack processes launched by the agent get externally SIGTERMed on this machine — run dev:api/worker/web in user terminals for watch sessions."
   ],
   "notes": [
-    "Phase 5 archived 2026-08-20 — gate passed first run: doctored draft rejected with named checks; sampled sentence walked chip→claim→evidence→attempt via API only. Kept run 01a01f87-c481 (phase-5 gate leg A). 501 tests.",
-    "P5 norms: every body sentence outside ## Uncertainties must cite (ADR-020); citable = live + not rejected + evidence-backed ('approved' status has no workflow); validator REJECT reasons feed the next synthesize attempt (rejectionFeedback).",
+    "Phase 6 archived 2026-08-20 — gate fully passed (scripted restart-survival leg first-run + human watch sign-off). 510 tests.",
+    "P6 norms: SSE events are double-written (named + default message frame) — clients listen via es.onmessage, never hardcode event-type names; FAILED→CANCELLED is the human-retirement transition (checkpoint retry only).",
+    "P5 norms: every body sentence outside ## Uncertainties must cite (ADR-020); citable = live + not rejected + evidence-backed; validator REJECT reasons feed the next synthesize attempt.",
     "P4 norms: .default([]) on semantically-optional arrays; never await network inside a DB tx; SCHEMA_FAILURE attempt ≥2 escalates tier; unconfigured tier suggestions inert.",
     "Tests run in research_lab_test DB (bun run test) — never against live runs.",
-    "Frontier = deepseek/deepseek-v4-pro; watch account balance (a mid-run 402 parks runs at WAITING_HUMAN).",
-    "Do NOT create new top-level tasks without user approval — Phase 6 tickets are defined in the 6.0 plan review."
+    "Frontier = deepseek/deepseek-v4-pro; WATCH ACCOUNT BALANCE before gate:p7 (a mid-run 402 parks runs at WAITING_HUMAN).",
+    "Standing UI rule: every phase DoD wires its capabilities into apps/web (ticket 7.4)."
   ]
 }

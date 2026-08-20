@@ -1,0 +1,88 @@
+{
+  "current_phase": "Phase 6 — Console UI completion (not started)",
+  "plan": "docs/implementation-plan.md §6 Phase 6 (amended: console built incrementally since P2 — this phase closes remaining gaps vs the normative mockup, ADR-019/§24.6); draft docs/plans/phase-6-plan.md before coding",
+  "gate": "Watch a live run end-to-end in the console; open a superseded attempt's trace after an API restart (verifies ADR-017 + §24.9).",
+  "tasks": [
+    {
+      "id": "6.0",
+      "title": "Draft docs/plans/phase-6-plan.md — inventory remaining mockup gaps vs the built console (runs list, new-research, overview rail, task graph, inspector drawer, SSE tail, report, transcript all exist in some form); review with user before coding",
+      "status": "completed",
+      "priority": 1,
+      "depends_on": [],
+      "completed_at": "2026-08-20",
+      "commit": "00a9565"
+    },
+    {
+      "id": "6.1",
+      "title": "Staged task board + inspector drawer + shared trace viewer (D1/D2)",
+      "status": "completed",
+      "started_at": "2026-08-20",
+      "priority": 2,
+      "depends_on": ["6.0"],
+      "completed_at": "2026-08-20",
+      "commit": "9436f8a"
+    },
+    {
+      "id": "6.2",
+      "title": "/runs/:id/metrics + overview metric grid + latest-verdict card (D3)",
+      "status": "completed",
+      "priority": 3,
+      "depends_on": ["6.0"],
+      "started_at": "2026-08-20",
+      "completed_at": "2026-08-20",
+      "commit": "f71684a"
+    },
+    {
+      "id": "6.3",
+      "title": "SSE generic-message fix + timeline robustness (D4, bug G5)",
+      "status": "completed",
+      "priority": 4,
+      "depends_on": ["6.0"],
+      "started_at": "2026-08-20",
+      "completed_at": "2026-08-20",
+      "commit": "cfb79d0"
+    },
+    {
+      "id": "6.4",
+      "title": "Checkpoint resolution: resolve endpoint + banner actions (D5)",
+      "status": "completed",
+      "priority": 5,
+      "depends_on": ["6.0"],
+      "started_at": "2026-08-20",
+      "completed_at": "2026-08-20",
+      "commit": "ae5ef4d"
+    },
+    {
+      "id": "6.5",
+      "title": "Chip jump-and-flash, keyboard nav, sidebar cleanup (D6)",
+      "status": "completed",
+      "priority": 6,
+      "depends_on": ["6.1"],
+      "started_at": "2026-08-20",
+      "completed_at": "2026-08-20",
+      "commit": "7e9073c"
+    },
+    {
+      "id": "gate",
+      "title": "gate:p6 — scripted restart-survival leg + human console watch leg",
+      "status": "completed",
+      "completed_at": "2026-08-20",
+      "commit": "3de2f35",
+      "priority": 7,
+      "depends_on": ["6.1", "6.2", "6.3", "6.4", "6.5"],
+      "notes": "Scripted leg passed first run; human leg signed off by user 2026-08-20 (live watch incl. a genuine cycle-guard trip resolved-able from the new banner)."
+    }
+  ],
+  "known_issues": [
+    "OPTIONAL: openai/xai hub keys upgrade the frontier beyond deepseek-v4-pro — alias swap + FRONTIER_STRUCTURED_MODE=json_schema.",
+    "gate:p4 single-process end-to-end pass still outstanding (all assertions verified manually after crash-resume); gate:p5 passed single-process first try."
+  ],
+  "notes": [
+    "Phase 5 archived 2026-08-20 — gate passed first run: doctored draft rejected with named checks; sampled sentence walked chip→claim→evidence→attempt via API only. Kept run 01a01f87-c481 (phase-5 gate leg A). 501 tests.",
+    "P5 norms: every body sentence outside ## Uncertainties must cite (ADR-020); citable = live + not rejected + evidence-backed ('approved' status has no workflow); validator REJECT reasons feed the next synthesize attempt (rejectionFeedback).",
+    "P4 norms: .default([]) on semantically-optional arrays; never await network inside a DB tx; SCHEMA_FAILURE attempt ≥2 escalates tier; unconfigured tier suggestions inert.",
+    "Tests run in research_lab_test DB (bun run test) — never against live runs.",
+    "Frontier = deepseek/deepseek-v4-pro; watch account balance (a mid-run 402 parks runs at WAITING_HUMAN).",
+    "Do NOT create new top-level tasks without user approval — Phase 6 tickets are defined in the 6.0 plan review."
+  ]
+}
