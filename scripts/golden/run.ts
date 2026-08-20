@@ -260,9 +260,12 @@ try {
 
   if (result.failures.length > 0) {
     console.error(`✗ golden ${golden.id}: ${result.failures.length} assertion(s) failed`);
-    process.exit(1);
+    // exitCode, never process.exit(): exit() skips the finally and orphans
+    // the stack on port 8795 (found live — G2 couldn't bind after a failed G1).
+    process.exitCode = 1;
+  } else {
+    console.log(`✓ golden ${golden.id}: all hard assertions green — awaiting human verdict`);
   }
-  console.log(`✓ golden ${golden.id}: all hard assertions green — awaiting human verdict`);
 } finally {
   stopStack();
   await close();
