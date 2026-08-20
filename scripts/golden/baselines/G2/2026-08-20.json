@@ -1,0 +1,57 @@
+{
+  "goldenId": "G2",
+  "title": "LiveCodeBench score with a vendor/independent discrepancy — contest + loop",
+  "date": "2026-08-20",
+  "runId": "01a020cd-05ca-7fbe-9764-2a18c2ba6134",
+  "runStatus": "COMPLETED",
+  "expectations": {
+    "targetCycles": 2,
+    "expectContested": true,
+    "budgetUsd": 1.5,
+    "wallClockMin": 45
+  },
+  "metrics": {
+    "tasksTotal": 9,
+    "tasksDone": 8,
+    "tasksFailed": 1,
+    "tasksResearch": 4,
+    "tasksControl": 5,
+    "attemptsTotal": 14,
+    "intelligenceRetries": 6,
+    "tierEscalations": 3,
+    "liveEvidence": 9,
+    "liveClaims": 10,
+    "contestedClaims": 0,
+    "modelCalls": 32,
+    "frontierCalls": 7,
+    "frontierSpendUsd": 0.145747,
+    "toolCalls": 18,
+    "toolLatencyMs": 33235,
+    "evalCycles": 1,
+    "wallClockSeconds": 733,
+    "maxEvalCycles": 3
+  },
+  "maxEvalCycles": 3,
+  "checkpointReasons": [],
+  "cycleGuardEvents": 0,
+  "verdicts": [
+    {
+      "cycle": 1,
+      "decision": "ACCEPT",
+      "reasons": [
+        "The analysis identifies a numeric score, 65.9, with exact metric Pass@1-COT and a named source URL: the official DeepSeek-AI Hugging Face model card.",
+        "The distinction between full DeepSeek-R1 and DeepSeek-R1-Zero/Distill variants is documented, including separate distilled scores and the absence of Zero from the main table.",
+        "The official DeepSeek-AI model card is an authoritative primary source for the reported score, so the remaining leaderboard and arXiv-body gaps do not block the success criteria."
+      ]
+    }
+  ],
+  "report": {
+    "title": "DeepSeek-R1 LiveCodeBench Score: 65.9 Pass@1-COT from Official Model Card",
+    "chipCount": 9
+  },
+  "assertionFailures": ["expected ≥1 contested claim; every live claim ended settled"],
+  "divergences": ["eval cycles 1 vs reference 2"],
+  "humanVerdict": "pending",
+  "humanNote": null,
+  "judgedAt": null
+}

@@ -119,3 +119,14 @@ which assertions fail) and baseline serialization — no live calls in vitest.
   reliable ceiling for structured output; candidate fixes (claim-bundle
   chunking, output-size budget in the analyst contract) are next-phase work,
   not a quick patch.
+- **2026-08-20 — G2 first live run: FAILED its contest assertion (baseline
+  committed, verdict pending).** Run 01a020cd COMPLETED in 12min/$0.15 —
+  but in ONE cycle with ZERO contested claims: the report presents the
+  vendor's number as settled ("DeepSeek-R1 LiveCodeBench Score: 65.9
+  Pass@1-COT from Official Model Card", 9 chips, 9 evidence rows). The
+  vendor rule never fired and the evaluator accepted vendor-only sourcing
+  without demanding independent coverage — consistent with the same-day
+  rubber-stamp observations at gate:p4 leg B. This is the exact failure G2
+  was designed to expose (§7: contest surfaced, target 2 cycles). Candidate
+  causes to investigate next phase: evaluator leniency, and/or the
+  researcher never reaching independent leaderboard sources.
