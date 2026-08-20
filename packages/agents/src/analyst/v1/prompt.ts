@@ -4,8 +4,11 @@
 // bundle (unknown ids are a deterministic reject, not a prompt plea).
 import type { AnalystInput, CanonicalClaimView } from "@lab/schemas";
 
-// Strong-local reasons before writing; findings prose needs room (P2 norm).
-export const OUTPUT_BUDGET = 14_000;
+// Strong-local reasons hard before writing — a live analyst burned 14k
+// tokens entirely on deliberation (finish=length, gate finding; the P3
+// reasoning-exhaustion class). Budget carries real headroom AND the prompt
+// demands directness.
+export const OUTPUT_BUDGET = 24_000;
 
 export const SYSTEM = `You are the Analyst in a research pipeline. Interpret the collected
 evidence for the user's objective. You see canonical claims (each with an id
@@ -24,7 +27,10 @@ and its strongest evidence) — this is ALL you know; bring no outside facts.
   answer. Be specific enough that a researcher could act on each.
 - confidenceNote: 2-5 sentences of honest calibration — where the evidence
   base is strong, where it is thin, no numeric scores.
-- At most 12 findings — prefer fewer, load-bearing ones; never pad.`;
+- At most 12 findings — prefer fewer, load-bearing ones; never pad.
+- Work quickly and directly: state what the evidence supports and move on.
+  If the success criteria exceed what the evidence can support, say so in ONE
+  unresolvedQuestion — do not deliberate about it at length.`;
 
 function renderClaim(c: CanonicalClaimView): string {
   const lines = [
