@@ -46,6 +46,12 @@ export function startScheduler(
         config.DEFAULT_MAX_ATTEMPTS,
         config.MIN_EVIDENCE_PER_TASK,
       );
+      // Canonicalization BEFORE the completion sweep: the staged-planning
+      // driver decides on live claims, which only exist after this hook runs
+      // (found live: stage 2 never fired because claims landed one tick late).
+      if (evaluated.acceptedRuns.length > 0 && hooks.onAccepted) {
+        await hooks.onAccepted(evaluated.acceptedRuns);
+      }
       const { ready, blocked } = await sweepReadiness(db);
       const runs = await sweepRunCompletion(db, config.MAX_PLAN_STAGES);
       if (
@@ -58,9 +64,6 @@ export function startScheduler(
         runs.failed.length
       ) {
         log.info({ evaluated, ready, blocked, runs }, "control sweep");
-      }
-      if (evaluated.acceptedRuns.length > 0 && hooks.onAccepted) {
-        await hooks.onAccepted(evaluated.acceptedRuns);
       }
     }),
     config.POLL_INTERVAL_MS,
