@@ -88,6 +88,7 @@ function stampVerdict(id: string, verdict: "pass" | "fail", note: string | null)
   baseline.humanNote = note;
   baseline.judgedAt = new Date().toISOString();
   writeFileSync(path, `${JSON.stringify(baseline, null, 2)}\n`);
+  biomeFormat(path);
   console.log(`✓ ${id} judged ${verdict}${note ? ` — ${note}` : ""} (${path})`);
   console.log("  commit the baseline: the git log is the regression history.");
 }
@@ -184,7 +185,16 @@ function writeBaseline(baseline: GoldenBaseline): string {
     // first run of the day
   }
   writeFileSync(path, `${JSON.stringify(baseline, null, 2)}\n`);
+  biomeFormat(path);
   return path;
+}
+
+// Baselines are committed — keep them lint-clean without a manual pass.
+function biomeFormat(path: string): void {
+  Bun.spawnSync(["bunx", "biome", "check", "--write", path], {
+    stdout: "ignore",
+    stderr: "ignore",
+  });
 }
 
 try {
