@@ -1,0 +1,59 @@
+{
+  "goldenId": "G1",
+  "title": "R2 vs B2 vs Garage — comparative research, clean accept",
+  "date": "2026-08-20",
+  "runId": "01a020a2-6715-7268-8b60-df45a67829cd",
+  "runStatus": "WAITING_HUMAN",
+  "expectations": {
+    "targetCycles": 1,
+    "budgetUsd": 1.5,
+    "wallClockMin": 45
+  },
+  "metrics": {
+    "tasksTotal": 21,
+    "tasksDone": 19,
+    "tasksFailed": 2,
+    "tasksResearch": 16,
+    "tasksControl": 5,
+    "attemptsTotal": 33,
+    "intelligenceRetries": 11,
+    "tierEscalations": 5,
+    "liveEvidence": 103,
+    "liveClaims": 86,
+    "contestedClaims": 0,
+    "modelCalls": 94,
+    "frontierCalls": 9,
+    "frontierSpendUsd": 0.426621,
+    "toolCalls": 62,
+    "toolLatencyMs": 83416,
+    "evalCycles": 1,
+    "wallClockSeconds": 2489,
+    "maxEvalCycles": 3
+  },
+  "maxEvalCycles": 3,
+  "checkpointReasons": [
+    "analysis_failed"
+  ],
+  "cycleGuardEvents": 0,
+  "verdicts": [
+    {
+      "cycle": 1,
+      "decision": "RESEARCH_MORE",
+      "reasons": [
+        "R2 and B2 pricing, free tiers, egress allowances, and Garage hardware/replication/ops requirements are well covered from official sources and satisfy several stage-1 criteria.",
+        "B2's exact S3 API parity is unverified, so the requirement that each option be characterized for missing or limited S3 features is not met.",
+        "Garage lacks a concrete homelab storage/TCO and egress/request cost model, so the all-three cost comparison required by stage 1 remains incomplete.",
+        "B2 operational limits and numeric availability SLA remain unfetched, leaving the reliability and operational comparison provisional.",
+        "All evidence is vendor-official; independent validation of integration with common homelab tooling is missing."
+      ]
+    }
+  ],
+  "report": null,
+  "assertionFailures": [
+    "run ended WAITING_HUMAN, not COMPLETED"
+  ],
+  "divergences": [],
+  "humanVerdict": "pending",
+  "humanNote": null,
+  "judgedAt": null
+}

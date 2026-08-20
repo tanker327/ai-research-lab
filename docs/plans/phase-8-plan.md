@@ -107,3 +107,15 @@ which assertions fail) and baseline serialization — no live calls in vitest.
   model-quality finding the goldens will measure (an over-lenient evaluator
   shows up as G2 clean-accepting instead of looping). Possibly the temp-0
   cached-replay class. Re-filed in known_issues.
+- **2026-08-20 — G1 first live run: FAILED its assertion honestly (baseline
+  committed, verdict pending).** Run 01a020a2: cycle 1 evaluated → follow-up
+  loop → the cycle-2 analyze died on the large-bundle class at BOTH tiers
+  over an 86-claim bundle: strong_local hit finish=length twice (24k output
+  cap, second a 0s cached replay), the 41c2cd0 cap fix correctly excluded a
+  frontier transport casualty, and the frontier retry finished (stop,
+  ~17k tokens out) but still failed Zod. Run parked at analysis_failed —
+  retryable from the console. Budget fine ($0.43, 41min). The suite exists
+  to catch exactly this: analyst contexts near 90 claims are over the
+  reliable ceiling for structured output; candidate fixes (claim-bundle
+  chunking, output-size budget in the analyst contract) are next-phase work,
+  not a quick patch.
