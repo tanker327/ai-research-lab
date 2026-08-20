@@ -63,7 +63,8 @@
     "OPTIONAL: openai/xai hub keys upgrade the frontier beyond deepseek-v4-pro — alias swap + FRONTIER_STRUCTURED_MODE=json_schema.",
     "gate:p4 single-process end-to-end pass still outstanding (all assertions verified manually) — optional ceremony.",
     "Watch run 01a01fab-cb49 still parked at its cycle_guard checkpoint — user may accept/stop from the console banner or leave it.",
-    "Background dev-stack processes launched by the agent get externally SIGTERMed on this machine — run dev:api/worker/web in user terminals for watch sessions."
+    "Background dev-stack processes launched by the agent get externally SIGTERMed on this machine — run dev:api/worker/web in user terminals for watch sessions.",
+    "FOUND (user run 01a01fad, RTX question): infra-killed attempts count against max_attempts and can starve the SCHEMA_FAILURE→frontier escalation — a SIGTERMed worker consumed the attempt the ladder needed. Proposed fix: enforceAttemptCap excludes TRANSIENT_INFRA attempts (design §14 separate-axis intent). Awaiting user approval to fix."
   ],
   "notes": [
     "Phase 6 archived 2026-08-20 — gate fully passed (scripted restart-survival leg first-run + human watch sign-off). 510 tests.",
