@@ -37,7 +37,7 @@ import { assertTaskTransition } from "./state/task";
 
 const ACTOR = "checkpoint_resolver";
 
-export type CheckpointAction = "retry" | "accept" | "stop";
+export type CheckpointAction = "retry" | "accept" | "stop" | "approve";
 
 const RETRYABLE_REASONS = new Set(["analysis_failed", "synthesis_failed"]);
 
@@ -84,6 +84,12 @@ export async function resolveCheckpoint(
         `action 'accept' is only valid for a cycle_guard checkpoint (got '${cp.reason}')`,
       );
     }
+    if (action === "approve" && cp.reason !== "plan_review") {
+      throw new CategorizedError(
+        "PERMANENT_INFRA",
+        `action 'approve' is only valid for a plan_review checkpoint (got '${cp.reason}')`,
+      );
+    }
     const run = await getRunForUpdate(tx, runId);
     if (!run) throw new CategorizedError("PERMANENT_INFRA", `run ${runId} does not exist`);
 
@@ -112,6 +118,22 @@ export async function resolveCheckpoint(
       actor: ACTOR,
       payload: { checkpointId, reason: cp.reason, action },
     });
+
+    // approve (plan_review, 7.2): release the stage-1 hold. Tasks were
+    // created normally at plan acceptance; walking the run back to
+    // RESEARCHING lets the readiness sweep promote them in dependency order.
+    if (action === "approve") {
+      assertRunTransition(run.status as RunStatus, "RESEARCHING");
+      await updateRunStatus(tx, runId, "RESEARCHING");
+      await emitEvent(tx, {
+        runId,
+        type: "RUN_PHASE_CHANGED",
+        kind: "info",
+        actor: ACTOR,
+        payload: { from: run.status, to: "RESEARCHING", reason: "plan_approved" },
+      });
+      return { action, createdTaskIds: [] };
+    }
 
     if (action === "stop") {
       assertRunTransition(run.status as RunStatus, "CANCELLED");

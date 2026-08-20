@@ -17,6 +17,9 @@ function mapSwept(r: Record<string, unknown>): SweptTask {
 
 // Readiness (design §8.1): CREATED → READY when every required dependency is
 // DONE and the run is still active. Budget checks are Phase-4 additions here.
+// WAITING_HUMAN joined the exclusion list in 7.2 (phase-7-plan D2): a parked
+// run performs no new work — this is both the plan-review hold and a general
+// correctness fix (checkpoint-parked runs no longer keep claiming tasks).
 export async function promoteReadyTasks(tx: SqlExecutor): Promise<SweptTask[]> {
   const rows = await tx.execute(sql`
     UPDATE research_tasks t
@@ -25,7 +28,7 @@ export async function promoteReadyTasks(tx: SqlExecutor): Promise<SweptTask[]> {
       AND EXISTS (
         SELECT 1 FROM research_runs r
         WHERE r.id = t.run_id
-          AND r.status NOT IN ('COMPLETED','FAILED','CANCELLED'))
+          AND r.status NOT IN ('COMPLETED','FAILED','CANCELLED','WAITING_HUMAN'))
       AND NOT EXISTS (
         SELECT 1 FROM task_dependencies d
         JOIN research_tasks dep ON dep.id = d.depends_on_task_id

@@ -2,10 +2,11 @@
 // sweep against real Postgres — atomic accept+interpret, the executable
 // ADR-011 concreteness guard, the ADR-016 cycle guard, and the reject path
 // riding the ordinary retry ladder (rule 10).
-import { createDb, deleteRun, seedAttempt, seedRun, seedTask } from "@lab/db";
+import { createDb, deleteRun, insertHumanCheckpoint, promoteReadyTasks, seedAttempt, seedRun, seedTask } from "@lab/db";
 import { newId, type PlannerOutput } from "@lab/schemas";
 import { sql } from "drizzle-orm";
 import { afterAll, afterEach, describe, expect, it } from "vitest";
+import { resolveCheckpoint } from "./checkpoint";
 import { sweepEvaluations } from "./scheduler/evaluate";
 
 const url = process.env.DATABASE_URL ?? "postgres://lab:lab@localhost:5434/research_lab";
@@ -230,5 +231,75 @@ describe("applyAcceptedPlan via sweepEvaluations", () => {
     expect(result.accepted).toContain(taskId);
     const task = await rows(sql`SELECT status FROM research_tasks WHERE id = ${victim}`);
     expect(task[0]?.status).toBe("CANCELLED");
+  });
+});
+
+describe("plan review pause (7.2, phase-7-plan D1/D2/D5)", () => {
+  async function seedReviewRun(reviewPlan: boolean) {
+    const seeded = await seedPlanCandidate(plannerOutput());
+    await db.execute(sql`
+      UPDATE research_runs
+      SET status = 'RESEARCHING',
+          metadata = ${JSON.stringify(reviewPlan ? { reviewPlan: true } : {})}::jsonb
+      WHERE id = ${seeded.runId}`);
+    return seeded;
+  }
+
+  it("reviewPlan on: stage-1 accept parks the run; the hold keeps tasks CREATED; approve releases", async () => {
+    const { runId } = await seedReviewRun(true);
+    await sweepEvaluations(db);
+
+    const run = await rows(sql`SELECT status FROM research_runs WHERE id = ${runId}`);
+    expect(run[0]?.status).toBe("WAITING_HUMAN");
+    const cp = await rows(sql`
+      SELECT id, reason, status FROM human_checkpoints WHERE run_id = ${runId}`);
+    expect(cp[0]).toMatchObject({ reason: "plan_review", status: "pending" });
+
+    // The readiness sweep must NOT promote a parked run's tasks (D2).
+    await promoteReadyTasks(db);
+    const held = await rows(sql`
+      SELECT status FROM research_tasks WHERE run_id = ${runId} AND type <> 'plan'`);
+    expect(held.length).toBeGreaterThan(0);
+    expect(held.every((t) => t.status === "CREATED")).toBe(true);
+
+    // approve → run walks back; the ordinary sweep promotes in dep order.
+    const res = await resolveCheckpoint(db, {
+      runId,
+      checkpointId: String(cp[0]?.id),
+      action: "approve",
+      note: "plan looks right",
+    });
+    expect(res).toEqual({ action: "approve", createdTaskIds: [] });
+    const after = await rows(sql`SELECT status FROM research_runs WHERE id = ${runId}`);
+    expect(after[0]?.status).toBe("RESEARCHING");
+    await promoteReadyTasks(db);
+    const released = await rows(sql`
+      SELECT status FROM research_tasks
+      WHERE run_id = ${runId} AND type = 'research'`);
+    expect(released.every((t) => t.status === "READY")).toBe(true);
+  });
+
+  it("reviewPlan off: stage-1 accept does not park (default behavior unchanged)", async () => {
+    const { runId } = await seedReviewRun(false);
+    await sweepEvaluations(db);
+    const run = await rows(sql`SELECT status FROM research_runs WHERE id = ${runId}`);
+    expect(run[0]?.status).toBe("RESEARCHING");
+    const cp = await rows(sql`SELECT id FROM human_checkpoints WHERE run_id = ${runId}`);
+    expect(cp).toHaveLength(0);
+  });
+
+  it("approve is illegal on non-plan_review checkpoints", async () => {
+    const { runId } = await seedReviewRun(false);
+    const cpId = newId();
+    await insertHumanCheckpoint(db, {
+      id: cpId,
+      runId,
+      taskId: null,
+      reason: "cycle_guard",
+      question: "q",
+    });
+    await expect(
+      resolveCheckpoint(db, { runId, checkpointId: cpId, action: "approve" }),
+    ).rejects.toThrow(/only valid for a plan_review/);
   });
 });

@@ -6,6 +6,7 @@
 import {
   type Db,
   type EvaluationCandidate,
+  getRunForUpdate,
   getTaskForUpdate,
   insertDecisionRecord,
   insertHumanCheckpoint,
@@ -18,6 +19,7 @@ import {
   selectRunForContext,
   selectTaskForContext,
   type Tx,
+  updateRunStatus,
   updateTaskStatus,
 } from "@lab/db";
 import {
@@ -33,6 +35,7 @@ import {
 import { emitEvent } from "./events";
 import { acceptAttemptInTx } from "./liveness";
 import { rejectSucceededAttempt } from "./quality";
+import { assertRunTransition } from "./state/run";
 import { assertTaskTransition } from "./state/task";
 
 const ACTOR = "plan_interpreter";
@@ -228,6 +231,34 @@ export async function applyAcceptedPlan(
         actor: ACTOR,
         payload: { question: q.question },
       });
+    }
+
+    // 7.2 (phase-7-plan D1): a review-flagged run parks after STAGE-1 plan
+    // acceptance — plan_review checkpoint + WAITING_HUMAN. The tasks were
+    // created normally above; the readiness sweep's WAITING_HUMAN hold (D2)
+    // keeps them CREATED until the human approves (resolveCheckpoint
+    // 'approve') and the run walks back to RESEARCHING.
+    if (stage === 1 && run?.metadata.reviewPlan === true) {
+      const locked = await getRunForUpdate(tx, c.runId);
+      if (locked?.status === "RESEARCHING") {
+        await insertHumanCheckpoint(tx, {
+          id: uuid(),
+          runId: c.runId,
+          taskId: c.taskId,
+          reason: "plan_review",
+          question: `Review the stage-1 plan (${createdTaskIds.length} task(s)): edit tasks and routing, then approve to start the research.`,
+        });
+        assertRunTransition("RESEARCHING", "WAITING_HUMAN");
+        await updateRunStatus(tx, c.runId, "WAITING_HUMAN");
+        await emitEvent(tx, {
+          runId: c.runId,
+          taskId: c.taskId,
+          type: "RUN_WAITING_HUMAN",
+          kind: "gate", // a designed human judgment point, not a failure
+          actor: ACTOR,
+          payload: { reason: "plan_review", tasks: createdTaskIds.length },
+        });
+      }
     }
 
     return {

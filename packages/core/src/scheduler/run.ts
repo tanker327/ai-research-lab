@@ -71,6 +71,8 @@ export interface StartRunInput {
   // Run-scoped per-role tier preference (7.1) — persisted verbatim on
   // research_runs.metadata.roleTiers; validated by the API (RoleTiers).
   roleTiers?: Record<string, string>;
+  // 7.2: stage-1 plan acceptance parks the run for human review.
+  reviewPlan?: boolean;
   tasks: Array<{
     id?: string;
     type: string;
@@ -91,7 +93,10 @@ export async function startRun(db: Db, req: StartRunInput): Promise<string> {
       title: req.title ?? null,
       userRequest: req.userRequest,
       budget: req.budget ?? {},
-      metadata: req.roleTiers ? { roleTiers: req.roleTiers } : {},
+      metadata: {
+        ...(req.roleTiers ? { roleTiers: req.roleTiers } : {}),
+        ...(req.reviewPlan ? { reviewPlan: true } : {}),
+      },
     });
     await emitEvent(tx, { runId, type: "RUN_CREATED", kind: "info", actor: ACTOR });
 

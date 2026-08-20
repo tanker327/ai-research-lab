@@ -30,13 +30,19 @@ export const CreateRunRequest = z.object({
   // on research_runs.metadata.roleTiers; the worker resolves task override >
   // this map > the policy table.
   roleTiers: RoleTiers.optional(),
+  // 7.2 (phase-7-plan D1): pause after STAGE-1 plan acceptance for human
+  // review (plan_review checkpoint, run WAITING_HUMAN) — the user edits the
+  // plan and approves before research starts. Default off so gates/scripts
+  // are unaffected; the console turns it on.
+  reviewPlan: z.boolean().default(false),
 });
 export type CreateRunRequest = z.infer<typeof CreateRunRequest>;
 
 // Checkpoint resolution (ticket 6.4, phase-6-plan D5): three deliberately
 // small verbs; the Control Plane interprets (ADR-003 applies to humans too).
 export const ResolveCheckpointRequest = z.object({
-  action: z.enum(["retry", "accept", "stop"]),
+  // approve joined in 7.2: releases a plan_review hold (phase-7-plan D5).
+  action: z.enum(["retry", "accept", "stop", "approve"]),
   note: z.string().max(2000).optional(),
   actor: z.string().max(200).optional(),
 });
