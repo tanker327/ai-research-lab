@@ -120,3 +120,19 @@ export async function markAttemptFinished(
         completed_at = now()
     WHERE id = ${attemptId}`);
 }
+
+// Intelligence-retry directives (ticket 4.5): the ladder's verdict is APPLIED
+// to the task row so the next claim runs with the fallback strategy / the
+// escalated tier — recording a verdict nobody executes is not a retry policy.
+export async function applyRetryDirectives(
+  tx: SqlExecutor,
+  taskId: string,
+  d: { strategy?: string; modelTier?: string },
+): Promise<void> {
+  await tx.execute(sql`
+    UPDATE research_tasks
+    SET strategy = COALESCE(${d.strategy ?? null}, strategy),
+        model_tier = COALESCE(${d.modelTier ?? null}, model_tier),
+        updated_at = now()
+    WHERE id = ${taskId}`);
+}

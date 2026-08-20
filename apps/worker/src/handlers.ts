@@ -21,6 +21,7 @@ import {
   type AnalysisOutput,
   CategorizedError,
   FakeTaskInput,
+  ModelTier,
   newId,
   PlannerInput,
   ResearcherOutput,
@@ -79,6 +80,13 @@ function tierModels(config: Config) {
 
 function tierModes(config: Config) {
   return { frontier: config.FRONTIER_STRUCTURED_MODE };
+}
+
+// 4.5: an intelligence-retry escalation writes model_tier onto the task row;
+// the next attempt routes there (guardDarkFrontier still applies on top).
+function taskTierOverride(work: ClaimedWork): ModelTier | null {
+  const parsed = ModelTier.safeParse(work.task.modelTier);
+  return parsed.success ? parsed.data : null;
 }
 
 // The per-attempt AgentContext (§5.5): tools scoped to the role, artifact
@@ -223,7 +231,7 @@ function researcherHandler(deps: AgentDeps): TaskHandler {
         "researcher",
         work.attempt.attemptNumber,
         tierModels(deps.config),
-        null,
+        taskTierOverride(work),
         tierModes(deps.config),
       ),
     );
@@ -260,7 +268,7 @@ function extractorHandler(deps: AgentDeps): TaskHandler {
       "extractor",
       work.attempt.attemptNumber,
       tierModels(deps.config),
-      null,
+      taskTierOverride(work),
       tierModes(deps.config),
     );
     const output = extractorV1.outputSchema.parse(
@@ -339,7 +347,7 @@ function analystHandler(deps: AgentDeps): TaskHandler {
         "analyst",
         work.attempt.attemptNumber,
         tierModels(deps.config),
-        null,
+        taskTierOverride(work),
         tierModes(deps.config),
       ),
     );
@@ -399,7 +407,7 @@ function evaluatorHandler(deps: AgentDeps): TaskHandler {
         "evaluator",
         work.attempt.attemptNumber,
         tierModels(deps.config),
-        null,
+        taskTierOverride(work),
         tierModes(deps.config),
       ),
     );

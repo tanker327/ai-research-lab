@@ -3,6 +3,7 @@
 // decideRetry + attempt cap (rule 10) → task transition → DecisionRecord →
 // event. Every rationale is human-readable (§24.2 renders it verbatim).
 import {
+  applyRetryDirectives,
   type EvaluationCandidate,
   insertDecisionRecord,
   insertEvaluation,
@@ -64,6 +65,14 @@ export async function rejectSucceededAttempt(
   const to = verdict.kind === "task_failed" ? "FAILED" : "READY";
   assertTaskTransition("EVALUATING", to);
   await updateTaskStatus(tx, c.taskId, to);
+  // 4.5: APPLY the ladder's directives — the next claim actually runs with
+  // the fallback strategy / escalated tier, not just a note saying it should.
+  if (verdict.kind === "intelligence_retry" && (verdict.strategy || verdict.tier)) {
+    await applyRetryDirectives(tx, c.taskId, {
+      strategy: verdict.strategy,
+      modelTier: verdict.tier,
+    });
+  }
   await insertDecisionRecord(tx, {
     id: newId(),
     runId: c.runId,
@@ -73,7 +82,12 @@ export async function rejectSucceededAttempt(
     decision: verdict.kind,
     rationale: `${reasons.join(" · ")}. Ladder: ${verdict.rationale}`,
     createdBy: opts.actor,
-    metadata: { checks: failures.map((f) => f.check) },
+    metadata: {
+      checks: failures.map((f) => f.check),
+      ...(verdict.kind === "intelligence_retry"
+        ? { strategy: verdict.strategy ?? null, tier: verdict.tier ?? null }
+        : {}),
+    },
   });
   await emitEvent(tx, {
     runId: c.runId,
