@@ -144,21 +144,25 @@ describe("sweepEvaluations", () => {
     expect(event?.kind).toBe("fail");
   });
 
-  it("hard-caps at max_attempts even when the ladder would retry", async () => {
+  it("hard-caps at max_attempts even when the ladder would retry (intelligence attempts)", async () => {
     const t = newId();
     await startSimpleRun([{ id: t, type: "research", title: "t", input: {}, maxAttempts: 1 }]);
     await sweepReadiness(db);
     const work = await claimNextReadyTask(db, "w");
     if (!work) throw new Error("expected claim");
+    // SCHEMA_FAILURE = an intelligence attempt (the ladder would retry it);
+    // infra failures no longer count toward the cap (P7 finding) — they have
+    // their own INFRA_BACKOFF bound, exercised in sweeps.test.ts.
     await finishAttempt(db, work, {
       ok: false,
-      error: new CategorizedError("TRANSIENT_INFRA", "would normally retry"),
+      error: new CategorizedError("SCHEMA_FAILURE", "would normally retry"),
     });
 
     const result = await sweepEvaluations(db, FUTURE);
     expect(result.failed).toEqual([t]);
     const [decision] = await raw`SELECT rationale FROM decision_records WHERE task_id = ${t}`;
     expect(decision?.rationale).toContain("max_attempts");
+    expect(decision?.rationale).toContain("intelligence attempts");
   });
 });
 

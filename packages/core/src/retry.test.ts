@@ -3,7 +3,7 @@
 // property (phase-1-plan Session A acceptance).
 import { CategorizedError, type QualityVerdict, ResearchStrategy } from "@lab/schemas";
 import { describe, expect, it } from "vitest";
-import { decideRetry, type RetryContext } from "./retry";
+import { decideRetry, enforceAttemptCap, type RetryContext } from "./retry";
 
 const ctx = (over: Partial<RetryContext> = {}): RetryContext => ({
   taskType: "research",
@@ -167,5 +167,32 @@ describe("rationale", () => {
     const v = decideRetry(ctx(), null, { rejected: true, reasons: ["thin note", "off-target"] });
     expect(v.rationale).toContain("thin note");
     expect(v.rationale).toContain("off-target");
+  });
+});
+
+describe("enforceAttemptCap counts intelligence attempts only (P7 finding)", () => {
+  const escalation = {
+    kind: "intelligence_retry" as const,
+    tier: "frontier" as const,
+    rationale: "SCHEMA_FAILURE on analyze attempt 3: escalate",
+  };
+
+  it("an infra casualty does not starve the tier escalation (the live failure replayed)", () => {
+    // attempt 1 SCHEMA, attempt 2 killed worker (infra), attempt 3 SCHEMA:
+    // 3 attempts total but only 2 intelligence — the frontier escalation runs.
+    const v = enforceAttemptCap(escalation, 3, 3, 1);
+    expect(v).toEqual(escalation);
+  });
+
+  it("pure intelligence exhaustion still caps, with an explicit rationale", () => {
+    const v = enforceAttemptCap(escalation, 3, 3, 0);
+    expect(v.kind).toBe("task_failed");
+    expect(v.rationale).toContain("3 intelligence attempts");
+    expect(v.rationale).toContain("0 infra casualties");
+  });
+
+  it("infra retries survive a padded count too (they have their own INFRA_BACKOFF bound)", () => {
+    const infra = { kind: "infra_retry" as const, delayMs: 5000, rationale: "backing off 5s" };
+    expect(enforceAttemptCap(infra, 4, 3, 2)).toEqual(infra);
   });
 });

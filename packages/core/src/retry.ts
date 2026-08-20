@@ -121,15 +121,23 @@ export function decideRetry(
 // The attempt budget is a hard cap ON TOP of the ladder (design §8.1) — part
 // of retry policy, so it lives here (rule 10) and every caller of decideRetry
 // applies it the same way.
+//
+// The cap counts INTELLIGENCE attempts only (P7 live finding, user run
+// 01a01fad): infra failures are a separate axis (§14) with their own bound
+// (INFRA_BACKOFF), so an attempt killed by a dead worker must not consume the
+// budget the tier-escalation ladder needs — a SIGTERMed worker once starved
+// the SCHEMA_FAILURE→frontier escalation and failed a rescuable analysis.
 export function enforceAttemptCap(
   verdict: RetryVerdict,
   attemptCount: number,
   maxAttempts: number,
+  infraFailureCount = 0,
 ): RetryVerdict {
-  if (verdict.kind !== "task_failed" && attemptCount >= maxAttempts) {
+  const intelligenceAttempts = Math.max(0, attemptCount - infraFailureCount);
+  if (verdict.kind !== "task_failed" && intelligenceAttempts >= maxAttempts) {
     return {
       kind: "task_failed",
-      rationale: `max_attempts (${maxAttempts}) exhausted after ${attemptCount} attempts; overriding ${verdict.kind}. Ladder said: ${verdict.rationale}`,
+      rationale: `max_attempts (${maxAttempts}) exhausted after ${intelligenceAttempts} intelligence attempts (${attemptCount} total, ${infraFailureCount} infra casualties excluded); overriding ${verdict.kind}. Ladder said: ${verdict.rationale}`,
     };
   }
   return verdict;

@@ -128,19 +128,31 @@ describe("sweepStaleClaims", () => {
     expect(rerun?.attempt.attemptNumber).toBe(2);
   });
 
-  it("caps stale-claim churn at max_attempts via the ladder (the gate's runaway-loop finding)", async () => {
+  it("caps stale-claim churn via the INFRA_BACKOFF bound (runaway-loop finding, P7 semantics)", async () => {
+    // Infra casualties no longer consume max_attempts (P7 finding: a dead
+    // worker must not starve the tier-escalation ladder) — the runaway-loop
+    // bound is now the infra axis itself: 3 backoff retries, then FAILED.
     const t = newId();
     await seedTask(db, { id: t, runId, maxAttempts: 1 });
-    const work = await claimNextReadyTask(db, "doomed-worker");
-    if (!work) throw new Error("expected claim");
-    await raw`UPDATE research_tasks SET claimed_at = now() - interval '1 hour' WHERE id = ${t}`;
-    await sweepStaleClaims(db, 900);
-
-    const swept = await sweepEvaluations(db, () => new Date(Date.now() + 10 * 60_000));
-    expect(swept.failed).toEqual([t]);
+    const FUTURE = () => new Date(Date.now() + 10 * 60_000);
+    for (let round = 1; round <= 4; round++) {
+      const work = await claimNextReadyTask(db, `doomed-worker-${round}`);
+      if (!work) throw new Error(`expected claim on round ${round}`);
+      await raw`UPDATE research_tasks SET claimed_at = now() - interval '1 hour' WHERE id = ${t}`;
+      await sweepStaleClaims(db, 900);
+      const swept = await sweepEvaluations(db, FUTURE);
+      if (round < 4) {
+        expect(swept.retried).toEqual([t]); // backoff, not budget consumption
+      } else {
+        expect(swept.failed).toEqual([t]); // INFRA_BACKOFF exhausted — bounded
+      }
+    }
     expect((await raw`SELECT status FROM research_tasks WHERE id = ${t}`)[0]?.status).toBe(
       "FAILED",
     );
+    const [decision] = await raw`SELECT rationale FROM decision_records
+                                 WHERE task_id = ${t} ORDER BY created_at DESC LIMIT 1`;
+    expect(decision?.rationale).toContain("backoff retries");
   });
 
   it("leaves fresh claims alone", async () => {

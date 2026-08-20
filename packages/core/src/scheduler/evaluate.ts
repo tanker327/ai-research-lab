@@ -278,5 +278,5 @@ function resolveVerdict(c: EvaluationCandidate): RetryVerdict {
     null,
   );
   // Attempt budget is a hard cap on top of the ladder (design §8.1 readiness).
-  return enforceAttemptCap(verdict, c.attemptCount, c.maxAttempts);
+  return enforceAttemptCap(verdict, c.attemptCount, c.maxAttempts, c.infraFailureCount);
 }

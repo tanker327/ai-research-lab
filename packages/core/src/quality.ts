@@ -61,6 +61,7 @@ export async function rejectSucceededAttempt(
     ),
     c.attemptCount,
     c.maxAttempts,
+    c.infraFailureCount,
   );
   const to = verdict.kind === "task_failed" ? "FAILED" : "READY";
   assertTaskTransition("EVALUATING", to);
