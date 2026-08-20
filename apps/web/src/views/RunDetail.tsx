@@ -7,11 +7,12 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 import { navigate } from "../App";
-import { cancelRun, useRun, useTasks } from "../api";
+import { cancelRun, useCheckpoints, useRun, useTasks } from "../api";
 import { AttemptsView } from "./Attempts";
 import { ClaimsView } from "./Claims";
 import { Placeholder } from "./Placeholder";
 import { Timeline } from "./Timeline";
+import { VerdictsView } from "./Verdicts";
 
 const PHASES = [
   "CREATED",
@@ -38,6 +39,7 @@ const TABS = [
   { key: "timeline", label: "Timeline" },
   { key: "attempts", label: "Attempts" },
   { key: "evidence", label: "Evidence" },
+  { key: "verdict", label: "Verdict" },
   { key: "report", label: "Report", badge: "P5" },
   { key: "transcript", label: "Transcript", badge: "P5" },
 ];
@@ -67,7 +69,9 @@ function PhasePill({
 export function RunDetail({ runId, tab }: { runId: string; tab: string }) {
   const { data: run } = useRun(runId);
   const { data: tasks } = useTasks(runId);
+  const { data: checkpoints } = useCheckpoints(runId);
   const terminal = run && ["COMPLETED", "FAILED", "CANCELLED"].includes(run.status);
+  const pendingCheckpoints = checkpoints?.filter((cp) => cp.status === "pending") ?? [];
 
   return (
     <>
@@ -108,6 +112,24 @@ export function RunDetail({ runId, tab }: { runId: string; tab: string }) {
         </TabsList>
       </Tabs>
       <div className="grid gap-4.5 px-7 py-6">
+        {run?.status === "WAITING_HUMAN" && pendingCheckpoints.length > 0 && (
+          <Card className="border-fail">
+            <CardHeader className="text-fail">Waiting on a human decision</CardHeader>
+            <CardContent className="grid gap-2 text-[0.82rem]">
+              {pendingCheckpoints.map((cp) => (
+                <div key={cp.id}>
+                  <span className="mr-2 font-mono text-[0.68rem] uppercase tracking-[0.06em] text-muted-foreground">
+                    {cp.reason}
+                  </span>
+                  {cp.question}
+                </div>
+              ))}
+              <div className="font-mono text-[0.68rem] text-muted-foreground">
+                Checkpoint resolution UI lands in a later ticket — resolve via the database for now.
+              </div>
+            </CardContent>
+          </Card>
+        )}
         {tab === "overview" && run && (
           <>
             <Card>
@@ -199,6 +221,7 @@ export function RunDetail({ runId, tab }: { runId: string; tab: string }) {
         {tab === "attempts" && <AttemptsView runId={runId} />}
 
         {tab === "evidence" && <ClaimsView runId={runId} />}
+        {tab === "verdict" && <VerdictsView runId={runId} />}
         {tab === "report" && (
           <Placeholder
             title="Report with citation chips"

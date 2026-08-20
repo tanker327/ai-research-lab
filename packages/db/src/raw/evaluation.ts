@@ -90,3 +90,52 @@ export async function selectEvidenceStatsByAttempt(
     nonVendorCount: (r?.non_vendor as number) ?? 0,
   };
 }
+
+// Console read surface (ticket 4.6): evaluator verdicts + human checkpoints.
+export interface VerdictRow {
+  id: string;
+  decision: string;
+  reasons: string[];
+  metadata: Record<string, unknown>; // cycle, coverage, issues, requiredActions, acceptedUncertainties
+  createdAt: string;
+}
+
+export async function selectAgentVerdicts(tx: SqlExecutor, runId: string): Promise<VerdictRow[]> {
+  const rows = await tx.execute(sql`
+    SELECT id, decision, reasons, metadata, created_at FROM evaluations
+    WHERE run_id = ${runId} AND evaluator_type = 'agent'
+    ORDER BY created_at ASC`);
+  return [...rows].map((r) => ({
+    id: r.id as string,
+    decision: r.decision as string,
+    reasons: (r.reasons as string[]) ?? [],
+    metadata: (r.metadata as Record<string, unknown>) ?? {},
+    createdAt: String(r.created_at),
+  }));
+}
+
+export interface CheckpointRow {
+  id: string;
+  taskId: string | null;
+  reason: string;
+  question: string;
+  status: string;
+  createdAt: string;
+}
+
+export async function selectCheckpointsByRun(
+  tx: SqlExecutor,
+  runId: string,
+): Promise<CheckpointRow[]> {
+  const rows = await tx.execute(sql`
+    SELECT id, task_id, reason, question, status, created_at FROM human_checkpoints
+    WHERE run_id = ${runId} ORDER BY created_at ASC`);
+  return [...rows].map((r) => ({
+    id: r.id as string,
+    taskId: (r.task_id as string | null) ?? null,
+    reason: r.reason as string,
+    question: r.question as string,
+    status: r.status as string,
+    createdAt: String(r.created_at),
+  }));
+}

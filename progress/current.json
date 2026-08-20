@@ -6,52 +6,90 @@
     {
       "id": "4.0",
       "title": "Draft docs/plans/phase-4-plan.md (decisions: Evaluator tier while frontier dark, CoverageSummary shape, RESEARCH_MORE interpretation) \u2014 review with user before coding",
-      "status": "in_progress",
-      "started_at": "2026-08-19",
+      "status": "completed",
       "priority": 1,
-      "depends_on": []
+      "depends_on": [],
+      "completed_at": "2026-08-19",
+      "commit": "f712989"
     },
     {
       "id": "4.1",
       "title": "Coverage summary computation (deterministic) \u2192 persisted on evaluation (packages/evidence)",
-      "status": "pending",
+      "status": "completed",
       "priority": 2,
-      "depends_on": ["4.0"]
+      "depends_on": [
+        "4.0"
+      ],
+      "completed_at": "2026-08-19",
+      "commit": "aec6240"
     },
     {
       "id": "4.2",
       "title": "Analyst v1: claim-bundle context (K=3 heuristic), findings-cite-claims schema check",
-      "status": "pending",
+      "status": "completed",
       "priority": 3,
-      "depends_on": ["4.1"]
+      "depends_on": [
+        "4.1"
+      ],
+      "completed_at": "2026-08-19",
+      "commit": "32f8318"
     },
     {
       "id": "4.3",
       "title": "Evaluator v1: merged critic+judge prompt, decision schema",
-      "status": "pending",
+      "status": "completed",
       "priority": 4,
-      "depends_on": ["4.2"]
+      "depends_on": [
+        "4.2"
+      ],
+      "completed_at": "2026-08-19",
+      "commit": "5bcfecc"
     },
     {
       "id": "4.4",
       "title": "Core interprets decisions: RESEARCH_MORE \u2192 tasks from requiredActions; REPLAN \u2192 planner task; cycle guard enforced",
-      "status": "pending",
+      "status": "completed",
       "priority": 5,
-      "depends_on": ["4.3"]
+      "depends_on": [
+        "4.3"
+      ],
+      "completed_at": "2026-08-19",
+      "commit": "7b31a0c"
     },
     {
       "id": "4.5",
       "title": "Intelligence-retry wiring end to end (deterministic reject \u2192 ladder \u2192 tier escalation)",
-      "status": "pending",
+      "status": "completed",
       "priority": 6,
-      "depends_on": ["4.4"]
+      "depends_on": [
+        "4.4"
+      ],
+      "completed_at": "2026-08-19",
+      "commit": "4a0e774"
     },
     {
       "id": "4.6",
       "title": "Console wiring: analysis + evaluator verdicts + cycle view (standing UI rule)",
-      "status": "pending",
+      "status": "completed",
       "priority": 7,
-      "depends_on": ["4.4"]
+      "depends_on": [
+        "4.4"
+      ],
+      "completed_at": "2026-08-19",
+      "commit": "HEAD"
+    },
+    {
+      "id": "4.7",
+      "title": "Phase 4 gate: scripts/gates/p4.ts (leg A milestone: gap\u2192follow-up\u2192ACCEPT cycle \u22652; leg B guard: impossible rubric + cap 1 \u2192 WAITING_HUMAN) \u2014 phase done when gate passes",
+      "status": "in_progress",
+      "priority": 8,
+      "depends_on": [
+        "4.4",
+        "4.5",
+        "4.6"
+      ],
+      "started_at": "2026-08-19",
+      "notes": "Approved implicitly by phase-4-plan D7 review (gate legs are the plan's D7, not new scope)."
     }
   ],
   "known_issues": [
@@ -60,6 +98,7 @@
     "Local strong model occasionally can't crack a hard research sub-question in 3 attempts (degenerate notes) \u2014 runs complete DEGRADED per ADR-010; revisit with frontier escalation in P4."
   ],
   "notes": [
+    "gate:p3 superseded by the analysis loop (P4.4): runs with claims now analyze+evaluate before completing; gate:p4 is the live gate.",
     "Frontier = deepseek/deepseek-v4-pro (user decision 2026-08-19): full escalation ladder + P4 Evaluator run without OpenAI/xAI.",
     "Phase 3 archived 2026-08-19 \u2014 gate:p3 green twice (25 and 35 live claims); 444 tests.",
     "P3 norms: no z.record/open maps in agent schemas; fast-tier prompts TERSE; output budgets carry reasoning headroom; bound output size in prompt AND schema; degenerate-string guard.",

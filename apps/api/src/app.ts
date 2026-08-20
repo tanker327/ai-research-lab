@@ -3,7 +3,9 @@
 import { cancelRun, startRun } from "@lab/core";
 import type { Db } from "@lab/db";
 import {
+  selectAgentVerdicts,
   selectAttemptsByRun,
+  selectCheckpointsByRun,
   selectEventsAfter,
   selectLiveClaimEvidence,
   selectLiveClaims,
@@ -13,6 +15,7 @@ import {
   selectTasksByRun,
   selectToolCallsByAttempt,
 } from "@lab/db";
+import { computeCoverage } from "@lab/evidence";
 import { CreateRunRequest } from "@lab/schemas";
 import { Hono } from "hono";
 import { streamSSE } from "hono/streaming";
@@ -100,6 +103,35 @@ export function createApp({ db, bus, log }: ApiDeps): Hono {
         })),
       })),
     );
+  });
+
+  // Evaluator verdicts (4.6): decision + issues + requiredActions + the
+  // coverage the model saw, one row per cycle.
+  app.get("/runs/:id/verdicts", async (c) => {
+    return c.json(await selectAgentVerdicts(db, c.req.param("id")));
+  });
+
+  // Per-cycle CoverageSummaries (§24.5): historical from the verdict rows
+  // (persisted verbatim, R13) + the current live computation.
+  app.get("/runs/:id/coverage", async (c) => {
+    const runId = c.req.param("id");
+    const [current, verdicts] = await Promise.all([
+      computeCoverage(db, runId),
+      selectAgentVerdicts(db, runId),
+    ]);
+    return c.json({
+      current,
+      cycles: verdicts.map((v) => ({
+        cycle: (v.metadata.cycle as number) ?? null,
+        decision: v.decision,
+        coverage: v.metadata.coverage ?? null,
+        createdAt: v.createdAt,
+      })),
+    });
+  });
+
+  app.get("/runs/:id/checkpoints", async (c) => {
+    return c.json(await selectCheckpointsByRun(db, c.req.param("id")));
   });
 
   app.get("/runs/:id/attempts", async (c) => {
