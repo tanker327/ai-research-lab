@@ -98,16 +98,21 @@ try {
   console.log("— Leg B: cycle guard (cap=1, impossible rubric)");
   startStack({ DEFAULT_MAX_EVAL_CYCLES: "1" });
   await waitApi();
-  // Live-gate finding (first run): a future-dated "impossible" criterion was
-  // reasonably ACCEPTed as documented absence — the rubric must be MEASURABLY
-  // unmet in coverage and explicitly forbid absence-acceptance.
+  // Live-gate findings: (run 1) a future-dated "impossible" criterion was
+  // reasonably ACCEPTed as documented absence — thresholds must be MEASURABLY
+  // unmet in coverage; (run 4) harsh thresholds leaked into RESEARCH — honest
+  // researchers self-rejected chasing 12 publishers and the run died with
+  // zero claims before evaluation. The thresholds burden the EVALUATOR only;
+  // research is pinned to one easy source so the run reliably reaches it.
   const runB = await createRun(
     "Does PostgreSQL support transactional DDL? " +
-      "STRICT success criteria that MUST be verified against the coverage numbers: the " +
-      "evidence base must span at least 12 distinct non-vendor publishers AND at least 5 " +
-      "distinct benchmark origins. If the coverage does not meet these thresholds the " +
-      "analysis MUST NOT be accepted — documented absence or accepted uncertainty does " +
-      "NOT satisfy these thresholds. " +
+      "RESEARCH INSTRUCTIONS (for planning and research): fetch ONLY the single primary " +
+      "source below — one source is fully sufficient research for this run; do NOT " +
+      "survey additional publishers or benchmarks; plan a single research task. " +
+      "ACCEPTANCE CRITERIA (applied at evaluation time, NOT during research): the run " +
+      "must NOT be accepted unless the coverage numbers show at least 12 distinct " +
+      "non-vendor publishers AND at least 5 distinct benchmark origins. Documented " +
+      "absence or accepted uncertainty does NOT satisfy these thresholds. " +
       "Primary source (content page, not a TOC): " +
       "https://wiki.postgresql.org/wiki/Transactional_DDL_in_PostgreSQL:_A_Competitive_Analysis",
     "phase-4 gate leg B",
