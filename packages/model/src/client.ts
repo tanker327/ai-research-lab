@@ -210,7 +210,10 @@ export function createModelClient(opts: ModelClientOptions): ModelClient {
             "SCHEMA_FAILURE",
             `model output failed schema validation (${args.model})`,
             // detail is what attempts.error persists — keep the cause legible.
-            { cause: err, detail: { cause: String(err instanceof Error ? err.message : err).slice(0, 500) } },
+            {
+              cause: err,
+              detail: { cause: String(err instanceof Error ? err.message : err).slice(0, 500) },
+            },
           );
         }
       }

@@ -143,16 +143,19 @@ export async function seedEvidence(
     excerpt: string;
     sourceClass?: string;
     sourceUrl?: string | null;
+    publisher?: string | null;
+    publishedAt?: string | null;
     vendorAffiliated?: boolean | null;
     benchmarkOrigin?: string | null;
     metadata?: Record<string, unknown>;
   },
 ): Promise<void> {
   await tx.execute(sql`
-    INSERT INTO evidence (id, run_id, task_id, attempt_id, source_class, source_url,
-                          vendor_affiliated, benchmark_origin, excerpt, metadata)
+    INSERT INTO evidence (id, run_id, task_id, attempt_id, source_class, source_url, publisher,
+                          published_at, vendor_affiliated, benchmark_origin, excerpt, metadata)
     VALUES (${e.id}, ${e.runId}, ${e.taskId}, ${e.attemptId}, ${e.sourceClass ?? "community"},
-            ${e.sourceUrl ?? null}, ${e.vendorAffiliated ?? null},
+            ${e.sourceUrl ?? null}, ${e.publisher ?? null},
+            ${e.publishedAt ?? null}::timestamptz, ${e.vendorAffiliated ?? null},
             ${e.benchmarkOrigin ?? null}, ${e.excerpt}, ${JSON.stringify(e.metadata ?? {})}::jsonb)`);
 }
 

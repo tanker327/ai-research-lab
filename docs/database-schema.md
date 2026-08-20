@@ -506,7 +506,8 @@ SELECT
   avg(CASE WHEN vendor_affiliated IS DISTINCT FROM false THEN 1.0 ELSE 0.0 END)
                                                   AS vendor_ratio   -- NULL counted as vendor (safety)
 FROM live_evidence WHERE run_id = $1;
--- per-key-question variant filters via a claim→key_question mapping in claim metadata
+-- per-key-question variant derives the question from task lineage (raw_claims.task_id →
+-- research_tasks.input→>'researchQuestion') — phase-4-plan D2; no claim-metadata mapping
 ```
 
 ## 9.5 Provenance walk (report chip → source)

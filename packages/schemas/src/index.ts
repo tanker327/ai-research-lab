@@ -1,5 +1,6 @@
 export * from "./agents";
 export * from "./api";
+export * from "./coverage";
 export * from "./decisions";
 export * from "./enums";
 export * from "./errors";

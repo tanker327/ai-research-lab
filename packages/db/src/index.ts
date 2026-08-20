@@ -6,6 +6,7 @@ export * from "./raw/calls";
 export * from "./raw/canonical";
 export * from "./raw/claim";
 export * from "./raw/context";
+export * from "./raw/coverage";
 export * from "./raw/decisions";
 export * from "./raw/evaluation";
 export * from "./raw/events";
