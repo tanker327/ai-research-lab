@@ -137,6 +137,13 @@ these three verbs; richer semantics stay deferred (§22).
 - **2026-08-20 (6.0) — Timeline SSE was silently frozen for P4/P5 events**
   (hardcoded Phase-1 event-name list + no history refetch). Filed as G5/6.3;
   load-bearing for the gate.
+- **2026-08-20 (6.4) — task machine gained FAILED → CANCELLED (human
+  retirement).** D5's `retry` verb needs the failed loop task out of the
+  completion sweep's failed set without special-case metadata; retirement is
+  status-based by design ("nothing is deleted during a run"). Implementation-
+  plan §5.1 updated in the same commit; the exhaustive state-machine test
+  matrix asserts the new row. FAILED is no longer strictly terminal — its only
+  exit is CANCELLED, and only a human resolution path uses it.
 
 ## Test plan
 

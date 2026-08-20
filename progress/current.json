@@ -55,17 +55,17 @@
     {
       "id": "6.5",
       "title": "Chip jump-and-flash, keyboard nav, sidebar cleanup (D6)",
-      "status": "in_progress",
+      "status": "completed",
       "priority": 6,
       "depends_on": ["6.1"],
-      "started_at": "2026-08-20"
+      "started_at": "2026-08-20",
+      "completed_at": "2026-08-20",
+      "commit": "7e9073c"
     }
   ],
   "known_issues": [
     "OPTIONAL: openai/xai hub keys upgrade the frontier beyond deepseek-v4-pro — alias swap + FRONTIER_STRUCTURED_MODE=json_schema.",
-    "Firecrawl scrape latency invisible in console — candidate Phase 6 item (surfaced in P4 latency analysis).",
-    "gate:p4 single-process end-to-end pass still outstanding (all assertions verified manually after crash-resume); gate:p5 passed single-process first try.",
-    "Checkpoint resolution UI missing — WAITING_HUMAN runs are resolved via SQL today (banner says so); candidate Phase 6 item."
+    "gate:p4 single-process end-to-end pass still outstanding (all assertions verified manually after crash-resume); gate:p5 passed single-process first try."
   ],
   "notes": [
     "Phase 5 archived 2026-08-20 — gate passed first run: doctored draft rejected with named checks; sampled sentence walked chip→claim→evidence→attempt via API only. Kept run 01a01f87-c481 (phase-5 gate leg A). 501 tests.",
