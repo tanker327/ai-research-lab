@@ -2,7 +2,15 @@
 // sweep against real Postgres — atomic accept+interpret, the executable
 // ADR-011 concreteness guard, the ADR-016 cycle guard, and the reject path
 // riding the ordinary retry ladder (rule 10).
-import { createDb, deleteRun, insertHumanCheckpoint, promoteReadyTasks, seedAttempt, seedRun, seedTask } from "@lab/db";
+import {
+  createDb,
+  deleteRun,
+  insertHumanCheckpoint,
+  promoteReadyTasks,
+  seedAttempt,
+  seedRun,
+  seedTask,
+} from "@lab/db";
 import { newId, type PlannerOutput } from "@lab/schemas";
 import { sql } from "drizzle-orm";
 import { afterAll, afterEach, describe, expect, it } from "vitest";
