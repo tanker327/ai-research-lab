@@ -121,6 +121,19 @@ review screen when the pending reason is plan_review.
 
 ## Findings during the phase (append-only)
 
+- **2026-08-20 — the attempt cap starved the tier escalation (fixed,
+  41c2cd0).** Live on the user's RTX run: analysis attempt 1 hit the
+  reasoning-exhaustion class (131-claim bundle, finish=length), attempt 2 was
+  eaten by an externally SIGTERMed worker (TRANSIENT_INFRA via the
+  stale-claim sweep), attempt 3 replayed the cached truncation in 40ms — and
+  the designed SCHEMA_FAILURE→frontier escalation died on max_attempts.
+  Design §14 already said infra "never counts against intelligence-retry
+  budget"; the code now honors it: `enforceAttemptCap` excludes infra
+  casualties (both call sites). Runaway stale-claim churn stays bounded by
+  the infra axis itself (INFRA_BACKOFF ×3 → FAILED); the churn test drives 4
+  kill rounds to prove it, and a wiring test replays the quality-path
+  boundary (maxAttempts=2, one casualty → escalation survives and the
+  frontier directive lands on the task row).
 - **2026-08-20 (gate, API leg) — PASSED first run.** The review run parked at
   plan_review with its research task held CREATED (hold verified under a live
   scheduler); a question rewrite, a task add, a task remove, and an

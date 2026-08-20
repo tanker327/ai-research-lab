@@ -975,6 +975,16 @@ The SSE stream is a tail over the existing event write path — it powers the li
 > default `message` frame, so clients listen generically (`es.onmessage`)
 > instead of hardcoding event-type names (P6 finding: a hardcoded list froze
 > the timeline for every event type added after Phase 1).
+>
+> **Amended 2026-08-20 (P7, interactive plan review):** `GET /runs/:runId/spec`
+> (latest research spec, read-only); plan-edit writes, legal only while a
+> `plan_review` checkpoint is pending and fully audited (PLAN_EDITED gate
+> events + human_plan_edit DecisionRecords): `PATCH|POST|DELETE
+> /runs/:runId/tasks(/:taskId)` and `PATCH /runs/:runId/routing` (run-scoped
+> per-role tier map, resolved task-override > run map > §5.6 policy). The
+> checkpoint resolve endpoint gained the `approve` verb (plan_review only);
+> `CreateRunRequest` gained `reviewPlan` and `roleTiers`. See
+> docs/plans/phase-7-plan.md D1–D6.
 
 ## 24.6 UI Specification (the mockup is normative)
 

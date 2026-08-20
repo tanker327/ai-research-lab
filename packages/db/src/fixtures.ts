@@ -62,14 +62,16 @@ export async function seedAttempt(
     attemptNumber?: number;
     status?: string;
     output?: Record<string, unknown> | null;
+    error?: Record<string, unknown> | null; // { category, message } (P7 cap tests)
   },
 ): Promise<void> {
   await tx.execute(sql`
     INSERT INTO attempts (id, task_id, run_id, attempt_number, status, agent_name,
-                          agent_version, output)
+                          agent_version, output, error)
     VALUES (${a.id}, ${a.taskId}, ${a.runId}, ${a.attemptNumber ?? 1},
             ${a.status ?? "ACCEPTED"}, 'fixture', 'v1',
-            ${a.output ? JSON.stringify(a.output) : null}::jsonb)`);
+            ${a.output ? JSON.stringify(a.output) : null}::jsonb,
+            ${a.error ? JSON.stringify(a.error) : null}::jsonb)`);
 }
 
 export async function seedSpec(
