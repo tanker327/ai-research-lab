@@ -1,91 +1,67 @@
 {
-  "current_phase": "Phase 3 \u2014 Planner \u00b7 Researcher \u00b7 Extractor (not started)",
-  "plan": "docs/implementation-plan.md \u00a76 Phase 3; draft docs/plans/phase-3-plan.md before coding (per-phase cadence)",
-  "gate": "implementation-plan \u00a76 Phase 3 gate; console lights up evidence/claims + Planner-driven new-run (standing UI rule)",
+  "current_phase": "Phase 4 \u2014 Analyst \u00b7 Evaluator \u00b7 Autonomous Loop (not started)",
+  "plan": "docs/implementation-plan.md \u00a76 Phase 4; draft docs/plans/phase-4-plan.md before coding (per-phase cadence)",
+  "gate": "THE MILESTONE: Evaluator finds a genuine gap \u2192 core creates follow-up \u2192 executes \u2192 analysis v2 \u2192 ACCEPT on cycle 2; cycle guard hard-stops at 3 with WAITING_HUMAN. Console wires analysis/verdicts (standing UI rule).",
   "tasks": [
     {
-      "id": "3.0",
-      "title": "Draft docs/plans/phase-3-plan.md (decisions: context builder shape, prompt v1 conventions incl. bounded-schema norm from P2 gate finding) \u2014 review with user before coding",
-      "status": "completed",
+      "id": "4.0",
+      "title": "Draft docs/plans/phase-4-plan.md (decisions: Evaluator tier while frontier dark, CoverageSummary shape, RESEARCH_MORE interpretation) \u2014 review with user before coding",
+      "status": "pending",
       "priority": 1,
-      "depends_on": [],
-      "completed_at": "2026-08-19",
-      "notes": "docs/plans/phase-3-plan.md drafted; D3 (planner tier while frontier dark) and D4 (search provider vs seedUrls) presented for user decision"
+      "depends_on": []
     },
     {
-      "id": "3.1",
-      "title": "packages/context: forPlanner/forResearcher builders + token budgeting (R12: output persisted verbatim; never selects reasoning artifacts \u2014 ADR-018)",
-      "status": "completed",
+      "id": "4.1",
+      "title": "Coverage summary computation (deterministic) \u2192 persisted on evaluation (packages/evidence)",
+      "status": "pending",
       "priority": 2,
-      "depends_on": ["3.0"],
-      "started_at": "2026-08-19",
-      "completed_at": "2026-08-19"
+      "depends_on": ["4.0"]
     },
     {
-      "id": "3.2",
-      "title": "Planner v1: clarify-stage prompt, PlannerOutput schema, PlanDelta interpretation in core (staged planning, ADR-011)",
-      "status": "completed",
+      "id": "4.2",
+      "title": "Analyst v1: claim-bundle context (K=3 heuristic), findings-cite-claims schema check",
+      "status": "pending",
       "priority": 3,
-      "depends_on": ["3.1"],
-      "started_at": "2026-08-19",
-      "completed_at": "2026-08-19"
+      "depends_on": ["4.1"]
     },
     {
-      "id": "3.3",
-      "title": "Researcher v1: pass-1 tool loop \u2192 Research Note artifact + tool-layer sourcesVisited",
-      "status": "completed",
+      "id": "4.3",
+      "title": "Evaluator v1: merged critic+judge prompt, decision schema",
+      "status": "pending",
       "priority": 4,
-      "depends_on": ["3.1"],
-      "started_at": "2026-08-19",
-      "completed_at": "2026-08-19",
-      "notes": "live golden run pending SearXNG endpoint (tracked user action)"
+      "depends_on": ["4.2"]
     },
     {
-      "id": "3.4",
-      "title": "Extractor v1: guided decoding, auto-created extract task after research accept",
-      "status": "completed",
+      "id": "4.4",
+      "title": "Core interprets decisions: RESEARCH_MORE \u2192 tasks from requiredActions; REPLAN \u2192 planner task; cycle guard enforced",
+      "status": "pending",
       "priority": 5,
-      "depends_on": ["3.3"],
-      "started_at": "2026-08-19",
-      "completed_at": "2026-08-19"
+      "depends_on": ["4.3"]
     },
     {
-      "id": "3.5",
-      "title": "packages/evidence: canonicalization (normalize \u2192 trgm candidates \u2192 batch-confirm \u2192 upsert)",
-      "status": "completed",
+      "id": "4.5",
+      "title": "Intelligence-retry wiring end to end (deterministic reject \u2192 ladder \u2192 tier escalation)",
+      "status": "pending",
       "priority": 6,
-      "depends_on": ["3.4"],
-      "started_at": "2026-08-19",
-      "completed_at": "2026-08-19"
+      "depends_on": ["4.4"]
     },
     {
-      "id": "3.6",
-      "title": "Deterministic checks: min-evidence, non-vendor rule (core/checks)",
-      "status": "completed",
+      "id": "4.6",
+      "title": "Console wiring: analysis + evaluator verdicts + cycle view (standing UI rule)",
+      "status": "pending",
       "priority": 7,
-      "depends_on": ["3.4"],
-      "started_at": "2026-08-19",
-      "completed_at": "2026-08-19"
-    },
-    {
-      "id": "3.7",
-      "title": "Console wiring: evidence & claims browser, Planner-driven new-run (standing UI rule)",
-      "status": "in_progress",
-      "priority": 8,
-      "depends_on": ["3.5"],
-      "started_at": "2026-08-19"
+      "depends_on": ["4.4"]
     }
   ],
   "known_issues": [
-    "USER ACTION: openai/xai keys on the deployed hub are invalid \u2014 frontier tier dark; required before Phase 4 tier escalation.",
-    "USER ACTION: share SearXNG endpoint (SEARXNG_BASE_URL) before Session C's live researcher run / gate:p3 (D4 resolved: self-hosted SearXNG).",
-    "Dev stack and test suite share one Postgres \u2014 stop dev processes before bun run check (separate test DB is a candidate chore; needs approval)."
+    "USER ACTION: openai/xai keys on the deployed hub are invalid \u2014 frontier tier dark (FRONTIER_ENABLED=0). HARD BLOCKER for Phase 4 tier escalation + Evaluator-on-frontier.",
+    "Dev stack and test suite share one Postgres \u2014 stop dev processes before bun run check (separate test DB is a candidate chore; needs approval).",
+    "Local strong model occasionally can't crack a hard research sub-question in 3 attempts (degenerate notes) \u2014 runs complete DEGRADED per ADR-010; revisit with frontier escalation in P4."
   ],
   "notes": [
-    "Phase 2 archived to progress/archive/phase-2.json 2026-08-19 \u2014 gate green twice; 394 tests.",
-    "P2 gate norm for all agent schemas: every array/string bounded (.max()) \u2014 constrained decoding degenerates on unbounded arrays.",
-    "Reasoning models need maxOutputTokens headroom (local model thinks before answering).",
-    "Standing UI rule: every phase DoD wires its capabilities into apps/web (ticket 3.7).",
-    "D3 resolved: PLANNER_TIER=strong_local + warn event until hub frontier keys fixed (2026-08-19)."
+    "Phase 3 archived 2026-08-19 \u2014 gate:p3 green twice (25 and 35 live claims); 444 tests.",
+    "P3 norms: no z.record/open maps in agent schemas; fast-tier prompts TERSE; output budgets carry reasoning headroom; bound output size in prompt AND schema; degenerate-string guard.",
+    "D4 final: Firecrawl at 192.168.10.120:3002 backs web_search + web_fetch (markdown scrape).",
+    "Standing UI rule: every phase DoD wires its capabilities into apps/web (ticket 4.6)."
   ]
 }

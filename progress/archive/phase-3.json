@@ -1,0 +1,92 @@
+{
+  "current_phase": "Phase 3 \u2014 Planner \u00b7 Researcher \u00b7 Extractor (not started)",
+  "plan": "docs/implementation-plan.md \u00a76 Phase 3; draft docs/plans/phase-3-plan.md before coding (per-phase cadence)",
+  "gate": "implementation-plan \u00a76 Phase 3 gate; console lights up evidence/claims + Planner-driven new-run (standing UI rule)",
+  "tasks": [
+    {
+      "id": "3.0",
+      "title": "Draft docs/plans/phase-3-plan.md (decisions: context builder shape, prompt v1 conventions incl. bounded-schema norm from P2 gate finding) \u2014 review with user before coding",
+      "status": "completed",
+      "priority": 1,
+      "depends_on": [],
+      "completed_at": "2026-08-19",
+      "notes": "docs/plans/phase-3-plan.md drafted; D3 (planner tier while frontier dark) and D4 (search provider vs seedUrls) presented for user decision"
+    },
+    {
+      "id": "3.1",
+      "title": "packages/context: forPlanner/forResearcher builders + token budgeting (R12: output persisted verbatim; never selects reasoning artifacts \u2014 ADR-018)",
+      "status": "completed",
+      "priority": 2,
+      "depends_on": ["3.0"],
+      "started_at": "2026-08-19",
+      "completed_at": "2026-08-19"
+    },
+    {
+      "id": "3.2",
+      "title": "Planner v1: clarify-stage prompt, PlannerOutput schema, PlanDelta interpretation in core (staged planning, ADR-011)",
+      "status": "completed",
+      "priority": 3,
+      "depends_on": ["3.1"],
+      "started_at": "2026-08-19",
+      "completed_at": "2026-08-19"
+    },
+    {
+      "id": "3.3",
+      "title": "Researcher v1: pass-1 tool loop \u2192 Research Note artifact + tool-layer sourcesVisited",
+      "status": "completed",
+      "priority": 4,
+      "depends_on": ["3.1"],
+      "started_at": "2026-08-19",
+      "completed_at": "2026-08-19",
+      "notes": "live golden run pending SearXNG endpoint (tracked user action)"
+    },
+    {
+      "id": "3.4",
+      "title": "Extractor v1: guided decoding, auto-created extract task after research accept",
+      "status": "completed",
+      "priority": 5,
+      "depends_on": ["3.3"],
+      "started_at": "2026-08-19",
+      "completed_at": "2026-08-19"
+    },
+    {
+      "id": "3.5",
+      "title": "packages/evidence: canonicalization (normalize \u2192 trgm candidates \u2192 batch-confirm \u2192 upsert)",
+      "status": "completed",
+      "priority": 6,
+      "depends_on": ["3.4"],
+      "started_at": "2026-08-19",
+      "completed_at": "2026-08-19"
+    },
+    {
+      "id": "3.6",
+      "title": "Deterministic checks: min-evidence, non-vendor rule (core/checks)",
+      "status": "completed",
+      "priority": 7,
+      "depends_on": ["3.4"],
+      "started_at": "2026-08-19",
+      "completed_at": "2026-08-19"
+    },
+    {
+      "id": "3.7",
+      "title": "Console wiring: evidence & claims browser, Planner-driven new-run (standing UI rule)",
+      "status": "completed",
+      "priority": 8,
+      "depends_on": ["3.5"],
+      "started_at": "2026-08-19",
+      "completed_at": "2026-08-19"
+    }
+  ],
+  "known_issues": [
+    "USER ACTION: openai/xai keys on the deployed hub are invalid \u2014 frontier tier dark; required before Phase 4 tier escalation.",
+    "USER ACTION: share SearXNG endpoint (SEARXNG_BASE_URL) before Session C's live researcher run / gate:p3 (D4 resolved: self-hosted SearXNG).",
+    "Dev stack and test suite share one Postgres \u2014 stop dev processes before bun run check (separate test DB is a candidate chore; needs approval)."
+  ],
+  "notes": [
+    "Phase 2 archived to progress/archive/phase-2.json 2026-08-19 \u2014 gate green twice; 394 tests.",
+    "P2 gate norm for all agent schemas: every array/string bounded (.max()) \u2014 constrained decoding degenerates on unbounded arrays.",
+    "Reasoning models need maxOutputTokens headroom (local model thinks before answering).",
+    "Standing UI rule: every phase DoD wires its capabilities into apps/web (ticket 3.7).",
+    "D3 resolved: PLANNER_TIER=strong_local + warn event until hub frontier keys fixed (2026-08-19)."
+  ]
+}
