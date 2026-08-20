@@ -54,11 +54,12 @@
     }
   ],
   "known_issues": [
-    "USER ACTION: openai/xai keys on the deployed hub are invalid \u2014 frontier tier dark (FRONTIER_ENABLED=0). HARD BLOCKER for Phase 4 tier escalation + Evaluator-on-frontier.",
+    "OPTIONAL: openai/xai hub keys would upgrade the frontier beyond deepseek-v4-pro; no longer a blocker \u2014 swap MODEL_FRONTIER alias + FRONTIER_STRUCTURED_MODE=json_schema when available.",
     "Dev stack and test suite share one Postgres \u2014 stop dev processes before bun run check (separate test DB is a candidate chore; needs approval).",
     "Local strong model occasionally can't crack a hard research sub-question in 3 attempts (degenerate notes) \u2014 runs complete DEGRADED per ADR-010; revisit with frontier escalation in P4."
   ],
   "notes": [
+    "Frontier = deepseek/deepseek-v4-pro (user decision 2026-08-19): full escalation ladder + P4 Evaluator run without OpenAI/xAI.",
     "Phase 3 archived 2026-08-19 \u2014 gate:p3 green twice (25 and 35 live claims); 444 tests.",
     "P3 norms: no z.record/open maps in agent schemas; fast-tier prompts TERSE; output budgets carry reasoning headroom; bound output size in prompt AND schema; degenerate-string guard.",
     "D4 final: Firecrawl at 192.168.10.120:3002 backs web_search + web_fetch (markdown scrape).",

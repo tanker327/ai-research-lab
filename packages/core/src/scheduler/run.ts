@@ -154,7 +154,10 @@ export async function sweepRunCompletion(
       const counts = await taskStatusCounts(tx, run.id);
       const total = Object.values(counts).reduce((a, b) => a + b, 0);
       if (total === 0) return; // nothing seeded yet
-      const terminal = (counts.DONE ?? 0) + (counts.FAILED ?? 0) + (counts.CANCELLED ?? 0);
+      // BLOCKED is terminal: a task whose dependency failed can never run
+      // (found live: a run hung forever on one BLOCKED leaf).
+      const terminal =
+        (counts.DONE ?? 0) + (counts.FAILED ?? 0) + (counts.CANCELLED ?? 0) + (counts.BLOCKED ?? 0);
       if (terminal < total) return; // work still in flight
 
       const liveClaims = await countLiveClaims(tx, run.id);
@@ -205,7 +208,8 @@ export async function sweepRunCompletion(
       // DONE task completes even when some leaf tasks failed — the failures
       // stay visible (RUN_DEGRADED warn; the P4 Evaluator will judge them).
       // No claims to show for it → the run failed.
-      const failedOrCancelled = (counts.FAILED ?? 0) + (counts.CANCELLED ?? 0);
+      const failedOrCancelled =
+        (counts.FAILED ?? 0) + (counts.CANCELLED ?? 0) + (counts.BLOCKED ?? 0);
       if (failedOrCancelled > 0 && !((counts.DONE ?? 0) > 0 && liveClaims > 0)) {
         assertRunTransition(locked.status, "FAILED");
         await updateRunStatus(tx, run.id, "FAILED");

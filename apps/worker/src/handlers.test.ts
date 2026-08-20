@@ -140,7 +140,8 @@ function stubHubFetch(json: unknown): typeof globalThis.fetch {
 }
 
 function agentDeps(fetchImpl: typeof globalThis.fetch) {
-  const config = loadConfig({ DATABASE_URL: url });
+  // PLANNER_TIER pinned off-frontier so the D3 downgrade-warn path stays exercised.
+  const config = loadConfig({ DATABASE_URL: url, PLANNER_TIER: "strong_local" });
   const artifacts = createArtifactStore("./data/test-artifacts");
   return {
     config,

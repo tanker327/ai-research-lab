@@ -111,10 +111,11 @@ AIHUB_BASE_URL=http://192.168.10.114/v1        # OpenAI-compatible (deployed hub
 AIHUB_SERVICE_NAME=research-lab                 # hub auth = x-service-name header, not a bearer key
 
 # Tiers bind to hub ALIASES (phase-2-plan D1) — the hub owns the concrete model behind each.
-MODEL_FRONTIER=best                             # openai/gpt-5.6-sol (needs valid key on hub)
+MODEL_FRONTIER=deepseek/deepseek-v4-pro         # strongest reachable judge (2026-08-19); 'best' once openai keys exist
 MODEL_STRONG_LOCAL=default                      # local model; json_schema + tools verified
 MODEL_FAST_LOCAL=cheapest                       # deepseek; json_object mode (D2)
-PLANNER_TIER=strong_local                       # TEMPORARY (phase-3-plan D3): frontier once hub keys work
+PLANNER_TIER=frontier                           # D3 closed: frontier = deepseek-v4-pro works
+FRONTIER_STRUCTURED_MODE=json_object            # deepseek has no wire json_schema (D2)
 FIRECRAWL_BASE_URL=http://192.168.10.120:3002   # D4 amended: self-hosted Firecrawl (search + markdown scrape)
 RESEARCHER_MAX_TOOL_CALLS=8                     # deterministic researcher loop cap (ADR-016)
 

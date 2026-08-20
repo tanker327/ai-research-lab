@@ -95,7 +95,12 @@ export type PlannedTaskInput = z.infer<typeof PlannedTaskInput>;
 
 export const PlannedTask = z.object({
   localId: z.string().min(1).max(60),
-  type: TaskType,
+  // V0.05: the Planner plans RESEARCH and ANALYZE only. extract tasks are
+  // control-plane-created after research accept (ADR-012); evaluate/
+  // synthesize/plan tasks are coordinator-owned (P4/P5 widen this). Found
+  // live: a frontier planner invented extract+synthesize tasks that could
+  // never run. Schema-level so guided decoding blocks it at the source.
+  type: z.enum(["research", "analyze"]),
   title: z.string().min(1).max(500),
   description: z.string().max(4000).default(""),
   researchQuestion: z.string().max(4000).optional(),

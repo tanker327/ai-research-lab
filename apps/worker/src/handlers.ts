@@ -75,6 +75,10 @@ function tierModels(config: Config) {
   };
 }
 
+function tierModes(config: Config) {
+  return { frontier: config.FRONTIER_STRUCTURED_MODE };
+}
+
 // The per-attempt AgentContext (§5.5): tools scoped to the role, artifact
 // saves bound to the attempt — agents never hold a db handle (ADR-003).
 function agentContext(
@@ -133,6 +137,7 @@ async function guardDarkFrontier(
     work.attempt.attemptNumber,
     tierModels(deps.config),
     "strong_local",
+    tierModes(deps.config),
   );
   await emitEvent(db, {
     runId: work.task.runId,
@@ -157,11 +162,18 @@ function plannerHandler(deps: AgentDeps): TaskHandler {
     const input = await deps.context.forPlanner(work.task.runId, stage);
     await updateAttemptInput(db, work.attempt.id, input); // R12: verbatim
 
-    const route = resolveRoute(
+    const route = await guardDarkFrontier(
+      deps,
+      db,
+      work,
       "planner",
-      work.attempt.attemptNumber,
-      tierModels(deps.config),
-      deps.config.PLANNER_TIER,
+      resolveRoute(
+        "planner",
+        work.attempt.attemptNumber,
+        tierModels(deps.config),
+        deps.config.PLANNER_TIER,
+        tierModes(deps.config),
+      ),
     );
     if (route.tier !== "frontier") {
       // D3: loud, never silent — the console timeline shows the downgrade.
@@ -197,7 +209,13 @@ function researcherHandler(deps: AgentDeps): TaskHandler {
       db,
       work,
       "researcher",
-      resolveRoute("researcher", work.attempt.attemptNumber, tierModels(deps.config)),
+      resolveRoute(
+        "researcher",
+        work.attempt.attemptNumber,
+        tierModels(deps.config),
+        null,
+        tierModes(deps.config),
+      ),
     );
     const result = await researcherV1.run(input, agentContext(deps, db, work, "researcher", route));
 
@@ -228,7 +246,13 @@ function extractorHandler(deps: AgentDeps): TaskHandler {
     const input = await deps.context.forExtractor(work.task.id);
     await updateAttemptInput(db, work.attempt.id, input); // R12: verbatim
 
-    const route = resolveRoute("extractor", work.attempt.attemptNumber, tierModels(deps.config));
+    const route = resolveRoute(
+      "extractor",
+      work.attempt.attemptNumber,
+      tierModels(deps.config),
+      null,
+      tierModes(deps.config),
+    );
     const output = extractorV1.outputSchema.parse(
       await extractorV1.run(input, agentContext(deps, db, work, "extractor", route)),
     );

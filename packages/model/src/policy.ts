@@ -43,6 +43,8 @@ export function resolveRoute(
   attemptNumber: number,
   models: TierModels,
   overrideTier?: ModelTier | null,
+  // Per-deployment capability override (e.g. frontier=deepseek → json_object).
+  modeOverrides?: Partial<Record<ModelTier, StructuredMode>>,
 ): ResolvedRoute {
   const tier =
     overrideTier ??
@@ -62,5 +64,5 @@ export function resolveRoute(
       `tier '${tier}' has no model alias configured (MODEL_${tier.toUpperCase()}) — never silently downgraded`,
     );
   }
-  return { tier, model, mode: TIER_MODE[tier] };
+  return { tier, model, mode: modeOverrides?.[tier] ?? TIER_MODE[tier] };
 }

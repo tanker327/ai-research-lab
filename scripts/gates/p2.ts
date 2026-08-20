@@ -94,7 +94,9 @@ try {
     ["researcher", 1],
     ["extractor", 1],
   ] as const) {
-    const route = resolveRoute(role, attempt, models);
+    const route = resolveRoute(role, attempt, models, null, {
+      frontier: config.FRONTIER_STRUCTURED_MODE,
+    });
     const res = await client.generateStructured({
       ctx: ctx(route.tier),
       model: route.model,
@@ -113,7 +115,9 @@ try {
   }
 
   // 2. frontier: attempted, reported pending on missing hub keys — never skipped silently.
-  const frontierRoute = resolveRoute("planner", 1, models);
+  const frontierRoute = resolveRoute("planner", 1, models, "frontier", {
+    frontier: config.FRONTIER_STRUCTURED_MODE,
+  });
   try {
     const res = await client.generateStructured({
       ctx: ctx("frontier"),

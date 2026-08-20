@@ -18,6 +18,8 @@
 
 ## Findings during the phase (append-only)
 
+- **Frontier ≠ OpenAI/xAI (user decision 2026-08-19):** `MODEL_FRONTIER=deepseek/deepseek-v4-pro` — a genuinely stronger, working, near-free judge. Full three-rung ladder (local → deepseek-flash → deepseek-pro) live with zero OpenAI/xAI keys; `FRONTIER_ENABLED=1`, planner back on frontier per the original design, `FRONTIER_STRUCTURED_MODE=json_object`. Swap the alias when/if openai keys land — no code change (D1).
+
 **Gate hardening (2026-08-19, ~16 live gate runs → 12 real fixes).** The live gate surfaced a finding per run; each is a commit on main:
 
 - **Firecrawl replaces raw SearXNG (D4 final):** self-hosted Firecrawl (192.168.10.120:3002) backs `web_search` (/v2/search) AND `web_fetch` (clean-markdown /v2/scrape, direct fetch as fallback).
