@@ -3,7 +3,7 @@
 // dispatch (implementation-plan §5.5) starts with the Planner (ticket 3.2) —
 // Researcher/Extractor land with 3.3/3.4. A handler either returns (attempt
 // SUCCEEDED) or throws a CategorizedError (attempt FAILED with that category).
-import { extractorV1, plannerV1, researcherV1 } from "@lab/agents";
+import { analystV1, extractorV1, plannerV1, researcherV1 } from "@lab/agents";
 import type { ContextBuilder } from "@lab/context";
 import { type ClaimedWork, type Config, emitEvent } from "@lab/core";
 import {
@@ -18,6 +18,7 @@ import {
 } from "@lab/db";
 import { type ModelClient, resolveRoute } from "@lab/model";
 import {
+  type AnalysisOutput,
   CategorizedError,
   FakeTaskInput,
   newId,
@@ -85,7 +86,7 @@ function agentContext(
   deps: AgentDeps,
   db: Db,
   work: ClaimedWork,
-  role: "planner" | "researcher" | "extractor",
+  role: "planner" | "researcher" | "extractor" | "analyst",
   route: ReturnType<typeof resolveRoute>,
 ) {
   return {
@@ -128,7 +129,7 @@ async function guardDarkFrontier(
   deps: AgentDeps,
   db: Db,
   work: ClaimedWork,
-  role: "planner" | "researcher" | "extractor",
+  role: "planner" | "researcher" | "extractor" | "analyst",
   route: ReturnType<typeof resolveRoute>,
 ): Promise<ReturnType<typeof resolveRoute>> {
   if (route.tier !== "frontier" || deps.config.FRONTIER_ENABLED === 1) return route;
@@ -315,6 +316,63 @@ function extractorHandler(deps: AgentDeps): TaskHandler {
   };
 }
 
+function analystHandler(deps: AgentDeps): TaskHandler {
+  return async (db, work) => {
+    const input = await deps.context.forAnalyst(work.task.runId);
+    await updateAttemptInput(db, work.attempt.id, input); // R12: verbatim
+
+    const route = await guardDarkFrontier(
+      deps,
+      db,
+      work,
+      "analyst",
+      resolveRoute(
+        "analyst",
+        work.attempt.attemptNumber,
+        tierModels(deps.config),
+        null,
+        tierModes(deps.config),
+      ),
+    );
+    const ctx = agentContext(deps, db, work, "analyst", route);
+    const output = analystV1.outputSchema.parse(await analystV1.run(input, ctx));
+
+    // Human-readable memo alongside the structured output (design §6.4) —
+    // what the console and (P5) the Synthesizer's context render.
+    await ctx.saveArtifact({
+      type: "analysis_memo",
+      name: "analysis-memo.md",
+      mediaType: "text/markdown",
+      content: renderAnalysisMemo(output),
+      createdBy: "analyst/v1",
+    });
+    await updateAttemptOutput(db, work.attempt.id, output);
+  };
+}
+
+function renderAnalysisMemo(a: AnalysisOutput): string {
+  const cite = (ids: string[]) => ids.map((id) => `[${id.slice(0, 8)}]`).join("");
+  return [
+    "## Findings",
+    ...a.findings.map(
+      (f) =>
+        `- ${f.statement} ${cite(f.canonicalClaimIds)}${f.implication ? `\n  → ${f.implication}` : ""}`,
+    ),
+    ...(a.comparisons.length
+      ? [
+          "\n## Comparisons",
+          ...a.comparisons.map(
+            (c) => `- **${c.topic}**: ${c.statement} ${cite(c.canonicalClaimIds)}`,
+          ),
+        ]
+      : []),
+    ...(a.unresolvedQuestions.length
+      ? ["\n## Unresolved questions", ...a.unresolvedQuestions.map((q) => `- ${q}`)]
+      : []),
+    `\n## Confidence\n${a.confidenceNote}`,
+  ].join("\n");
+}
+
 function notYetImplemented(type: string, ticket: string): TaskHandler {
   return async () => {
     throw new CategorizedError(
@@ -351,7 +409,7 @@ export function createHandlerRegistry(deps?: AgentDeps): Record<TaskType, TaskHa
     plan: withFakeEscape(plannerHandler(deps)),
     research: withFakeEscape(researcherHandler(deps)),
     extract: withFakeEscape(extractorHandler(deps)),
-    analyze: withFakeEscape(notYetImplemented("analyze", "4.x")),
+    analyze: withFakeEscape(analystHandler(deps)),
     evaluate: withFakeEscape(notYetImplemented("evaluate", "4.x")),
     synthesize: withFakeEscape(notYetImplemented("synthesize", "5.x")),
     human_review: withFakeEscape(notYetImplemented("human_review", "4.x")),

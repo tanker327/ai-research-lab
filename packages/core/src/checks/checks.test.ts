@@ -2,11 +2,20 @@
 // attempt failing a deterministic check is REJECTED with evaluations rows,
 // a DecisionRecord, and a ladder verdict (rule 10). Fake outputs skip checks.
 import { createDb, deleteRun, seedAttempt, seedEvidence, seedRun, seedTask } from "@lab/db";
-import { type ExtractorOutput, newId, type ResearcherOutput } from "@lab/schemas";
+import {
+  type AnalysisOutput,
+  type ExtractorOutput,
+  newId,
+  type ResearcherOutput,
+} from "@lab/schemas";
 import { sql } from "drizzle-orm";
 import { afterAll, afterEach, describe, expect, it } from "vitest";
 import { sweepEvaluations } from "../scheduler/evaluate";
-import { extractorPreAcceptChecks, researcherPreAcceptChecks } from "./index";
+import {
+  analystPreAcceptChecks,
+  extractorPreAcceptChecks,
+  researcherPreAcceptChecks,
+} from "./index";
 
 const url = process.env.DATABASE_URL ?? "postgres://lab:lab@localhost:5434/research_lab";
 const { db, close } = createDb(url);
@@ -163,5 +172,32 @@ describe("checks in the evaluation sweep", () => {
     await seedAttempt(db, { id: newId(), taskId, runId, status: "SUCCEEDED", output: null });
     const result = await sweepEvaluations(db);
     expect(result.accepted).toContain(taskId);
+  });
+});
+
+describe("analyst check (pure)", () => {
+  const ANALYSIS: AnalysisOutput = {
+    findings: [
+      { statement: "PG supports transactional DDL", canonicalClaimIds: ["c1"], implication: null },
+      {
+        statement: "limits exist",
+        canonicalClaimIds: ["c2", "c1"],
+        implication: "plan migrations",
+      },
+    ],
+    comparisons: [{ topic: "vs MySQL", statement: "PG stronger", canonicalClaimIds: ["c2"] }],
+    unresolvedQuestions: [],
+    confidenceNote: "solid",
+  };
+
+  it("passes when every cited id is live", () => {
+    expect(analystPreAcceptChecks(ANALYSIS, new Set(["c1", "c2"]))).toHaveLength(0);
+  });
+
+  it("rejects unknown ids (findings AND comparisons), listing them", () => {
+    const failures = analystPreAcceptChecks(ANALYSIS, new Set(["c1"]));
+    expect(failures).toHaveLength(1);
+    expect(failures[0]).toMatchObject({ check: "check:findings_cite_claims", severity: "reject" });
+    expect(failures[0]?.reason).toContain("c2");
   });
 });

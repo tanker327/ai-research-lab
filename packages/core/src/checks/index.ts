@@ -2,7 +2,7 @@
 // functions — they decide WHETHER an output is rejected; decideRetry decides
 // what happens next (rule 10). They run only when the attempt output parses
 // as the real agent contract, so fake-handler attempts (demos, gates) skip.
-import type { ExtractorOutput, ResearcherOutput } from "@lab/schemas";
+import type { AnalysisOutput, ExtractorOutput, ResearcherOutput } from "@lab/schemas";
 
 export interface CheckFailure {
   check: string; // 'check:min_evidence' — evaluations.evaluator_name
@@ -66,4 +66,27 @@ export function extractorPreAcceptChecks(
     });
   }
   return failures;
+}
+
+// Findings-cite-claims (ticket 4.2, design §6.4): every id an analysis cites
+// must be a live canonical claim. Zero-citation findings can't decode (schema
+// min 1); this closes the other hole — invented or stale ids. Referential
+// integrity is code, not prompt.
+export function analystPreAcceptChecks(
+  output: AnalysisOutput,
+  liveClaimIds: ReadonlySet<string>,
+): CheckFailure[] {
+  const cited = [
+    ...output.findings.flatMap((f) => f.canonicalClaimIds),
+    ...output.comparisons.flatMap((c) => c.canonicalClaimIds),
+  ];
+  const unknown = [...new Set(cited.filter((id) => !liveClaimIds.has(id)))];
+  if (unknown.length === 0) return [];
+  return [
+    {
+      check: "check:findings_cite_claims",
+      reason: `analysis cites ${unknown.length} id(s) that are not live canonical claims: ${unknown.slice(0, 5).join(", ")}${unknown.length > 5 ? ", …" : ""}`,
+      severity: "reject",
+    },
+  ];
 }

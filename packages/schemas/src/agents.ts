@@ -250,3 +250,66 @@ export const ExtractorInput = z.object({
   question: z.string().max(4000),
 });
 export type ExtractorInput = z.infer<typeof ExtractorInput>;
+
+// ---- Analyst (design §6.4, ticket 4.2) ----
+// Reads ONLY live canonical claims + evidence via the Context Builder (P9);
+// findings must cite claim ids — a finding with zero citations cannot decode
+// (min 1), and unknown ids are a deterministic pre-accept reject.
+
+export const EvidenceView = z.object({
+  relation: z.string().max(40),
+  sourceClass: z.string().max(40),
+  sourceUrl: z.string().max(2000).nullable(),
+  vendorAffiliated: z.boolean().nullable(), // null = unknown (treated as vendor)
+  benchmarkOrigin: z.string().max(200).nullable(),
+  excerpt: z.string().max(1000),
+});
+export type EvidenceView = z.infer<typeof EvidenceView>;
+
+export const CanonicalClaimView = z.object({
+  id: z.string().max(40),
+  subjectKey: z.string().max(200),
+  predicateKey: z.string().max(200),
+  statement: z.string().max(1000),
+  status: z.string().max(40),
+  contestNote: z.string().max(2000).nullable(),
+  evidence: z.array(EvidenceView).max(3), // K=3 strongest (design §12)
+});
+export type CanonicalClaimView = z.infer<typeof CanonicalClaimView>;
+
+export const ContestedClaimView = z.object({
+  claimId: z.string().max(40),
+  statement: z.string().max(1000),
+  contestNote: z.string().max(2000),
+});
+export type ContestedClaimView = z.infer<typeof ContestedClaimView>;
+
+export const AnalystInput = z.object({
+  specification: ResearchSpecification,
+  claimBundle: z.array(CanonicalClaimView).max(300),
+  openContests: z.array(ContestedClaimView).max(50),
+  timeContext: z.string().max(500),
+});
+export type AnalystInput = z.infer<typeof AnalystInput>;
+
+export const Finding = z.object({
+  statement: z.string().min(1).max(2000),
+  canonicalClaimIds: z.array(z.string().max(40)).min(1).max(20),
+  implication: z.string().max(2000).nullable(), // what it means for the user's goal
+});
+export type Finding = z.infer<typeof Finding>;
+
+export const Comparison = z.object({
+  topic: z.string().min(1).max(200),
+  statement: z.string().min(1).max(2000),
+  canonicalClaimIds: z.array(z.string().max(40)).min(1).max(20),
+});
+export type Comparison = z.infer<typeof Comparison>;
+
+export const AnalysisOutput = z.object({
+  findings: z.array(Finding).min(1).max(20),
+  comparisons: z.array(Comparison).max(10),
+  unresolvedQuestions: z.array(shortText).max(15),
+  confidenceNote: z.string().min(1).max(2000), // prose calibration, not a fake float
+});
+export type AnalysisOutput = z.infer<typeof AnalysisOutput>;

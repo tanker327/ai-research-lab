@@ -284,3 +284,47 @@ describe("forExtractor", () => {
     });
   });
 });
+
+describe("forAnalyst", () => {
+  it("builds spec + claim bundle (K evidence, ids present) + open contests", async () => {
+    const g = await seedGraph();
+    await seedSpec(db, {
+      id: newId(),
+      runId: g.runId,
+      objective: "compare quantization options",
+      successCriteria: ["covers GGUF and AWQ"],
+      keyQuestions: ["what formats exist?"],
+    });
+    const builder = createContextBuilder({ db, capabilities: CAPS });
+    const input = await builder.forAnalyst(g.runId);
+
+    expect(input.specification.objective).toBe("compare quantization options");
+    expect(input.claimBundle).toHaveLength(2);
+    const supported = input.claimBundle.find((c) => c.id === g.claimId);
+    expect(supported?.evidence[0]?.excerpt).toContain("27B parameter");
+    expect(supported?.evidence[0]?.vendorAffiliated).toBe(true);
+    // The contested claim appears in the bundle AND as an open contest.
+    expect(input.openContests).toHaveLength(1);
+    expect(input.openContests[0]?.contestNote).toContain("128k");
+    const contested = input.claimBundle.find((c) => c.status === "contested");
+    expect(contested?.id).toBe(input.openContests[0]?.claimId);
+  });
+
+  it("fails loudly when the run has no spec (analysis before planning)", async () => {
+    const runId = newId();
+    cleanup.push(runId);
+    await seedRun(db, runId);
+    const builder = createContextBuilder({ db, capabilities: CAPS });
+    await expect(builder.forAnalyst(runId)).rejects.toThrow(CategorizedError);
+  });
+
+  it("superseded attempts' claims never enter the bundle (rule 5)", async () => {
+    const g = await seedGraph();
+    await seedSpec(db, { id: newId(), runId: g.runId, objective: "obj" });
+    await db.execute(sql`UPDATE attempts SET status = 'SUPERSEDED' WHERE id = ${g.attemptId}`);
+    const builder = createContextBuilder({ db, capabilities: CAPS });
+    const input = await builder.forAnalyst(g.runId);
+    expect(input.claimBundle).toHaveLength(0);
+    expect(input.openContests).toHaveLength(0);
+  });
+});

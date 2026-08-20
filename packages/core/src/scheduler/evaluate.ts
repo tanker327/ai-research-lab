@@ -11,9 +11,11 @@ import {
   selectAttemptOutput,
   selectEvaluationCandidates,
   selectEvidenceStatsByAttempt,
+  selectLiveClaims,
   updateTaskStatus,
 } from "@lab/db";
 import {
+  AnalysisOutput,
   CategorizedError,
   ExtractorOutput,
   newId,
@@ -21,7 +23,11 @@ import {
   ResearchStrategy,
   TaskType,
 } from "@lab/schemas";
-import { extractorPreAcceptChecks, researcherPreAcceptChecks } from "../checks";
+import {
+  analystPreAcceptChecks,
+  extractorPreAcceptChecks,
+  researcherPreAcceptChecks,
+} from "../checks";
 import { emitEvent } from "../events";
 import { acceptResearchAttempt } from "../extract";
 import { acceptAttempt } from "../liveness";
@@ -161,11 +167,17 @@ async function preAcceptChecks(
   c: EvaluationCandidate,
   minEvidence: number,
 ): Promise<ReturnType<typeof researcherPreAcceptChecks>> {
-  if (c.taskType !== "research" && c.taskType !== "extract") return [];
+  if (c.taskType !== "research" && c.taskType !== "extract" && c.taskType !== "analyze") return [];
   const output = await selectAttemptOutput(db, c.attemptId);
   if (c.taskType === "research") {
     const parsed = ResearcherOutput.safeParse(output);
     return parsed.success ? researcherPreAcceptChecks(parsed.data) : [];
+  }
+  if (c.taskType === "analyze") {
+    const parsed = AnalysisOutput.safeParse(output);
+    if (!parsed.success) return [];
+    const liveIds = new Set((await selectLiveClaims(db, c.runId)).map((cl) => cl.id));
+    return analystPreAcceptChecks(parsed.data, liveIds);
   }
   const parsed = ExtractorOutput.safeParse(output);
   if (!parsed.success) return [];

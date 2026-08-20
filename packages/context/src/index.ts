@@ -12,8 +12,14 @@ import {
   selectRunForContext,
   selectTaskForContext,
 } from "@lab/db";
-import type { CapabilitySummary, ResearchSpecification } from "@lab/schemas";
+import type {
+  CanonicalClaimView,
+  CapabilitySummary,
+  ContestedClaimView,
+  ResearchSpecification,
+} from "@lab/schemas";
 import {
+  AnalystInput,
   CategorizedError,
   ExtractorInput,
   PlannerInput,
@@ -25,6 +31,7 @@ import {
   DEFAULT_EVIDENCE_K,
   FULL_DIGEST,
   filterClaimsForQuestion,
+  pickStrongest,
   renderClaimDigest,
   summarizeDoneTask,
 } from "./digest";
@@ -36,6 +43,7 @@ export interface ContextBuilder {
   forPlanner(runId: string, stage: number): Promise<PlannerInput>;
   forResearcher(taskId: string): Promise<ResearcherInput>;
   forExtractor(taskId: string): Promise<ExtractorInput>;
+  forAnalyst(runId: string): Promise<AnalystInput>;
 }
 
 export interface ContextBuilderDeps {
@@ -183,6 +191,80 @@ export function createContextBuilder(deps: ContextBuilderDeps): ContextBuilder {
         );
       }
       return parsed.data;
+    },
+
+    // Whole-run claim bundle with K=3 strongest evidence per claim (design
+    // §12 heuristic via pickStrongest). Contested claims and the spec are
+    // hard content — the overflow ladder degrades evidence richness, never
+    // drops a claim's identity.
+    async forAnalyst(runId) {
+      const specRow = await selectLatestSpec(deps.db, runId);
+      if (!specRow) {
+        throw new CategorizedError(
+          "PERMANENT_INFRA",
+          `context: forAnalyst on run ${runId} with no research spec — analysis before planning`,
+        );
+      }
+      const claims = await selectLiveClaims(deps.db, runId);
+      const evidence = await selectLiveClaimEvidence(deps.db, runId);
+      const byClaim = new Map<string, typeof evidence>();
+      for (const e of evidence) {
+        byClaim.set(e.canonicalClaimId, [...(byClaim.get(e.canonicalClaimId) ?? []), e]);
+      }
+
+      const renderBundle = (evidenceK: number, excerptChars: number): CanonicalClaimView[] =>
+        claims.slice(0, 300).map((c) => ({
+          id: c.id,
+          subjectKey: c.subjectKey.slice(0, 200),
+          predicateKey: c.predicateKey.slice(0, 200),
+          statement: c.statement.slice(0, 1000),
+          status: c.status,
+          contestNote: c.contestNote ? c.contestNote.slice(0, 2000) : null,
+          evidence: pickStrongest(byClaim.get(c.id) ?? [], evidenceK).map((e) => ({
+            relation: e.relation.slice(0, 40),
+            sourceClass: e.sourceClass.slice(0, 40),
+            sourceUrl: e.sourceUrl ? e.sourceUrl.slice(0, 2000) : null,
+            vendorAffiliated: e.vendorAffiliated,
+            benchmarkOrigin: e.benchmarkOrigin ? e.benchmarkOrigin.slice(0, 200) : null,
+            excerpt: e.excerpt.slice(0, excerptChars),
+          })),
+        }));
+
+      const openContests: ContestedClaimView[] = claims
+        .filter((c) => c.status === "contested" && c.contestNote)
+        .slice(0, 50)
+        .map((c) => ({
+          claimId: c.id,
+          statement: c.statement.slice(0, 1000),
+          contestNote: (c.contestNote ?? "").slice(0, 2000),
+        }));
+
+      const hard =
+        estimateTokens(JSON.stringify(specRow)) + estimateTokens(JSON.stringify(openContests));
+      const variants: Array<[string, CanonicalClaimView[]]> = [
+        ["k3", renderBundle(3, 1000)],
+        ["k3-short-excerpts", renderBundle(3, 300)],
+        ["k1", renderBundle(1, 300)],
+        ["claims-only", renderBundle(0, 0)],
+      ];
+      const fit = fitToBudget({
+        role: "analyst",
+        budgetTokens: budgets.analyst,
+        hardTokens: hard,
+        renderings: variants.map(([label, value]) => ({
+          label,
+          value,
+          tokens: estimateTokens(JSON.stringify(value)),
+        })),
+      });
+
+      const date = now().toISOString().slice(0, 10);
+      return AnalystInput.parse({
+        specification: specRow,
+        claimBundle: fit.value,
+        openContests,
+        timeContext: `Current date: ${date}. Weigh evidence recency against this date.`,
+      });
     },
   };
 }
