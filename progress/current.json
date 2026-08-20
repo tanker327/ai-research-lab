@@ -34,24 +34,29 @@
     {
       "id": "7.3",
       "title": "Plan-edit endpoints: PATCH/POST/DELETE task + PATCH routing, legality guards, audit trail (PLAN_EDITED events + DecisionRecords)",
-      "status": "in_progress",
+      "status": "completed",
       "priority": 4,
       "depends_on": ["7.2"],
-      "started_at": "2026-08-20"
+      "started_at": "2026-08-20",
+      "completed_at": "2026-08-20",
+      "commit": "d95f9b0"
     },
     {
       "id": "7.4",
       "title": "Console: Plan Review screen (#/run/:id/review) + New Research form review toggle and tier selects",
-      "status": "pending",
+      "status": "completed",
       "priority": 5,
-      "depends_on": ["7.1", "7.3"]
+      "depends_on": ["7.1", "7.3"],
+      "completed_at": "2026-08-20",
+      "commit": "29be102"
     },
     {
       "id": "7.5",
       "title": "scripts/gates/p7.ts (API leg) + console leg with user",
-      "status": "pending",
+      "status": "in_progress",
       "priority": 6,
-      "depends_on": ["7.4"]
+      "depends_on": ["7.4"],
+      "started_at": "2026-08-20"
     }
   ],
   "known_issues": [
