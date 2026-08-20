@@ -4,6 +4,7 @@
 import { createDb, deleteRun, seedAttempt, seedEvidence, seedRun, seedTask } from "@lab/db";
 import {
   type AnalysisOutput,
+  type EvaluatorOutput,
   type ExtractorOutput,
   newId,
   type ResearcherOutput,
@@ -13,6 +14,7 @@ import { afterAll, afterEach, describe, expect, it } from "vitest";
 import { sweepEvaluations } from "../scheduler/evaluate";
 import {
   analystPreAcceptChecks,
+  evaluatorPreAcceptChecks,
   extractorPreAcceptChecks,
   researcherPreAcceptChecks,
 } from "./index";
@@ -199,5 +201,56 @@ describe("analyst check (pure)", () => {
     expect(failures).toHaveLength(1);
     expect(failures[0]).toMatchObject({ check: "check:findings_cite_claims", severity: "reject" });
     expect(failures[0]?.reason).toContain("c2");
+  });
+});
+
+describe("evaluator checks (pure)", () => {
+  const BASE: EvaluatorOutput = {
+    issues: [],
+    decision: "ACCEPT",
+    reasons: ["criteria met"],
+    requiredActions: [],
+    acceptedUncertainties: [],
+  };
+  const ACTION = {
+    kind: "research" as const,
+    question: "What are the DDL locking semantics?",
+    seedUrls: null,
+    rationale: "gap",
+  };
+
+  it("RESEARCH_MORE/REPLAN demand actions; with actions they pass", () => {
+    for (const decision of ["RESEARCH_MORE", "REPLAN"] as const) {
+      expect(evaluatorPreAcceptChecks({ ...BASE, decision })[0]?.check).toBe(
+        "check:actions_required",
+      );
+      expect(
+        evaluatorPreAcceptChecks({ ...BASE, decision, requiredActions: [ACTION] }),
+      ).toHaveLength(0);
+    }
+  });
+
+  it("ACCEPT with an open critical issue is a rubber-stamp reject", () => {
+    const failures = evaluatorPreAcceptChecks({
+      ...BASE,
+      issues: [
+        {
+          severity: "critical",
+          category: "missing_evidence",
+          description: "no independent source",
+          suggestedResearchQuestion: null,
+        },
+      ],
+    });
+    expect(failures[0]?.check).toBe("check:no_rubber_stamp");
+  });
+
+  it("placeholder text in a requiredAction question rejects", () => {
+    const failures = evaluatorPreAcceptChecks({
+      ...BASE,
+      decision: "RESEARCH_MORE",
+      requiredActions: [{ ...ACTION, question: "Research {{topic}} in more depth" }],
+    });
+    expect(failures.map((f) => f.check)).toContain("check:concrete_actions");
   });
 });

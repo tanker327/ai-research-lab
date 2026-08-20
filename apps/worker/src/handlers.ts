@@ -3,7 +3,7 @@
 // dispatch (implementation-plan §5.5) starts with the Planner (ticket 3.2) —
 // Researcher/Extractor land with 3.3/3.4. A handler either returns (attempt
 // SUCCEEDED) or throws a CategorizedError (attempt FAILED with that category).
-import { analystV1, extractorV1, plannerV1, researcherV1 } from "@lab/agents";
+import { analystV1, evaluatorV1, extractorV1, plannerV1, researcherV1 } from "@lab/agents";
 import type { ContextBuilder } from "@lab/context";
 import { type ClaimedWork, type Config, emitEvent } from "@lab/core";
 import {
@@ -86,7 +86,7 @@ function agentContext(
   deps: AgentDeps,
   db: Db,
   work: ClaimedWork,
-  role: "planner" | "researcher" | "extractor" | "analyst",
+  role: "planner" | "researcher" | "extractor" | "analyst" | "evaluator",
   route: ReturnType<typeof resolveRoute>,
 ) {
   return {
@@ -129,7 +129,7 @@ async function guardDarkFrontier(
   deps: AgentDeps,
   db: Db,
   work: ClaimedWork,
-  role: "planner" | "researcher" | "extractor" | "analyst",
+  role: "planner" | "researcher" | "extractor" | "analyst" | "evaluator",
   route: ReturnType<typeof resolveRoute>,
 ): Promise<ReturnType<typeof resolveRoute>> {
   if (route.tier !== "frontier" || deps.config.FRONTIER_ENABLED === 1) return route;
@@ -373,6 +373,34 @@ function renderAnalysisMemo(a: AnalysisOutput): string {
   ].join("\n");
 }
 
+function evaluatorHandler(deps: AgentDeps): TaskHandler {
+  return async (db, work) => {
+    const input = await deps.context.forEvaluator(
+      work.task.runId,
+      deps.config.DEFAULT_MAX_EVAL_CYCLES,
+    );
+    await updateAttemptInput(db, work.attempt.id, input); // R12: verbatim — incl. coverage
+
+    const route = await guardDarkFrontier(
+      deps,
+      db,
+      work,
+      "evaluator",
+      resolveRoute(
+        "evaluator",
+        work.attempt.attemptNumber,
+        tierModels(deps.config),
+        null,
+        tierModes(deps.config),
+      ),
+    );
+    const output = evaluatorV1.outputSchema.parse(
+      await evaluatorV1.run(input, agentContext(deps, db, work, "evaluator", route)),
+    );
+    await updateAttemptOutput(db, work.attempt.id, output);
+  };
+}
+
 function notYetImplemented(type: string, ticket: string): TaskHandler {
   return async () => {
     throw new CategorizedError(
@@ -410,7 +438,7 @@ export function createHandlerRegistry(deps?: AgentDeps): Record<TaskType, TaskHa
     research: withFakeEscape(researcherHandler(deps)),
     extract: withFakeEscape(extractorHandler(deps)),
     analyze: withFakeEscape(analystHandler(deps)),
-    evaluate: withFakeEscape(notYetImplemented("evaluate", "4.x")),
+    evaluate: withFakeEscape(evaluatorHandler(deps)),
     synthesize: withFakeEscape(notYetImplemented("synthesize", "5.x")),
     human_review: withFakeEscape(notYetImplemented("human_review", "4.x")),
   };

@@ -6,21 +6,26 @@
 import type { Db } from "@lab/db";
 import {
   selectDoneTasksWithOutput,
+  selectLatestAcceptedAnalysis,
   selectLatestSpec,
   selectLiveClaimEvidence,
   selectLiveClaims,
   selectRunForContext,
+  selectRunMetrics,
   selectTaskForContext,
 } from "@lab/db";
 import type {
   CanonicalClaimView,
   CapabilitySummary,
   ContestedClaimView,
+  CoverageSummary,
   ResearchSpecification,
 } from "@lab/schemas";
 import {
+  AnalysisOutput,
   AnalystInput,
   CategorizedError,
+  EvaluatorInput,
   ExtractorInput,
   PlannerInput,
   ResearcherInput,
@@ -44,6 +49,7 @@ export interface ContextBuilder {
   forResearcher(taskId: string): Promise<ResearcherInput>;
   forExtractor(taskId: string): Promise<ExtractorInput>;
   forAnalyst(runId: string): Promise<AnalystInput>;
+  forEvaluator(runId: string, maxCycles: number): Promise<EvaluatorInput>;
 }
 
 export interface ContextBuilderDeps {
@@ -53,6 +59,9 @@ export interface ContextBuilderDeps {
   capabilities: CapabilitySummary[];
   budgets?: Partial<RoleBudgets>;
   now?: () => Date;
+  // Injected from @lab/evidence (computeCoverage) by the worker — keeps this
+  // package free of a dependency it only needs for one role.
+  computeCoverage?: (runId: string) => Promise<CoverageSummary>;
 }
 
 // Digest degradation ladder per §12: full → drop context-relation evidence →
@@ -264,6 +273,71 @@ export function createContextBuilder(deps: ContextBuilderDeps): ContextBuilder {
         claimBundle: fit.value,
         openContests,
         timeContext: `Current date: ${date}. Weigh evidence recency against this date.`,
+      });
+    },
+
+    // Evaluator judges what was collected (design §16: no web) over COMPUTED
+    // facts: coverage + run metrics are deterministic inputs, the claim
+    // bundle is K=1 (identity + one strongest evidence — coverage carries the
+    // stats). The analysis under judgment is the latest ACCEPTED one.
+    async forEvaluator(runId, maxCycles) {
+      if (!deps.computeCoverage) {
+        throw new CategorizedError(
+          "PERMANENT_INFRA",
+          "context: forEvaluator requires a computeCoverage dep (worker wiring bug)",
+        );
+      }
+      const specRow = await selectLatestSpec(deps.db, runId);
+      if (!specRow) {
+        throw new CategorizedError(
+          "PERMANENT_INFRA",
+          `context: forEvaluator on run ${runId} with no research spec`,
+        );
+      }
+      const analysisRaw = await selectLatestAcceptedAnalysis(deps.db, runId);
+      const analysis = AnalysisOutput.safeParse(analysisRaw);
+      if (!analysis.success) {
+        throw new CategorizedError(
+          "PERMANENT_INFRA",
+          `context: forEvaluator on run ${runId} with no accepted analysis — evaluation before analysis`,
+        );
+      }
+      const claims = await selectLiveClaims(deps.db, runId);
+      const evidence = await selectLiveClaimEvidence(deps.db, runId);
+      const byClaim = new Map<string, typeof evidence>();
+      for (const e of evidence) {
+        byClaim.set(e.canonicalClaimId, [...(byClaim.get(e.canonicalClaimId) ?? []), e]);
+      }
+      const claimBundle: CanonicalClaimView[] = claims.slice(0, 300).map((c) => ({
+        id: c.id,
+        subjectKey: c.subjectKey.slice(0, 200),
+        predicateKey: c.predicateKey.slice(0, 200),
+        statement: c.statement.slice(0, 1000),
+        status: c.status,
+        contestNote: c.contestNote ? c.contestNote.slice(0, 2000) : null,
+        evidence: pickStrongest(byClaim.get(c.id) ?? [], 1).map((e) => ({
+          relation: e.relation.slice(0, 40),
+          sourceClass: e.sourceClass.slice(0, 40),
+          sourceUrl: e.sourceUrl ? e.sourceUrl.slice(0, 2000) : null,
+          vendorAffiliated: e.vendorAffiliated,
+          benchmarkOrigin: e.benchmarkOrigin ? e.benchmarkOrigin.slice(0, 200) : null,
+          excerpt: e.excerpt.slice(0, 300),
+        })),
+      }));
+
+      const [coverage, runMetrics] = await Promise.all([
+        deps.computeCoverage(runId),
+        selectRunMetrics(deps.db, runId),
+      ]);
+      const date = now().toISOString().slice(0, 10);
+      return EvaluatorInput.parse({
+        specification: specRow,
+        analysis: analysis.data,
+        claimBundle,
+        coverage,
+        runMetrics,
+        maxCycles,
+        timeContext: `Current date: ${date}. Judge evidence recency against this date.`,
       });
     },
   };

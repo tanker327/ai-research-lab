@@ -39,7 +39,7 @@ const ACTOR = "plan_interpreter";
 
 // Executable staged-planning invariant (rule 12): inputs that smell like
 // templates are rejected before any task row exists.
-const PLACEHOLDER = /\{\{|\{%|<insert|<fill|\bTBD\b|\bTODO\b|\bPLACEHOLDER\b|\bFIXME\b/i;
+export const PLACEHOLDER = /\{\{|\{%|<insert|<fill|\bTBD\b|\bTODO\b|\bPLACEHOLDER\b|\bFIXME\b/i;
 
 export function findConcretenessViolation(t: PlannedTask): string | null {
   const rendered = JSON.stringify(t.input);

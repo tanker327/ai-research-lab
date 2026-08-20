@@ -177,3 +177,16 @@ export async function selectTaskForContext(
     priority: r.priority as number,
   };
 }
+
+// Latest accepted analysis output for the Evaluator's context (ticket 4.3).
+export async function selectLatestAcceptedAnalysis(
+  tx: SqlExecutor,
+  runId: string,
+): Promise<Record<string, unknown> | null> {
+  const rows = await tx.execute(sql`
+    SELECT a.output FROM attempts a
+    JOIN research_tasks t ON t.id = a.task_id
+    WHERE t.run_id = ${runId} AND t.type = 'analyze' AND a.status = 'ACCEPTED'
+    ORDER BY a.completed_at DESC NULLS LAST, a.attempt_number DESC LIMIT 1`);
+  return ([...rows][0]?.output as Record<string, unknown> | undefined) ?? null;
+}

@@ -3,6 +3,7 @@
 // their agent tickets (3.2–3.4). D1 norm (phase-3-plan): every array and
 // string is bounded — constrained decoding degenerates on unbounded shapes.
 import { z } from "zod";
+import { CoverageSummary } from "./coverage";
 import { ModelTier, ResearchStrategy, TaskType } from "./enums";
 
 const shortText = z.string().max(2000);
@@ -313,3 +314,76 @@ export const AnalysisOutput = z.object({
   confidenceNote: z.string().min(1).max(2000), // prose calibration, not a fake float
 });
 export type AnalysisOutput = z.infer<typeof AnalysisOutput>;
+
+// ---- Evaluator (design §6.5, ticket 4.3) ----
+// Merged Critic + Judge (ADR-015). One frontier call per cycle. The output is
+// a DECISION the Control Plane interprets (ADR-003) — it never mutates tasks,
+// and the cycle guard bounding the loop is code (ADR-016), not this contract.
+
+export const RunMetrics = z.object({
+  attemptsUsed: z.number().int().nonnegative(),
+  tasksDone: z.number().int().nonnegative(),
+  tasksFailed: z.number().int().nonnegative(),
+  cyclesCompleted: z.number().int().nonnegative(), // accepted evaluate attempts so far
+  costUsd: z.number().nonnegative().nullable(),
+});
+export type RunMetrics = z.infer<typeof RunMetrics>;
+
+export const EvaluatorInput = z.object({
+  specification: ResearchSpecification,
+  analysis: AnalysisOutput,
+  claimBundle: z.array(CanonicalClaimView).max(300), // K=1 — coverage carries the stats
+  coverage: CoverageSummary, // deterministic computed facts (D2) — never recount evidence
+  runMetrics: RunMetrics,
+  maxCycles: z.number().int().min(1).max(10), // so RESEARCH_MORE on the last cycle is informed
+  timeContext: z.string().max(500),
+});
+export type EvaluatorInput = z.infer<typeof EvaluatorInput>;
+
+export const EvaluatorIssue = z.object({
+  severity: z.enum(["low", "medium", "high", "critical"]),
+  category: z.enum([
+    "source_quality",
+    "missing_evidence",
+    "contradiction",
+    "reasoning",
+    "scope",
+    "recency",
+    "benchmark_validity",
+    "bias",
+    "other",
+  ]),
+  description: z.string().min(1).max(2000),
+  suggestedResearchQuestion: z.string().max(500).nullable(),
+});
+export type EvaluatorIssue = z.infer<typeof EvaluatorIssue>;
+
+// V0.05 has exactly one action kind; the enum leaves room for more without a
+// shape change (phase-4-plan D3). Question floors are real: a template-ish or
+// empty question is caught by the placeholder guard at interpretation.
+export const RequiredAction = z.object({
+  kind: z.enum(["research"]),
+  question: z.string().min(12).max(500),
+  seedUrls: z.array(z.string().max(2000)).max(5).nullable(),
+  rationale: z.string().min(1).max(1000),
+});
+export type RequiredAction = z.infer<typeof RequiredAction>;
+
+export const EvaluatorDecision = z.enum([
+  "ACCEPT",
+  "RESEARCH_MORE",
+  "REANALYZE",
+  "REPLAN",
+  "ESCALATE",
+  "STOP",
+]);
+export type EvaluatorDecision = z.infer<typeof EvaluatorDecision>;
+
+export const EvaluatorOutput = z.object({
+  issues: z.array(EvaluatorIssue).max(20), // the "critic" half
+  decision: EvaluatorDecision,
+  reasons: z.array(z.string().min(1).max(2000)).min(1).max(10),
+  requiredActions: z.array(RequiredAction).max(10),
+  acceptedUncertainties: z.array(shortText).max(10), // surfaced in the report (P5)
+});
+export type EvaluatorOutput = z.infer<typeof EvaluatorOutput>;

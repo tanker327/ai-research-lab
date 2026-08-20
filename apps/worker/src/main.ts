@@ -10,6 +10,7 @@ import {
   loadConfig,
 } from "@lab/core";
 import { createArtifactStore, createDb, type Db } from "@lab/db";
+import { computeCoverage } from "@lab/evidence";
 import { createArtifactReasoningSink, createModelClient } from "@lab/model";
 import { CategorizedError } from "@lab/schemas";
 import { createToolRegistry, createWebSearchTool, webFetchTool } from "@lab/tools";
@@ -47,6 +48,7 @@ export async function runWorker({ once = false } = {}): Promise<void> {
         { name: "web_fetch", description: "fetch a URL as clean markdown; snapshot persisted" },
         { name: "web_search", description: "web search (Firecrawl/SearXNG)" },
       ],
+      computeCoverage: (runId) => computeCoverage(db, runId),
     }),
   });
   let running = true;

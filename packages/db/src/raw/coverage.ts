@@ -106,3 +106,44 @@ export async function selectCoveragePerQuestion(
     vendorRatio: (r.vendor_ratio as number) ?? 0,
   }));
 }
+
+// Cycle count = accepted evaluate attempts (phase-4-plan D3: one cycle = one
+// accepted evaluate attempt). The ADR-016 guard and RunMetrics both read this.
+export async function selectAcceptedEvaluationCycles(
+  tx: SqlExecutor,
+  runId: string,
+): Promise<number> {
+  const rows = await tx.execute(sql`
+    SELECT count(*)::int AS n FROM attempts a
+    JOIN research_tasks t ON t.id = a.task_id
+    WHERE t.run_id = ${runId} AND t.type = 'evaluate' AND a.status = 'ACCEPTED'`);
+  return ([...rows][0]?.n as number) ?? 0;
+}
+
+export interface RunMetricsRow {
+  attemptsUsed: number;
+  tasksDone: number;
+  tasksFailed: number;
+  cyclesCompleted: number;
+  costUsd: number | null;
+}
+
+export async function selectRunMetrics(tx: SqlExecutor, runId: string): Promise<RunMetricsRow> {
+  const cycles = await selectAcceptedEvaluationCycles(tx, runId);
+  const rows = await tx.execute(sql`
+    SELECT
+      (SELECT count(*)::int FROM attempts WHERE run_id = ${runId}) AS attempts_used,
+      (SELECT count(*)::int FROM research_tasks
+        WHERE run_id = ${runId} AND status = 'DONE') AS tasks_done,
+      (SELECT count(*)::int FROM research_tasks
+        WHERE run_id = ${runId} AND status IN ('FAILED','BLOCKED','CANCELLED')) AS tasks_failed,
+      (SELECT sum(cost_usd) FROM model_calls WHERE run_id = ${runId}) AS cost_usd`);
+  const r = [...rows][0] as Record<string, unknown>;
+  return {
+    attemptsUsed: (r.attempts_used as number) ?? 0,
+    tasksDone: (r.tasks_done as number) ?? 0,
+    tasksFailed: (r.tasks_failed as number) ?? 0,
+    cyclesCompleted: cycles,
+    costUsd: r.cost_usd === null || r.cost_usd === undefined ? null : Number(r.cost_usd),
+  };
+}

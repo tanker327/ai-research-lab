@@ -328,3 +328,91 @@ describe("forAnalyst", () => {
     expect(input.openContests).toHaveLength(0);
   });
 });
+
+describe("forEvaluator", () => {
+  const COVERAGE = {
+    evidenceCount: 1,
+    claimCount: 2,
+    contestedCount: 1,
+    distinctPublishers: 1,
+    distinctOrigins: 0,
+    vendorRatio: 1,
+    sourceClassMix: [{ sourceClass: "official_docs", count: 1 }],
+    perQuestion: [],
+    oldestEvidence: null,
+    newestEvidence: null,
+  };
+
+  async function seedAnalyzed() {
+    const g = await seedGraph();
+    await seedSpec(db, {
+      id: newId(),
+      runId: g.runId,
+      objective: "compare quantization options",
+      successCriteria: ["covers GGUF and AWQ"],
+    });
+    const analyzeTask = newId();
+    await seedTask(db, {
+      id: analyzeTask,
+      runId: g.runId,
+      status: "DONE",
+      type: "analyze",
+      title: "analysis",
+    });
+    await seedAttempt(db, {
+      id: newId(),
+      taskId: analyzeTask,
+      runId: g.runId,
+      status: "ACCEPTED",
+      output: {
+        findings: [
+          { statement: "27B confirmed", canonicalClaimIds: [g.claimId], implication: null },
+        ],
+        comparisons: [],
+        unresolvedQuestions: [],
+        confidenceNote: "thin but consistent",
+      },
+    });
+    return g;
+  }
+
+  it("builds spec + analysis + K=1 bundle + injected coverage + run metrics", async () => {
+    const g = await seedAnalyzed();
+    const calls: string[] = [];
+    const builder = createContextBuilder({
+      db,
+      capabilities: CAPS,
+      computeCoverage: async (runId) => {
+        calls.push(runId);
+        return COVERAGE;
+      },
+    });
+    const input = await builder.forEvaluator(g.runId, 3);
+    expect(calls).toEqual([g.runId]);
+    expect(input.analysis.findings[0]?.canonicalClaimIds).toEqual([g.claimId]);
+    expect(input.coverage.claimCount).toBe(2);
+    expect(input.maxCycles).toBe(3);
+    // K=1: at most one evidence item per claim, and metrics count the seeded rows.
+    for (const c of input.claimBundle) expect(c.evidence.length).toBeLessThanOrEqual(1);
+    expect(input.runMetrics.tasksDone).toBe(2); // research + analyze
+    expect(input.runMetrics.cyclesCompleted).toBe(0);
+    expect(input.runMetrics.attemptsUsed).toBe(2);
+  });
+
+  it("fails loudly with no accepted analysis (evaluation before analysis)", async () => {
+    const g = await seedGraph();
+    await seedSpec(db, { id: newId(), runId: g.runId, objective: "obj" });
+    const builder = createContextBuilder({
+      db,
+      capabilities: CAPS,
+      computeCoverage: async () => COVERAGE,
+    });
+    await expect(builder.forEvaluator(g.runId, 3)).rejects.toThrow(/no accepted analysis/);
+  });
+
+  it("fails loudly when computeCoverage was not injected (wiring bug)", async () => {
+    const g = await seedAnalyzed();
+    const builder = createContextBuilder({ db, capabilities: CAPS });
+    await expect(builder.forEvaluator(g.runId, 3)).rejects.toThrow(/computeCoverage/);
+  });
+});

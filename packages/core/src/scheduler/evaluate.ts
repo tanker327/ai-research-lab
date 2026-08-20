@@ -17,6 +17,7 @@ import {
 import {
   AnalysisOutput,
   CategorizedError,
+  EvaluatorOutput,
   ExtractorOutput,
   newId,
   ResearcherOutput,
@@ -25,6 +26,7 @@ import {
 } from "@lab/schemas";
 import {
   analystPreAcceptChecks,
+  evaluatorPreAcceptChecks,
   extractorPreAcceptChecks,
   researcherPreAcceptChecks,
 } from "../checks";
@@ -167,11 +169,16 @@ async function preAcceptChecks(
   c: EvaluationCandidate,
   minEvidence: number,
 ): Promise<ReturnType<typeof researcherPreAcceptChecks>> {
-  if (c.taskType !== "research" && c.taskType !== "extract" && c.taskType !== "analyze") return [];
+  const checked = ["research", "extract", "analyze", "evaluate"];
+  if (!checked.includes(c.taskType)) return [];
   const output = await selectAttemptOutput(db, c.attemptId);
   if (c.taskType === "research") {
     const parsed = ResearcherOutput.safeParse(output);
     return parsed.success ? researcherPreAcceptChecks(parsed.data) : [];
+  }
+  if (c.taskType === "evaluate") {
+    const parsed = EvaluatorOutput.safeParse(output);
+    return parsed.success ? evaluatorPreAcceptChecks(parsed.data) : [];
   }
   if (c.taskType === "analyze") {
     const parsed = AnalysisOutput.safeParse(output);

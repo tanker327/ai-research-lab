@@ -2,7 +2,13 @@
 // functions — they decide WHETHER an output is rejected; decideRetry decides
 // what happens next (rule 10). They run only when the attempt output parses
 // as the real agent contract, so fake-handler attempts (demos, gates) skip.
-import type { AnalysisOutput, ExtractorOutput, ResearcherOutput } from "@lab/schemas";
+import type {
+  AnalysisOutput,
+  EvaluatorOutput,
+  ExtractorOutput,
+  ResearcherOutput,
+} from "@lab/schemas";
+import { PLACEHOLDER } from "../plan";
 
 export interface CheckFailure {
   check: string; // 'check:min_evidence' — evaluations.evaluator_name
@@ -89,4 +95,40 @@ export function analystPreAcceptChecks(
       severity: "reject",
     },
   ];
+}
+
+// Evaluator consistency checks (ticket 4.3, phase-4-plan D6): mechanical
+// anti-rubber-stamp rules (ADR-015's split criterion made code) — the merged
+// critic+judge may not find critical flaws and accept anyway, may not demand
+// more work without saying what work, and may not emit template-ish actions.
+export function evaluatorPreAcceptChecks(output: EvaluatorOutput): CheckFailure[] {
+  const failures: CheckFailure[] = [];
+  if (
+    (output.decision === "RESEARCH_MORE" || output.decision === "REPLAN") &&
+    output.requiredActions.length === 0
+  ) {
+    failures.push({
+      check: "check:actions_required",
+      reason: `decision ${output.decision} with zero requiredActions — gaps must arrive as concrete actions`,
+      severity: "reject",
+    });
+  }
+  if (output.decision === "ACCEPT" && output.issues.some((i) => i.severity === "critical")) {
+    failures.push({
+      check: "check:no_rubber_stamp",
+      reason:
+        "ACCEPT with an open critical issue — resolve it, demand the work, or consciously downgrade it with acceptedUncertainties",
+      severity: "reject",
+    });
+  }
+  for (const a of output.requiredActions) {
+    if (PLACEHOLDER.test(a.question)) {
+      failures.push({
+        check: "check:concrete_actions",
+        reason: `requiredAction question contains placeholder text: ${a.question.slice(0, 120)}`,
+        severity: "reject",
+      });
+    }
+  }
+  return failures;
 }
