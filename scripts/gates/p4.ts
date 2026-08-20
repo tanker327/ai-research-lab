@@ -52,7 +52,13 @@ function stopStack(): void {
 async function until<T>(what: string, fn: () => Promise<T | null>, timeoutMs: number): Promise<T> {
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
-    const v = await fn().catch(() => null);
+    let v: T | null = null;
+    try {
+      v = await fn();
+    } catch (err) {
+      // Assertion failures must abort the leg — only transient errors poll on.
+      if (err instanceof Error && err.message.startsWith("GATE ASSERTION FAILED")) throw err;
+    }
     if (v !== null) return v;
     await Bun.sleep(1500);
   }

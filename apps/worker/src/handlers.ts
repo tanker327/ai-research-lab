@@ -84,9 +84,12 @@ function tierModes(config: Config) {
 
 // 4.5: an intelligence-retry escalation writes model_tier onto the task row;
 // the next attempt routes there (guardDarkFrontier still applies on top).
-function taskTierOverride(work: ClaimedWork): ModelTier | null {
+// Belt (gate finding): only tiers with a configured model are honored — an
+// unconfigured suggestion (cheap_remote) is inert, not fatal.
+function taskTierOverride(deps: AgentDeps, work: ClaimedWork): ModelTier | null {
   const parsed = ModelTier.safeParse(work.task.modelTier);
-  return parsed.success ? parsed.data : null;
+  if (!parsed.success) return null;
+  return parsed.data in tierModels(deps.config) ? parsed.data : null;
 }
 
 // The per-attempt AgentContext (§5.5): tools scoped to the role, artifact
@@ -231,7 +234,7 @@ function researcherHandler(deps: AgentDeps): TaskHandler {
         "researcher",
         work.attempt.attemptNumber,
         tierModels(deps.config),
-        taskTierOverride(work),
+        taskTierOverride(deps, work),
         tierModes(deps.config),
       ),
     );
@@ -268,7 +271,7 @@ function extractorHandler(deps: AgentDeps): TaskHandler {
       "extractor",
       work.attempt.attemptNumber,
       tierModels(deps.config),
-      taskTierOverride(work),
+      taskTierOverride(deps, work),
       tierModes(deps.config),
     );
     const output = extractorV1.outputSchema.parse(
@@ -347,7 +350,7 @@ function analystHandler(deps: AgentDeps): TaskHandler {
         "analyst",
         work.attempt.attemptNumber,
         tierModels(deps.config),
-        taskTierOverride(work),
+        taskTierOverride(deps, work),
         tierModes(deps.config),
       ),
     );
@@ -407,7 +410,7 @@ function evaluatorHandler(deps: AgentDeps): TaskHandler {
         "evaluator",
         work.attempt.attemptNumber,
         tierModels(deps.config),
-        taskTierOverride(work),
+        taskTierOverride(deps, work),
         tierModes(deps.config),
       ),
     );

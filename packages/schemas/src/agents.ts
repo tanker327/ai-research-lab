@@ -123,7 +123,10 @@ export const PlannedTask = z.object({
   priority: z.number().int().min(0).max(100),
   dependencies: z.array(z.string().min(1).max(60)).max(50),
   successCriteria: z.array(shortText).max(20),
-  suggestedModelTier: ModelTier.optional(),
+  // Only tiers with configured models in V0.05 — a live planner suggested
+  // cheap_remote, which since 4.5 routes for real and has no alias (gate
+  // finding: three research tasks died PERMANENT_INFRA at claim time).
+  suggestedModelTier: z.enum(["frontier", "strong_local", "fast_local"]).optional(),
   parallelizable: z.boolean(),
   // Fully concrete at creation (ADR-011) — the interpreter enforces this with
   // the placeholder guard; the schema can only bound the shape.
