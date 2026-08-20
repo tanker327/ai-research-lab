@@ -16,16 +16,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
+import { useAttempts } from "../api";
 
-interface AttemptRow {
-  id: string;
-  taskId: string;
-  attemptNumber: number;
-  status: string;
-  agentName: string;
-  modelTier: string | null;
-  error: { category?: string; message?: string } | null;
-}
 interface ModelCall {
   id: string;
   model: string;
@@ -139,11 +131,7 @@ function CallsPanel({ attemptId }: { attemptId: string }) {
 }
 
 export function AttemptsView({ runId }: { runId: string }) {
-  const { data: attempts } = useQuery({
-    queryKey: ["attempts", runId],
-    queryFn: () => get<AttemptRow[]>(`/runs/${runId}/attempts`),
-    refetchInterval: 3000,
-  });
+  const { data: attempts } = useAttempts(runId);
   const [open, setOpen] = useState<string | null>(null);
 
   return (

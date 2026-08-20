@@ -127,11 +127,19 @@ export interface TaskListRow {
   attemptCount: number;
   maxAttempts: number;
   claimedBy: string | null;
+  // Staged task board (6.1, ADR-019): stages are the columns; role/strategy/
+  // tier feed the inspector drawer badges.
+  planStage: number;
+  agentRole: string | null;
+  strategy: string | null;
+  modelTier: string | null;
+  createdAt: string;
 }
 
 export async function selectTasksByRun(tx: SqlExecutor, runId: string): Promise<TaskListRow[]> {
   const rows = await tx.execute(sql`
-    SELECT id, run_id, type, title, status, priority, attempt_count, max_attempts, claimed_by
+    SELECT id, run_id, type, title, status, priority, attempt_count, max_attempts, claimed_by,
+           plan_stage, agent_role, strategy, model_tier, created_at
     FROM research_tasks WHERE run_id = ${runId} ORDER BY priority DESC, created_at ASC`);
   return [...rows].map((r) => ({
     id: r.id as string,
@@ -143,6 +151,11 @@ export async function selectTasksByRun(tx: SqlExecutor, runId: string): Promise<
     attemptCount: r.attempt_count as number,
     maxAttempts: r.max_attempts as number,
     claimedBy: (r.claimed_by as string | null) ?? null,
+    planStage: (r.plan_stage as number | null) ?? 1,
+    agentRole: (r.agent_role as string | null) ?? null,
+    strategy: (r.strategy as string | null) ?? null,
+    modelTier: (r.model_tier as string | null) ?? null,
+    createdAt: String(r.created_at),
   }));
 }
 

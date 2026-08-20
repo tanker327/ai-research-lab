@@ -11,6 +11,7 @@ import { cancelRun, useCheckpoints, useRun, useTasks } from "../api";
 import { AttemptsView } from "./Attempts";
 import { ClaimsView } from "./Claims";
 import { ReportView } from "./Report";
+import { TaskBoard } from "./TaskBoard";
 import { Timeline } from "./Timeline";
 import { TranscriptView } from "./Transcript";
 import { VerdictsView } from "./Verdicts";
@@ -182,35 +183,7 @@ export function RunDetail({ runId, tab }: { runId: string; tab: string }) {
           </>
         )}
 
-        {tab === "tasks" && (
-          <div className="grid grid-cols-[repeat(auto-fit,minmax(170px,1fr))] gap-3">
-            {TASK_COLUMNS.filter((s) => tasks?.some((t) => t.status === s)).map((s) => (
-              <div key={s}>
-                <div className="flex justify-between px-0.5 pb-2 pt-1 font-mono text-[0.64rem] uppercase tracking-[0.08em] text-muted-foreground">
-                  <span>{s}</span>
-                  <span>{tasks?.filter((t) => t.status === s).length}</span>
-                </div>
-                {tasks
-                  ?.filter((t) => t.status === s)
-                  .map((t) => (
-                    <div
-                      key={t.id}
-                      className="mb-2 rounded-md border bg-card px-3 py-2.5 text-[0.8rem]"
-                    >
-                      <div className="mb-0.5 font-mono text-[0.62rem] uppercase tracking-[0.06em] text-muted-foreground">
-                        {t.type}
-                      </div>
-                      <div>{t.title}</div>
-                      <div className="mt-1.5 font-mono text-[0.66rem] text-muted-foreground">
-                        attempts {t.attemptCount}/{t.maxAttempts}
-                        {t.claimedBy ? ` · ${t.claimedBy}` : ""}
-                      </div>
-                    </div>
-                  ))}
-              </div>
-            ))}
-          </div>
-        )}
+        {tab === "tasks" && <TaskBoard runId={runId} />}
 
         {tab === "timeline" && <Timeline runId={runId} />}
 

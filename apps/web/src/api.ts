@@ -18,6 +18,11 @@ export interface RunRow {
 }
 
 export interface TaskRow {
+  planStage: number;
+  agentRole: string | null;
+  strategy: string | null;
+  modelTier: string | null;
+  createdAt: string;
   id: string;
   runId: string;
   type: string;
@@ -317,4 +322,32 @@ export const useTranscript = (runId: string, stage?: number) =>
         `/runs/${runId}/transcript${stage !== undefined ? `?stage=${stage}` : ""}`,
       ),
     refetchInterval: 5000,
+  });
+
+// ---- Phase 6 (6.1): shared attempts + on-demand trace ----
+
+export interface AttemptRow {
+  id: string;
+  taskId: string;
+  attemptNumber: number;
+  status: string;
+  agentName: string;
+  modelTier: string | null;
+  error: { category?: string; message?: string } | null;
+  startedAt: string | null;
+  completedAt: string | null;
+}
+
+export const useAttempts = (runId: string) =>
+  useQuery({
+    queryKey: ["attempts", runId],
+    queryFn: () => get<AttemptRow[]>(`/runs/${runId}/attempts`),
+    refetchInterval: 3000,
+  });
+
+export const useTrace = (runId: string, attemptId: string | null) =>
+  useQuery({
+    queryKey: ["trace", runId, attemptId],
+    queryFn: () => get<TraceDto>(`/runs/${runId}/attempts/${attemptId}/trace`),
+    enabled: attemptId !== null,
   });

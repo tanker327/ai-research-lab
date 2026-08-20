@@ -6,9 +6,47 @@
     {
       "id": "6.0",
       "title": "Draft docs/plans/phase-6-plan.md — inventory remaining mockup gaps vs the built console (runs list, new-research, overview rail, task graph, inspector drawer, SSE tail, report, transcript all exist in some form); review with user before coding",
-      "status": "pending",
+      "status": "completed",
       "priority": 1,
-      "depends_on": []
+      "depends_on": [],
+      "completed_at": "2026-08-20",
+      "commit": "00a9565"
+    },
+    {
+      "id": "6.1",
+      "title": "Staged task board + inspector drawer + shared trace viewer (D1/D2)",
+      "status": "in_progress",
+      "started_at": "2026-08-20",
+      "priority": 2,
+      "depends_on": ["6.0"]
+    },
+    {
+      "id": "6.2",
+      "title": "/runs/:id/metrics + overview metric grid + latest-verdict card (D3)",
+      "status": "pending",
+      "priority": 3,
+      "depends_on": ["6.0"]
+    },
+    {
+      "id": "6.3",
+      "title": "SSE generic-message fix + timeline robustness (D4, bug G5)",
+      "status": "pending",
+      "priority": 4,
+      "depends_on": ["6.0"]
+    },
+    {
+      "id": "6.4",
+      "title": "Checkpoint resolution: resolve endpoint + banner actions (D5)",
+      "status": "pending",
+      "priority": 5,
+      "depends_on": ["6.0"]
+    },
+    {
+      "id": "6.5",
+      "title": "Chip jump-and-flash, keyboard nav, sidebar cleanup (D6)",
+      "status": "pending",
+      "priority": 6,
+      "depends_on": ["6.1"]
     }
   ],
   "known_issues": [
