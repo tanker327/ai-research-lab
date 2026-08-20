@@ -1,107 +1,63 @@
 {
-  "current_phase": "Phase 4 \u2014 Analyst \u00b7 Evaluator \u00b7 Autonomous Loop (not started)",
-  "plan": "docs/implementation-plan.md \u00a76 Phase 4; draft docs/plans/phase-4-plan.md before coding (per-phase cadence)",
-  "gate": "THE MILESTONE: Evaluator finds a genuine gap \u2192 core creates follow-up \u2192 executes \u2192 analysis v2 \u2192 ACCEPT on cycle 2; cycle guard hard-stops at 3 with WAITING_HUMAN. Console wires analysis/verdicts (standing UI rule).",
+  "current_phase": "Phase 5 \u2014 Synthesizer + Citation Validator (not started)",
+  "plan": "docs/implementation-plan.md \u00a76 Phase 5; draft docs/plans/phase-5-plan.md before coding (per-phase cadence)",
+  "gate": "End-to-end run produces a report where a sampled factual sentence traces sentence\u2192claim\u2192live evidence\u2192source\u2192attempt via API only; validator rejects a doctored uncited draft (ADR-020). Console wires report + transcript (standing UI rule).",
   "tasks": [
     {
-      "id": "4.0",
-      "title": "Draft docs/plans/phase-4-plan.md (decisions: Evaluator tier while frontier dark, CoverageSummary shape, RESEARCH_MORE interpretation) \u2014 review with user before coding",
-      "status": "completed",
+      "id": "5.0",
+      "title": "Draft docs/plans/phase-5-plan.md \u2014 review with user before coding",
+      "status": "pending",
       "priority": 1,
-      "depends_on": [],
-      "completed_at": "2026-08-19",
-      "commit": "f712989"
+      "depends_on": []
     },
     {
-      "id": "4.1",
-      "title": "Coverage summary computation (deterministic) \u2192 persisted on evaluation (packages/evidence)",
-      "status": "completed",
+      "id": "5.1",
+      "title": "Synthesizer v1: approved-material-only context, citationMap output (web tools denied)",
+      "status": "pending",
       "priority": 2,
       "depends_on": [
-        "4.0"
-      ],
-      "completed_at": "2026-08-19",
-      "commit": "aec6240"
+        "5.0"
+      ]
     },
     {
-      "id": "4.2",
-      "title": "Analyst v1: claim-bundle context (K=3 heuristic), findings-cite-claims schema check",
-      "status": "completed",
+      "id": "5.2",
+      "title": "Deterministic citation validator: uncited factual sentence \u21d2 REJECT attempt (ADR-020)",
+      "status": "pending",
       "priority": 3,
       "depends_on": [
-        "4.1"
-      ],
-      "completed_at": "2026-08-19",
-      "commit": "32f8318"
+        "5.1"
+      ]
     },
     {
-      "id": "4.3",
-      "title": "Evaluator v1: merged critic+judge prompt, decision schema",
-      "status": "completed",
+      "id": "5.3",
+      "title": "Read APIs: trace, transcript (paginated by stage), claims, coverage, citations (\u00a724.5)",
+      "status": "pending",
       "priority": 4,
       "depends_on": [
-        "4.2"
-      ],
-      "completed_at": "2026-08-19",
-      "commit": "5bcfecc"
+        "5.1"
+      ]
     },
     {
-      "id": "4.4",
-      "title": "Core interprets decisions: RESEARCH_MORE \u2192 tasks from requiredActions; REPLAN \u2192 planner task; cycle guard enforced",
-      "status": "completed",
+      "id": "5.4",
+      "title": "Console wiring: report with citation-chip jumps + transcript reading mode (standing UI rule)",
+      "status": "pending",
       "priority": 5,
       "depends_on": [
-        "4.3"
-      ],
-      "completed_at": "2026-08-19",
-      "commit": "7b31a0c"
-    },
-    {
-      "id": "4.5",
-      "title": "Intelligence-retry wiring end to end (deterministic reject \u2192 ladder \u2192 tier escalation)",
-      "status": "completed",
-      "priority": 6,
-      "depends_on": [
-        "4.4"
-      ],
-      "completed_at": "2026-08-19",
-      "commit": "4a0e774"
-    },
-    {
-      "id": "4.6",
-      "title": "Console wiring: analysis + evaluator verdicts + cycle view (standing UI rule)",
-      "status": "completed",
-      "priority": 7,
-      "depends_on": [
-        "4.4"
-      ],
-      "completed_at": "2026-08-19",
-      "commit": "HEAD"
-    },
-    {
-      "id": "4.7",
-      "title": "Phase 4 gate: scripts/gates/p4.ts (leg A milestone: gap\u2192follow-up\u2192ACCEPT cycle \u22652; leg B guard: impossible rubric + cap 1 \u2192 WAITING_HUMAN) \u2014 phase done when gate passes",
-      "status": "pending",
-      "priority": 8,
-      "depends_on": [
-        "4.4",
-        "4.5",
-        "4.6"
-      ],
-      "notes": "Gate script committed (5382cfc); live gate:p4 run in progress in the background this session \u2014 mark completed when both legs pass."
+        "5.2",
+        "5.3"
+      ]
     }
   ],
   "known_issues": [
-    "OPTIONAL: openai/xai hub keys would upgrade the frontier beyond deepseek-v4-pro; no longer a blocker \u2014 swap MODEL_FRONTIER alias + FRONTIER_STRUCTURED_MODE=json_schema when available.",
-    "Local strong model occasionally can't crack a hard research sub-question in 3 attempts (degenerate notes) \u2014 runs complete DEGRADED per ADR-010; revisit with frontier escalation in P4.",
-    "RESOLVED 2026-08-20: tests now run in dedicated research_lab_test DB (bun run test sets DATABASE_URL) \u2014 the suite twice poisoned a parked live gate run before this."
+    "OPTIONAL: openai/xai hub keys upgrade the frontier beyond deepseek-v4-pro \u2014 alias swap + FRONTIER_STRUCTURED_MODE=json_schema.",
+    "Firecrawl scrape latency invisible in console \u2014 candidate console chore (surfaced in P4 latency analysis).",
+    "gate:p4 single-process end-to-end pass still outstanding (all assertions verified manually after crash-resume) \u2014 optional re-run before P5 gate work."
   ],
   "notes": [
-    "gate:p3 superseded by the analysis loop (P4.4): runs with claims now analyze+evaluate before completing; gate:p4 is the live gate.",
-    "Frontier = deepseek/deepseek-v4-pro (user decision 2026-08-19): full escalation ladder + P4 Evaluator run without OpenAI/xAI.",
-    "Phase 3 archived 2026-08-19 \u2014 gate:p3 green twice (25 and 35 live claims); 444 tests.",
-    "P3 norms: no z.record/open maps in agent schemas; fast-tier prompts TERSE; output budgets carry reasoning headroom; bound output size in prompt AND schema; degenerate-string guard.",
-    "D4 final: Firecrawl at 192.168.10.120:3002 backs web_search + web_fetch (markdown scrape).",
-    "Standing UI rule: every phase DoD wires its capabilities into apps/web (ticket 4.6)."
+    "Phase 4 archived 2026-08-20 \u2014 THE MILESTONE achieved live: 3x RESEARCH_MORE \u2192 11 follow-ups \u2192 ACCEPT on cycle 4, coverage 10\u219255 evidence; cycle guard passed 4x. 476 tests.",
+    "P4 norms: json_object outputs \u2014 semantically-optional arrays .default([]); never await network inside a DB tx; SCHEMA_FAILURE attempt \u22652 escalates tier; unconfigured tier suggestions inert.",
+    "Tests run in research_lab_test DB (bun run test) \u2014 never against live runs.",
+    "Frontier = deepseek/deepseek-v4-pro; watch account balance (a mid-run 402 parked a run at WAITING_HUMAN).",
+    "Standing UI rule: every phase DoD wires its capabilities into apps/web (ticket 5.4)."
   ]
 }
