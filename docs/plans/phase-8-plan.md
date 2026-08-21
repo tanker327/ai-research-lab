@@ -208,3 +208,10 @@ which assertions fail) and baseline serialization — no live calls in vitest.
   was designed to expose (§7: contest surfaced, target 2 cycles). Candidate
   causes to investigate next phase: evaluator leniency, and/or the
   researcher never reaching independent leaderboard sources.
+- **2026-08-21 — gate:p4 PASSED end to end on evaluator/v2** (single
+  uninterrupted run): leg B's impossible rubric was refused and the
+  deterministic guard tripped at cap (WAITING_HUMAN + cycle_guard + fail
+  event); leg A's milestone held (RESEARCH_MORE → follow-up → ACCEPT on
+  cycle 2, coverage 19→46 evidence). This closes BOTH the rubber-stamp known
+  issue (the D8 per-criterion discipline held live) and the long-outstanding
+  gate:p4 single-process ceremony (D4).

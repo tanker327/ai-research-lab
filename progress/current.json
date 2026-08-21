@@ -40,7 +40,7 @@
       "depends_on": ["8.1"],
       "started_at": "2026-08-20",
       "completed_at": "2026-08-20",
-      "notes": "Flake hunt 5x green (flake dropped); CLAUDE.md golden syntax updated; gate:p4 ceremony NOT completed — evaluator rubber-stamped the impossible rubric twice (re-filed as known issue; assertions long since verified manually)."
+      "notes": "Flake hunt 5x green (flake dropped); CLAUDE.md golden syntax updated; gate:p4 ceremony PASSED 2026-08-21 on evaluator/v2 (leg B guard trip + leg A milestone) — rubber-stamp issue closed."
     },
     {
       "id": "8.4",
@@ -71,8 +71,7 @@
   "known_issues": [
     "OPTIONAL: openai/xai hub keys upgrade the frontier beyond deepseek-v4-pro — alias swap + FRONTIER_STRUCTURED_MODE=json_schema.",
     "Parked runs awaiting user action from the console: 01a01fad (RTX, analysis_failed — Retry; first beneficiary of the 41c2cd0 cap fix) and 01a01fab (cycle_guard — Accept or Stop).",
-    "Background dev-stack processes launched by the agent get externally SIGTERMed on this machine — use ONE supervised background bash (children + wait, gate pattern) or user terminals.",
-    "Evaluator rubber-stamping: gate:p4 leg B's impossible rubric was ACCEPTed twice in a row (2026-08-20 pm) after passing the same morning — possible temp-0 cached-replay class. gate:p4 ceremony left incomplete (assertions verified manually long ago); watch G2's cycle count for over-leniency."
+    "Background dev-stack processes launched by the agent get externally SIGTERMed on this machine — use ONE supervised background bash (children + wait, gate pattern) or user terminals."
   ],
   "notes": [
     "Phase 7 archived 2026-08-20 — gate fully passed (API leg first run + user console sign-off 'the review flow works'). 529 tests.",
