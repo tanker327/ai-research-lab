@@ -215,3 +215,17 @@ which assertions fail) and baseline serialization — no live calls in vitest.
   cycle 2, coverage 19→46 evidence). This closes BOTH the rubber-stamp known
   issue (the D8 per-criterion discipline held live) and the long-outstanding
   gate:p4 single-process ceremony (D4).
+- **2026-08-21 — G2 rerun on the v2 chain: the independence machinery fired,
+  and its cost blew the wall clock (baseline committed, verdict pending).**
+  Run 01a0241d: the researcher reached independent sources
+  (vendor_affiliated=false evidence exists now), 15 claims ended contested
+  (was 0), and the evaluator looped — 2 accepted cycles plus a third in
+  flight when the runner's 45-min ceiling hit ($0.63 spent, budget fine).
+  Two honest failures: wall clock exceeded, run still EVALUATING at timeout.
+  The pendulum swung from rubber-stamp to over-thoroughness: 22 intelligence
+  retries (10 escalations) and 15 contests is a lot of machinery for one
+  benchmark question. Watch items for the next iteration: contest volume
+  (is the vendor-only rule too broad on satellite claims?), retry pressure
+  on big cycle-2+ bundles, and whether targetCycles=2 should imply a longer
+  wall-clock allowance for loop-expected goldens. The orphaned run may be
+  completed by the dev stack's workers via the stale-claim sweep.

@@ -1,0 +1,69 @@
+{
+  "goldenId": "G2",
+  "title": "LiveCodeBench score with a vendor/independent discrepancy — contest + loop",
+  "date": "2026-08-21",
+  "runId": "01a0241d-7077-7828-b198-ff21ecad8cf7",
+  "runStatus": "EVALUATING",
+  "expectations": {
+    "targetCycles": 2,
+    "expectContested": true,
+    "budgetUsd": 1.5,
+    "wallClockMin": 45
+  },
+  "metrics": {
+    "tasksTotal": 31,
+    "tasksDone": 27,
+    "tasksFailed": 3,
+    "tasksResearch": 23,
+    "tasksControl": 8,
+    "attemptsTotal": 52,
+    "intelligenceRetries": 22,
+    "tierEscalations": 10,
+    "liveEvidence": 65,
+    "liveClaims": 78,
+    "contestedClaims": 15,
+    "modelCalls": 214,
+    "frontierCalls": 58,
+    "frontierSpendUsd": 0.632245,
+    "toolCalls": 161,
+    "toolLatencyMs": 261086,
+    "evalCycles": 2,
+    "wallClockSeconds": 2822,
+    "maxEvalCycles": 3
+  },
+  "maxEvalCycles": 3,
+  "checkpointReasons": [],
+  "cycleGuardEvents": 0,
+  "verdicts": [
+    {
+      "cycle": 1,
+      "decision": "RESEARCH_MORE",
+      "reasons": [
+        "The exact vendor-reported score is well established: full DeepSeek-R1 = 65.9 LiveCodeBench Pass@1-COT, in DeepSeek's arXiv Table 3 at https://arxiv.org/html/2501.12948, and the table separates R1-Zero and R1-Dev stages.",
+        "The official LiveCodeBench leaderboard backend is still unresolved: the analysis cannot establish whether full DeepSeek-R1 is present or absent in the underlying leaderboard data.",
+        "Independent corroboration or refutation of the 65.9 score is absent; the only named independent source, BenchLM, neither lists DeepSeek-R1 nor bears on the 65.9 figure.",
+        "R1-Distill separation is missing, so the variant-separation success criterion is incomplete.",
+        "No contradiction in the evidence was found, but multiple explicit success criteria remain unmet; targeted additional research can plausibly close them."
+      ]
+    },
+    {
+      "cycle": 2,
+      "decision": "RESEARCH_MORE",
+      "reasons": [
+        "A numeric score and metric are documented from a primary vendor source: 65.9 Pass@1-COT, DeepSeek arXiv Table 3, https://arxiv.org/html/2501.12948, satisfying criterion 1.",
+        "Official leaderboard verification is incomplete: the raw JSON files backing livecodebench.github.io are identified but not row-level searched, and absence is explicitly not established.",
+        "Independent corroboration or refutation is absent: BenchLM, Artificial Analysis, and Papers with Code neither confirm nor refute the score, while the Hugging Face card is vendor-affiliated.",
+        "Variant separation is partial: DeepSeek-R1-Zero and R1-Dev scores are separated, but DeepSeek-R1-Distill LiveCodeBench scores were not collected."
+      ]
+    }
+  ],
+  "report": null,
+  "assertionFailures": [
+    "wall clock 2822s exceeds the 45min ceiling",
+    "run ended EVALUATING, not COMPLETED"
+  ],
+  "divergences": [],
+  "humanVerdict": "pending",
+  "humanNote": null,
+  "judgedAt": null
+}
