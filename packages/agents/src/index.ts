@@ -3,8 +3,10 @@
 export { analystV1 } from "./analyst/v1";
 export { analystV2 } from "./analyst/v2";
 export { evaluatorV1 } from "./evaluator/v1";
+export { evaluatorV2 } from "./evaluator/v2";
 export { extractorV1 } from "./extractor/v1";
 export { plannerV1 } from "./planner/v1";
 export { type ResearcherAgentResult, researcherV1 } from "./researcher/v1";
+export { researcherV2 } from "./researcher/v2";
 export { synthesizerV1 } from "./synthesizer/v1";
 export type { Agent, AgentContext } from "./types";

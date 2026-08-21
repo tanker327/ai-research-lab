@@ -101,8 +101,54 @@ export function analystPreAcceptChecks(
 // anti-rubber-stamp rules (ADR-015's split criterion made code) — the merged
 // critic+judge may not find critical flaws and accept anyway, may not demand
 // more work without saying what work, and may not emit template-ish actions.
-export function evaluatorPreAcceptChecks(output: EvaluatorOutput): CheckFailure[] {
+export function evaluatorPreAcceptChecks(
+  output: EvaluatorOutput,
+  // Live contested-claim count at judgment time (8.5/D8). Deterministic
+  // contested-unaddressed rule: an ACCEPT while contests exist must carry at
+  // least one acceptedUncertainty — the conscious downgrade that P5 then
+  // forces into the report's ## Uncertainties. (Matching each contest to an
+  // uncertainty TEXTUALLY would be fuzzy, so the rule is count-based.)
+  contestedCount = 0,
+  // Success-criteria count from the run's latest spec (8.5/D8): an ACCEPT
+  // must carry a verdict row per criterion, and none may be 'unsatisfied'.
+  criteriaCount = 0,
+): CheckFailure[] {
   const failures: CheckFailure[] = [];
+  if (output.decision === "ACCEPT" && criteriaCount > 0) {
+    if (output.criterionVerdicts.length < criteriaCount) {
+      failures.push({
+        check: "check:criteria_unassessed",
+        reason:
+          `ACCEPT with ${output.criterionVerdicts.length}/${criteriaCount} criterion verdicts — ` +
+          "every success criterion needs an explicit satisfied/unsatisfied/not_assessable call",
+        severity: "reject",
+      });
+    }
+    const unsatisfied = output.criterionVerdicts.filter((v) => v.verdict === "unsatisfied");
+    if (unsatisfied.length > 0) {
+      failures.push({
+        check: "check:criteria_unsatisfied",
+        reason:
+          `ACCEPT while ${unsatisfied.length} criterion verdict(s) say unsatisfied ` +
+          `(first: ${unsatisfied[0]?.criterion.slice(0, 120)}) — demand the work or consciously ` +
+          "downgrade to not_assessable with an acceptedUncertainty",
+        severity: "reject",
+      });
+    }
+  }
+  if (
+    output.decision === "ACCEPT" &&
+    contestedCount > 0 &&
+    output.acceptedUncertainties.length === 0
+  ) {
+    failures.push({
+      check: "check:contested_unaddressed",
+      reason:
+        `ACCEPT with ${contestedCount} contested claim(s) and zero acceptedUncertainties — ` +
+        "resolve the contests (RESEARCH_MORE) or consciously accept them as uncertainties",
+      severity: "reject",
+    });
+  }
   if (
     (output.decision === "RESEARCH_MORE" || output.decision === "REPLAN") &&
     output.requiredActions.length === 0

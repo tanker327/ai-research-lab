@@ -403,12 +403,24 @@ export const EvaluatorDecision = z.enum([
 ]);
 export type EvaluatorDecision = z.infer<typeof EvaluatorDecision>;
 
+// Per-criterion accountability (8.5/D8, evaluator/v2): rubber-stamping an
+// impossible rubric then requires fabricating a per-criterion pointer —
+// structurally harder, and auditable in the trace. Deterministic checks
+// enforce presence and consistency on ACCEPT.
+export const CriterionVerdict = z.object({
+  criterion: z.string().min(1).max(500), // verbatim from successCriteria
+  verdict: z.enum(["satisfied", "unsatisfied", "not_assessable"]),
+  pointer: z.string().max(500).nullable(), // the claim/coverage fact anchoring the call
+});
+export type CriterionVerdict = z.infer<typeof CriterionVerdict>;
+
 export const EvaluatorOutput = z.object({
   issues: z.array(EvaluatorIssue).max(20).default([]), // the "critic" half
   decision: EvaluatorDecision,
   reasons: z.array(z.string().min(1).max(2000)).min(1).max(10),
   requiredActions: z.array(RequiredAction).max(10).default([]),
   acceptedUncertainties: z.array(shortText).max(10).default([]), // surfaced in the report (P5)
+  criterionVerdicts: z.array(CriterionVerdict).max(20).default([]), // v2 (8.5/D8)
 });
 export type EvaluatorOutput = z.infer<typeof EvaluatorOutput>;
 

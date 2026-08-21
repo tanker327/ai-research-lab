@@ -54,6 +54,7 @@ const VERDICT: EvaluatorOutput = {
     },
   ],
   acceptedUncertainties: [],
+  criterionVerdicts: [],
 };
 
 async function seedEvaluatingRun(output: EvaluatorOutput, runStatus = "EVALUATING") {

@@ -211,6 +211,7 @@ describe("evaluator checks (pure)", () => {
     reasons: ["criteria met"],
     requiredActions: [],
     acceptedUncertainties: [],
+    criterionVerdicts: [],
   };
   const ACTION = {
     kind: "research" as const,
@@ -252,5 +253,63 @@ describe("evaluator checks (pure)", () => {
       requiredActions: [{ ...ACTION, question: "Research {{topic}} in more depth" }],
     });
     expect(failures.map((f) => f.check)).toContain("check:concrete_actions");
+  });
+
+  it("ACCEPT with contested claims and no acceptedUncertainties rejects (8.5/D8)", () => {
+    expect(evaluatorPreAcceptChecks(BASE, 2).map((f) => f.check)).toContain(
+      "check:contested_unaddressed",
+    );
+    // Conscious downgrade passes; so does demanding the work instead.
+    expect(
+      evaluatorPreAcceptChecks({ ...BASE, acceptedUncertainties: ["score is vendor-only"] }, 2),
+    ).toHaveLength(0);
+    expect(
+      evaluatorPreAcceptChecks(
+        { ...BASE, decision: "RESEARCH_MORE", requiredActions: [ACTION] },
+        2,
+      ),
+    ).toHaveLength(0);
+  });
+
+  it("ACCEPT needs a verdict per criterion, and none unsatisfied (8.5/D8)", () => {
+    const satisfied = {
+      criterion: "cite official docs",
+      verdict: "satisfied" as const,
+      pointer: "c1",
+    };
+    // Missing rows reject.
+    expect(evaluatorPreAcceptChecks(BASE, 0, 2).map((f) => f.check)).toContain(
+      "check:criteria_unassessed",
+    );
+    // Full coverage passes.
+    expect(
+      evaluatorPreAcceptChecks(
+        { ...BASE, criterionVerdicts: [satisfied, { ...satisfied, criterion: "recent sources" }] },
+        0,
+        2,
+      ),
+    ).toHaveLength(0);
+    // An unsatisfied verdict under ACCEPT rejects (the impossible-rubric path).
+    expect(
+      evaluatorPreAcceptChecks(
+        {
+          ...BASE,
+          criterionVerdicts: [
+            satisfied,
+            { criterion: "impossible", verdict: "unsatisfied", pointer: null },
+          ],
+        },
+        0,
+        2,
+      ).map((f) => f.check),
+    ).toContain("check:criteria_unsatisfied");
+    // Non-ACCEPT decisions are exempt (nothing is being rubber-stamped).
+    expect(
+      evaluatorPreAcceptChecks(
+        { ...BASE, decision: "RESEARCH_MORE", requiredActions: [ACTION] },
+        0,
+        2,
+      ),
+    ).toHaveLength(0);
   });
 });

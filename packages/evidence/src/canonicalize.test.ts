@@ -173,6 +173,86 @@ describe("canonicalizeRun", () => {
     expect(links[0]?.n).toBe(1); // upsert — no duplicate links
   });
 
+  it("vendor-only benchmark claims are born contested; independent evidence clears them (8.5/D7)", async () => {
+    const { runId, taskId, attemptId } = await seedBase();
+    // Claim A: benchmark evidence, ALL vendor (null counts as vendor) ⇒ contested.
+    const vendorOnly = newId();
+    await seedRawClaim(db, {
+      id: vendorOnly,
+      runId,
+      taskId,
+      attemptId,
+      subjectKey: "model:r1",
+      predicateKey: "livecodebench_pass_at1",
+      valueText: "65.9",
+    });
+    await seedEvidence(db, {
+      id: newId(),
+      runId,
+      taskId,
+      attemptId,
+      excerpt: "we score 65.9",
+      vendorAffiliated: true,
+      benchmarkOrigin: "LiveCodeBench",
+      metadata: { rawClaimIds: [vendorOnly] },
+    });
+    // Claim B: same shape but one INDEPENDENT evidence row ⇒ supported.
+    const confirmed = newId();
+    await seedRawClaim(db, {
+      id: confirmed,
+      runId,
+      taskId,
+      attemptId,
+      subjectKey: "model:o1",
+      predicateKey: "livecodebench_pass_at1",
+      valueText: "63.4",
+    });
+    for (const vendor of [true, false]) {
+      await seedEvidence(db, {
+        id: newId(),
+        runId,
+        taskId,
+        attemptId,
+        excerpt: vendor ? "vendor table" : "leaderboard entry",
+        vendorAffiliated: vendor,
+        benchmarkOrigin: "LiveCodeBench",
+        metadata: { rawClaimIds: [confirmed] },
+      });
+    }
+    // Claim C: no benchmark evidence at all (a doc fact) ⇒ untouched even
+    // though its only source is vendor-affiliated (the P3 finding stands).
+    const docFact = newId();
+    await seedRawClaim(db, {
+      id: docFact,
+      runId,
+      taskId,
+      attemptId,
+      subjectKey: "db:postgresql",
+      predicateKey: "transactional_ddl",
+      valueText: "yes",
+    });
+    await seedEvidence(db, {
+      id: newId(),
+      runId,
+      taskId,
+      attemptId,
+      excerpt: "DDL is transactional",
+      vendorAffiliated: true,
+      metadata: { rawClaimIds: [docFact] },
+    });
+
+    const result = await canonicalizeRun(db, runId);
+    expect(result.contested).toBe(1);
+    const statuses = await rows(sql`
+      SELECT subject_key, status, contest_note FROM canonical_claims
+      WHERE run_id = ${runId} ORDER BY subject_key`);
+    const byKey = new Map(statuses.map((r) => [r.subject_key, r]));
+    expect(byKey.get("db:postgresql")?.status).toBe("supported");
+    expect(byKey.get("model:o1")?.status).toBe("supported");
+    expect(byKey.get("model:r1")?.status).toBe("contested");
+    expect(String(byKey.get("model:r1")?.contest_note)).toContain("vendor-only benchmark");
+  });
+
   it("superseded attempts' claims go dark: live view stops serving the canonical row", async () => {
     const { runId, taskId, attemptId } = await seedBase();
     await seedRawClaim(db, {

@@ -994,6 +994,19 @@ The SSE stream is a tail over the existing event write path — it powers the li
 > (`detail.truncated: true` when finish=length) from malformation, and the
 > worker stamps the agent version it actually ran onto the attempt row. See
 > docs/plans/phase-8-plan.md D6.
+>
+> **Amended 2026-08-21 (P8.5, independence chain):** canonicalization gained a
+> second deterministic contest rule (§10's contradiction system): a claim
+> whose evidence includes a benchmarkOrigin-carrying row and NO independent
+> (vendor_affiliated=false) evidence is born `contested` ("vendor-only
+> benchmark sourcing"); doc/fact claims without benchmark evidence stay
+> advisory-warn (P3 finding). `EvaluatorOutput` gained `criterionVerdicts`
+> (default `[]`; evaluator/v2, per-criterion satisfied/unsatisfied/
+> not_assessable + pointer), and the deterministic evaluator checks reject an
+> ACCEPT that leaves contested claims without acceptedUncertainties, lacks a
+> verdict per success criterion, or carries an unsatisfied verdict.
+> researcher/v2 adds the independence rule for vendor-reported measured
+> values. See docs/plans/phase-8-plan.md D7/D8.
 
 ## 24.6 UI Specification (the mockup is normative)
 

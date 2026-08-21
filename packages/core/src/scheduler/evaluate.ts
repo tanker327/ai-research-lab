@@ -13,6 +13,7 @@ import {
   selectEvaluationCandidates,
   selectEvidenceStatsByAttempt,
   selectFinalAcceptMetadata,
+  selectLatestSpec,
   selectLiveClaimEvidence,
   selectLiveClaims,
   updateTaskStatus,
@@ -241,7 +242,14 @@ async function preAcceptChecks(
   }
   if (c.taskType === "evaluate") {
     const parsed = EvaluatorOutput.safeParse(output);
-    return parsed.success ? evaluatorPreAcceptChecks(parsed.data) : [];
+    if (!parsed.success) return [];
+    // 8.5/D8: the contested-unaddressed backstop needs the live contest
+    // count; the per-criterion checks need the spec's criteria count.
+    const contestedCount = (await selectLiveClaims(db, c.runId)).filter(
+      (cl) => cl.status === "contested",
+    ).length;
+    const spec = await selectLatestSpec(db, c.runId);
+    return evaluatorPreAcceptChecks(parsed.data, contestedCount, spec?.successCriteria.length ?? 0);
   }
   if (c.taskType === "analyze") {
     const parsed = AnalysisOutput.safeParse(output);

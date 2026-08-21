@@ -5,10 +5,10 @@
 // SUCCEEDED) or throws a CategorizedError (attempt FAILED with that category).
 import {
   analystV2,
-  evaluatorV1,
+  evaluatorV2,
   extractorV1,
   plannerV1,
-  researcherV1,
+  researcherV2,
   synthesizerV1,
 } from "@lab/agents";
 import type { ContextBuilder } from "@lab/context";
@@ -254,7 +254,8 @@ function researcherHandler(deps: AgentDeps): TaskHandler {
         tierModes(deps.config),
       ),
     );
-    const result = await researcherV1.run(input, agentContext(deps, db, work, "researcher", route));
+    await updateAttemptAgentVersion(db, work.attempt.id, researcherV2.version);
+    const result = await researcherV2.run(input, agentContext(deps, db, work, "researcher", route));
 
     // sourcesVisited is MECHANICAL: the tool layer's own log (§6.2) — the
     // model cannot forget or invent a URL it fetched.
@@ -432,8 +433,9 @@ function evaluatorHandler(deps: AgentDeps): TaskHandler {
         tierModes(deps.config),
       ),
     );
-    const output = evaluatorV1.outputSchema.parse(
-      await evaluatorV1.run(input, agentContext(deps, db, work, "evaluator", route)),
+    await updateAttemptAgentVersion(db, work.attempt.id, evaluatorV2.version);
+    const output = evaluatorV2.outputSchema.parse(
+      await evaluatorV2.run(input, agentContext(deps, db, work, "evaluator", route)),
     );
     await updateAttemptOutput(db, work.attempt.id, output);
   };

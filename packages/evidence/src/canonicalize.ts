@@ -109,6 +109,16 @@ export async function canonicalizeRun(
     const result: CanonicalizeResult = { canonicalIds: [], merged: 0, contested: 0, linked: 0 };
     const rawToCanonical = new Map<string, string>();
 
+    // Evidence facts per raw claim, read up front — the benchmark contest
+    // rule (D7) needs them at status-decision time; the LINK step reuses them.
+    const sources = await selectLiveEvidenceLinkSources(tx, runId);
+    const evidenceByRawId = new Map<string, typeof sources>();
+    for (const s of sources) {
+      for (const rawId of s.rawClaimIds) {
+        evidenceByRawId.set(rawId, [...(evidenceByRawId.get(rawId) ?? []), s]);
+      }
+    }
+
     for (const [key, members] of groups) {
       const [subjectKey, predicateKey] = key.split("|") as [string, string];
       const first = members[0];
@@ -141,13 +151,32 @@ export async function canonicalizeRun(
       const values = [
         ...new Set(members.map((m) => m.valueText).filter((v): v is string => v !== null)),
       ];
-      const contested = values.length > 1;
+      const notes: string[] = [];
+      if (values.length > 1) notes.push(`disagreeing values: ${values.join(" vs ")}`);
+
+      // D7 (8.5): a benchmark claim confirmed ONLY by the vendor is born
+      // contested — code, not prompt. Scope: evidence carrying a
+      // benchmarkOrigin (a reported benchmark result) with no independent
+      // (vendorAffiliated=false) evidence anywhere on the claim; NULL counts
+      // as vendor (existing safety rule). Doc/fact claims without benchmark
+      // evidence are untouched — the P3 finding stands (postgresql.org is
+      // "vendor" for a PostgreSQL question).
+      const linked = members.flatMap((m) => evidenceByRawId.get(m.id) ?? []);
+      const benchmarkBacked = linked.some((e) => e.benchmarkOrigin !== null);
+      const hasIndependent = linked.some((e) => e.vendorAffiliated === false);
+      if (benchmarkBacked && !hasIndependent) {
+        notes.push(
+          "vendor-only benchmark sourcing — every supporting source is vendor-affiliated; no independent confirmation",
+        );
+      }
+
+      const contested = notes.length > 0;
       if (contested) result.contested += 1;
       await updateCanonicalStatus(
         tx,
         canonicalId,
         contested ? "contested" : "supported",
-        contested ? `disagreeing values: ${values.join(" vs ")}` : null,
+        contested ? notes.join("; ") : null,
         first.statement,
       );
 
@@ -159,7 +188,6 @@ export async function canonicalizeRun(
 
     // LINK: evidence.metadata.rawClaimIds (written by the extractor handler)
     // → claim_evidence_links against the canonical rows.
-    const sources = await selectLiveEvidenceLinkSources(tx, runId);
     for (const s of sources) {
       for (const rawId of s.rawClaimIds) {
         const canonicalId = rawToCanonical.get(rawId);

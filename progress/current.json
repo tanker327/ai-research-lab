@@ -54,9 +54,11 @@
     {
       "id": "8.5",
       "title": "Independence chain: vendor-only benchmark claims born contested (code), researcher v2, evaluator contested-unaddressed backstop + per-criterion v2 (D7 D8)",
-      "status": "pending",
+      "status": "completed",
       "priority": 5,
-      "depends_on": ["8.2"]
+      "depends_on": ["8.2"],
+      "started_at": "2026-08-21",
+      "completed_at": "2026-08-21"
     },
     {
       "id": "gate",

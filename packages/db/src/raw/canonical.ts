@@ -130,6 +130,10 @@ export async function upsertClaimEvidenceLink(
 export interface LiveEvidenceLinkSource {
   id: string;
   rawClaimIds: string[];
+  // Vendor-independence facts for the canonicalizer's benchmark contest rule
+  // (8.5/D7): NULL affiliation counts as vendor (existing safety rule).
+  vendorAffiliated: boolean | null;
+  benchmarkOrigin: string | null;
 }
 
 // Live evidence rows carrying the extractor's claim↔evidence mapping
@@ -139,10 +143,12 @@ export async function selectLiveEvidenceLinkSources(
   runId: string,
 ): Promise<LiveEvidenceLinkSource[]> {
   const rows = await tx.execute(sql`
-    SELECT id, metadata FROM live_evidence
+    SELECT id, metadata, vendor_affiliated, benchmark_origin FROM live_evidence
     WHERE run_id = ${runId} AND metadata ? 'rawClaimIds'`);
   return [...rows].map((r) => ({
     id: r.id as string,
     rawClaimIds: ((r.metadata as Record<string, unknown>).rawClaimIds as string[]) ?? [],
+    vendorAffiliated: (r.vendor_affiliated as boolean | null) ?? null,
+    benchmarkOrigin: (r.benchmark_origin as string | null) ?? null,
   }));
 }

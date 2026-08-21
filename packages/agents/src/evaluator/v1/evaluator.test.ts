@@ -72,6 +72,7 @@ const OUTPUT: EvaluatorOutput = {
     },
   ],
   acceptedUncertainties: [],
+  criterionVerdicts: [],
 };
 
 function makeCtx(object: unknown): AgentContext {
