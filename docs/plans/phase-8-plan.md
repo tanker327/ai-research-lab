@@ -76,6 +76,82 @@ review artifact.
 - CI wiring for goldens (they spend money and need a human verdict; they
   stay manual by design, §7 "run on demand").
 
+## Gate-fix work (added 2026-08-20 after the first G1/G2 baselines)
+
+The first live suite run caught two quality failures; the gate stays open
+until they are fixed and the goldens rerun green. Root causes, from the
+evidence (not symptoms):
+
+**G1 (analyst):** the cycle-2 analyze died at both tiers over an 86-claim
+bundle — but for different reasons. strong_local hit finish=length at the
+24k OUTPUT_BUDGET (reasoning + 20×2000-char findings don't fit), then
+replayed the identical failure from cache in 0s (temp-0, identical prompt).
+The frontier attempt COMPLETED (~17k tokens, finish=stop) and failed Zod on
+exactly two strings: `canonicalClaimIds` entries over 40 chars (two UUIDs
+glued into one string) — a 99%-valid analysis rejected all-or-nothing, with
+the retry replaying the same prompt verbatim.
+
+**G2 (independence chain):** the contradiction system works (canonicalize.ts
+marks disagreeing values contested) but never got input — the researcher
+only fetched DeepSeek's own model card and paper (9/9 evidence rows
+vendor-affiliated), the `check:non_vendor` rule is advisory (warn) by the P3
+finding, and the evaluator ACCEPTed with the 9/9 vendor ratio visible in its
+coverage facts. Same-day, gate:p4 leg B's evaluator ACCEPTed an impossible
+rubric twice. The evaluator is the failing backstop; the researcher is the
+failing front line.
+
+### D6 — Analyst robustness (fixes G1)
+
+- **Schema-feedback retries:** `AnalystInput` gains
+  `schemaFeedback: z.array(shortText).default([])` (the P5
+  `rejectionFeedback` pattern). On a SCHEMA_FAILURE retry the context
+  builder feeds the previous attempt's Zod issue paths ("canonicalClaimIds
+  entries must be single ids, ≤40 chars"); on finish=length it feeds a
+  conciseness directive instead ("previous attempt exceeded the output
+  budget — shorter statements, ids only, no restating claims"). A changed
+  prompt also breaks the temp-0 cached-replay loop for free.
+- **Distinguish truncation from malformation:** the model client already
+  sees finish_reason; a `length` finish becomes SCHEMA_FAILURE with
+  `detail.truncated: true` so the retry path can pick the right feedback.
+- **Prompt version bump:** analyst v1 has accepted attempts → the feedback
+  field + tightened id/conciseness instructions land as `analyst/v2`
+  (design §33); the golden rerun + baseline diff is the review artifact.
+- NOT doing: claim-bundle chunking (changes cross-claim semantics; deferred
+  trigger: v2 still failing on large bundles), raising OUTPUT_BUDGET
+  (reasoning models will spend whatever they're given).
+
+### D7 — Source-independence chain (fixes G2, deterministically first)
+
+- **Vendor-only benchmark claims are born contested (code, not prompt —
+  ADR-016 spirit):** in canonicalization, a claim of type
+  benchmark/measurement whose live evidence is ALL vendor-affiliated
+  (NULL = vendor, existing safety rule) gets `status = contested`,
+  contest note "vendor-only sourcing — no independent confirmation".
+  Everything downstream already reacts to contested: the analyst sees
+  openContests, the evaluator sees the contested count, ADR-020 forces it
+  into ## Uncertainties. Scoped to measured-value claim types ONLY — the
+  P3 finding stands (postgresql.org is "vendor" for a PostgreSQL question;
+  doc/fact claims stay advisory-warn).
+- **Researcher v2:** for benchmark/measured-value questions, the strategy
+  instructions demand an attempted independent source (leaderboard,
+  third-party eval) before self-assessing complete.
+
+### D8 — Evaluator anti-rubber-stamp (fixes G2's backstop + gate:p4 leg B)
+
+- **Deterministic backstop (code):** `evaluatorPreAcceptChecks` — an ACCEPT
+  while contested claims exist that appear nowhere in
+  `acceptedUncertainties` is rejected (`check:contested_unaddressed`,
+  QUALITY_FAILURE → the ladder retries/escalates). The guard that stops a
+  lenient model is code, never the model (ADR-016).
+- **Evaluator v2:** output gains a per-criterion verdict array (each
+  success criterion: satisfied | unsatisfied | not_assessable + a claim/
+  evidence pointer). Rubber-stamping an impossible rubric then requires
+  fabricating per-criterion evidence pointers — structurally harder, and
+  auditable in the trace. ACCEPT additionally requires every criterion row
+  present (deterministic check).
+- Verification: gate:p4 leg B rerun (the impossible rubric must again trip
+  the guard) + G2 rerun (must contest + loop).
+
 ## Ticket mapping (proposed)
 
 | Ticket | Delivers | Decisions |
@@ -84,7 +160,9 @@ review artifact.
 | 8.1 | Runner + tasks-as-data + baseline writer + --judge stamping | D1 D2 |
 | 8.2 | G1–G4 definitions with encoded expectations | D3 |
 | 8.3 | Hardening tail: gate:p4 ceremony, 5× flake hunt, CLAUDE.md accuracy | D4 |
-| gate | G1+G2 live with baselines + budgets green + human verdicts | — |
+| 8.4 | Analyst robustness: schema/truncation feedback retries, analyst v2 | D6 |
+| 8.5 | Independence chain: vendor-contest guard, researcher v2, evaluator backstop + v2 | D7 D8 |
+| gate | G1+G2 rerun green (G1 completes, G2 contests + loops) + gate:p4 leg B passes + budgets + human verdicts | — |
 
 ## Test plan
 
