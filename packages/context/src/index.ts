@@ -5,6 +5,7 @@
 // (ADR-018, rule 9; asserted by a contract test).
 import type { Db } from "@lab/db";
 import {
+  type FailedAttemptError,
   selectDoneTasksWithOutput,
   selectFinalAcceptMetadata,
   selectLatestAcceptedAnalysis,
@@ -14,6 +15,7 @@ import {
   selectRejectionReasonsForTask,
   selectRunForContext,
   selectRunMetrics,
+  selectSchemaFailureErrors,
   selectTaskForContext,
 } from "@lab/db";
 import type {
@@ -55,7 +57,9 @@ export interface ContextBuilder {
   ): Promise<PlannerInput>;
   forResearcher(taskId: string): Promise<ResearcherInput>;
   forExtractor(taskId: string): Promise<ExtractorInput>;
-  forAnalyst(runId: string): Promise<AnalystInput>;
+  // taskId (when known) pulls prior SCHEMA_FAILURE errors for THIS task into
+  // schemaFeedback — a schema reject or truncation must be fixable (8.4/D6).
+  forAnalyst(runId: string, taskId?: string): Promise<AnalystInput>;
   forEvaluator(runId: string, maxCycles: number): Promise<EvaluatorInput>;
   // taskId (when known) pulls prior rejection reasons for THIS task into the
   // context — a citation-validator reject must be fixable (5.2).
@@ -101,6 +105,28 @@ function digestLadder(
   });
   out.push({ label: "empty", value: "", tokens: 0 });
   return out;
+}
+
+// Prior SCHEMA_FAILURE errors → actionable feedback lines for the next
+// attempt (8.4/D6). Truncation and malformation get different directives;
+// pure so the mapping is unit-testable.
+export function deriveSchemaFeedback(errors: FailedAttemptError[]): string[] {
+  const lines: string[] = [];
+  for (const e of errors) {
+    if (e.detail?.truncated === true) {
+      lines.push(
+        "Your previous attempt exceeded the output token budget (finish=length). " +
+          "Be drastically more concise: fewer findings, shorter statements, cite claim " +
+          "ids without restating claim text, and do not deliberate at length.",
+      );
+    } else {
+      const cause = typeof e.detail?.cause === "string" ? e.detail.cause : (e.message ?? "");
+      lines.push(
+        `Your previous attempt failed schema validation. Fix exactly this and change nothing else: ${cause.slice(0, 1500)}`,
+      );
+    }
+  }
+  return [...new Set(lines)].slice(0, 10);
 }
 
 export function createContextBuilder(deps: ContextBuilderDeps): ContextBuilder {
@@ -217,7 +243,7 @@ export function createContextBuilder(deps: ContextBuilderDeps): ContextBuilder {
     // §12 heuristic via pickStrongest). Contested claims and the spec are
     // hard content — the overflow ladder degrades evidence richness, never
     // drops a claim's identity.
-    async forAnalyst(runId) {
+    async forAnalyst(runId, taskId) {
       const specRow = await selectLatestSpec(deps.db, runId);
       if (!specRow) {
         throw new CategorizedError(
@@ -278,11 +304,16 @@ export function createContextBuilder(deps: ContextBuilderDeps): ContextBuilder {
         })),
       });
 
+      const schemaFeedback = taskId
+        ? deriveSchemaFeedback(await selectSchemaFailureErrors(deps.db, taskId))
+        : [];
+
       const date = now().toISOString().slice(0, 10);
       return AnalystInput.parse({
         specification: specRow,
         claimBundle: fit.value,
         openContests,
+        schemaFeedback,
         timeContext: `Current date: ${date}. Weigh evidence recency against this date.`,
       });
     },

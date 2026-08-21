@@ -309,6 +309,10 @@ export const AnalystInput = z.object({
   specification: ResearchSpecification,
   claimBundle: z.array(CanonicalClaimView).max(300),
   openContests: z.array(ContestedClaimView).max(50),
+  // Why the previous attempt of THIS task failed schema validation or hit the
+  // output budget (phase-8 D6) — a changed prompt also defeats the temp-0
+  // cached-replay loop. Same .default([]) convention as rejectionFeedback.
+  schemaFeedback: z.array(shortText).max(10).default([]),
   timeContext: z.string().max(500),
 });
 export type AnalystInput = z.infer<typeof AnalystInput>;

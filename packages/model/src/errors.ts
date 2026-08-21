@@ -21,11 +21,24 @@ export function mapModelError(err: unknown, model: string): CategorizedError {
   // Structured output did not match the schema — the ladder's re-extract /
   // reject path, never a transport retry (rule 7).
   if (/NoObjectGeneratedError|NoOutputGeneratedError|TypeValidationError/.test(nameOf(err))) {
+    // NoObjectGeneratedError carries the finishReason — a 'length' finish is
+    // truncation, not malformation, and the retry feedback differs (D6).
+    const finishReason =
+      typeof err === "object" && err !== null && "finishReason" in err
+        ? (err as { finishReason: unknown }).finishReason
+        : null;
     return new CategorizedError(
       "SCHEMA_FAILURE",
       `model output failed schema validation (${model})`,
       {
         cause: err,
+        detail: {
+          truncated: finishReason === "length",
+          // The Zod issue list lives on the wrapped cause, not the wrapper.
+          cause: String(
+            err instanceof Error && err.cause instanceof Error ? err.cause.message : err,
+          ).slice(0, 500),
+        },
       },
     );
   }

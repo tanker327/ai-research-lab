@@ -43,11 +43,27 @@
       "notes": "Flake hunt 5x green (flake dropped); CLAUDE.md golden syntax updated; gate:p4 ceremony NOT completed — evaluator rubber-stamped the impossible rubric twice (re-filed as known issue; assertions long since verified manually)."
     },
     {
-      "id": "gate",
-      "title": "G1+G2 live with baselines committed, budgets green, human verdicts stamped",
+      "id": "8.4",
+      "title": "Analyst robustness: schemaFeedback retries (truncation vs malformation), analyst v2, attempt agent-version stamping (D6)",
+      "status": "completed",
+      "started_at": "2026-08-21",
+      "priority": 4,
+      "depends_on": ["8.2"],
+      "completed_at": "2026-08-21"
+    },
+    {
+      "id": "8.5",
+      "title": "Independence chain: vendor-only benchmark claims born contested (code), researcher v2, evaluator contested-unaddressed backstop + per-criterion v2 (D7 D8)",
       "status": "pending",
       "priority": 5,
       "depends_on": ["8.2"]
+    },
+    {
+      "id": "gate",
+      "title": "G1+G2 rerun green (G1 completes, G2 contests + loops) + gate:p4 leg B passes + budgets + human verdicts",
+      "status": "pending",
+      "priority": 6,
+      "depends_on": ["8.4", "8.5"]
     }
   ],
   "known_issues": [

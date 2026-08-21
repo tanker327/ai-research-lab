@@ -16,7 +16,7 @@ import {
 import { CategorizedError, newId } from "@lab/schemas";
 import { sql } from "drizzle-orm";
 import { afterAll, afterEach, describe, expect, it } from "vitest";
-import { createContextBuilder, estimateTokens } from "./index";
+import { createContextBuilder, deriveSchemaFeedback, estimateTokens } from "./index";
 
 const url = process.env.DATABASE_URL ?? "postgres://lab:lab@localhost:5434/research_lab";
 const { db, close } = createDb(url);
@@ -326,6 +326,63 @@ describe("forAnalyst", () => {
     const input = await builder.forAnalyst(g.runId);
     expect(input.claimBundle).toHaveLength(0);
     expect(input.openContests).toHaveLength(0);
+  });
+
+  it("taskId pulls prior SCHEMA_FAILURE errors into schemaFeedback (8.4/D6)", async () => {
+    const g = await seedGraph();
+    await seedSpec(db, { id: newId(), runId: g.runId, objective: "obj" });
+    const analyzeTask = newId();
+    await seedTask(db, { id: analyzeTask, runId: g.runId, status: "READY", type: "analyze" });
+    // Attempt 1: truncation; attempt 2: malformation. Newest first, distinct lines.
+    await seedAttempt(db, {
+      id: newId(),
+      taskId: analyzeTask,
+      runId: g.runId,
+      attemptNumber: 1,
+      status: "FAILED",
+      error: { category: "SCHEMA_FAILURE", message: "m", detail: { truncated: true } },
+    });
+    await seedAttempt(db, {
+      id: newId(),
+      taskId: analyzeTask,
+      runId: g.runId,
+      attemptNumber: 2,
+      status: "FAILED",
+      error: {
+        category: "SCHEMA_FAILURE",
+        message: "m",
+        detail: { truncated: false, cause: "Too big: expected string to have <=40 characters" },
+      },
+    });
+    // Infra failures never become feedback.
+    await seedAttempt(db, {
+      id: newId(),
+      taskId: analyzeTask,
+      runId: g.runId,
+      attemptNumber: 3,
+      status: "FAILED",
+      error: { category: "TRANSIENT_INFRA", message: "worker died" },
+    });
+    const builder = createContextBuilder({ db, capabilities: CAPS });
+    const input = await builder.forAnalyst(g.runId, analyzeTask);
+    expect(input.schemaFeedback).toHaveLength(2);
+    expect(input.schemaFeedback[0]).toContain("<=40 characters"); // newest first
+    expect(input.schemaFeedback[1]).toContain("output token budget");
+    // Without taskId (or with no failures) the field stays empty.
+    expect((await builder.forAnalyst(g.runId)).schemaFeedback).toEqual([]);
+  });
+});
+
+describe("deriveSchemaFeedback", () => {
+  it("maps truncation and malformation to different directives, deduped", () => {
+    const lines = deriveSchemaFeedback([
+      { category: "SCHEMA_FAILURE", message: "m", detail: { truncated: true } },
+      { category: "SCHEMA_FAILURE", message: "m", detail: { truncated: true } },
+      { category: "SCHEMA_FAILURE", message: "fallback msg", detail: null },
+    ]);
+    expect(lines).toHaveLength(2);
+    expect(lines[0]).toContain("more concise");
+    expect(lines[1]).toContain("fallback msg");
   });
 });
 

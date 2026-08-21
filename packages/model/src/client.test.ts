@@ -77,7 +77,7 @@ function stubFetch(
   return { fetch: fetchImpl, captured };
 }
 
-function completion(content: string, extra: Record<string, unknown> = {}) {
+function completion(content: string, extra: Record<string, unknown> = {}, finishReason = "stop") {
   return {
     id: "chatcmpl-1",
     object: "chat.completion",
@@ -87,7 +87,7 @@ function completion(content: string, extra: Record<string, unknown> = {}) {
       {
         index: 0,
         message: { role: "assistant", content, ...extra },
-        finish_reason: "stop",
+        finish_reason: finishReason,
       },
     ],
     usage: { prompt_tokens: 42, completion_tokens: 7 },
@@ -207,6 +207,29 @@ describe("generateStructured", () => {
       .generateStructured({ ctx, model: "default", schema: Classification, messages })
       .catch((e) => e);
     expect(err).toMatchObject({ name: "CategorizedError", category: "SCHEMA_FAILURE" });
+  });
+
+  it("truncated json_object output → SCHEMA_FAILURE with detail.truncated (8.4/D6)", async () => {
+    const { fetch } = stubFetch(() => ({
+      status: 200,
+      // finish=length mid-object: unparseable AND flagged as truncation.
+      json: completion('{"category": "data', {}, "length"),
+    }));
+    const client = makeClient(fetch);
+    const err = await client
+      .generateStructured({
+        ctx,
+        model: "cheapest",
+        schema: Classification,
+        mode: "json_object",
+        messages,
+      })
+      .catch((e) => e);
+    expect(err).toMatchObject({
+      name: "CategorizedError",
+      category: "SCHEMA_FAILURE",
+      detail: { truncated: true },
+    });
   });
 
   it("persists reasoning through the sink and links the artifact", async () => {

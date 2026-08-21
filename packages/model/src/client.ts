@@ -51,6 +51,7 @@ export interface ModelCallMeta {
   outputTokens: number | null;
   costUsd: number | null;
   latencyMs: number;
+  finishReason: string | null; // 'length' = truncation — retry feedback differs (D6)
 }
 
 export interface ModelClient {
@@ -192,6 +193,7 @@ export function createModelClient(opts: ModelClientOptions): ModelClient {
       outputTokens: p.outputTokens,
       costUsd: p.costUsd,
       latencyMs: p.latencyMs,
+      finishReason: p.finishReason,
     };
   }
 
@@ -212,7 +214,10 @@ export function createModelClient(opts: ModelClientOptions): ModelClient {
             // detail is what attempts.error persists — keep the cause legible.
             {
               cause: err,
-              detail: { cause: String(err instanceof Error ? err.message : err).slice(0, 500) },
+              detail: {
+                truncated: res.finishReason === "length",
+                cause: String(err instanceof Error ? err.message : err).slice(0, 500),
+              },
             },
           );
         }

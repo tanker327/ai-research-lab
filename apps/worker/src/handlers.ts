@@ -4,7 +4,7 @@
 // Researcher/Extractor land with 3.3/3.4. A handler either returns (attempt
 // SUCCEEDED) or throws a CategorizedError (attempt FAILED with that category).
 import {
-  analystV1,
+  analystV2,
   evaluatorV1,
   extractorV1,
   plannerV1,
@@ -20,6 +20,7 @@ import {
   insertFakeEvidence,
   insertRawClaimRow,
   selectToolCallsByAttempt,
+  updateAttemptAgentVersion,
   updateAttemptInput,
   updateAttemptOutput,
 } from "@lab/db";
@@ -353,8 +354,10 @@ function extractorHandler(deps: AgentDeps): TaskHandler {
 
 function analystHandler(deps: AgentDeps): TaskHandler {
   return async (db, work) => {
-    const input = await deps.context.forAnalyst(work.task.runId);
+    // taskId → prior SCHEMA_FAILURE errors become schemaFeedback (8.4/D6).
+    const input = await deps.context.forAnalyst(work.task.runId, work.task.id);
     await updateAttemptInput(db, work.attempt.id, input); // R12: verbatim
+    await updateAttemptAgentVersion(db, work.attempt.id, analystV2.version);
 
     const route = await guardDarkFrontier(
       deps,
@@ -370,7 +373,7 @@ function analystHandler(deps: AgentDeps): TaskHandler {
       ),
     );
     const ctx = agentContext(deps, db, work, "analyst", route);
-    const output = analystV1.outputSchema.parse(await analystV1.run(input, ctx));
+    const output = analystV2.outputSchema.parse(await analystV2.run(input, ctx));
 
     // Human-readable memo alongside the structured output (design §6.4) —
     // what the console and (P5) the Synthesizer's context render.
@@ -379,7 +382,7 @@ function analystHandler(deps: AgentDeps): TaskHandler {
       name: "analysis-memo.md",
       mediaType: "text/markdown",
       content: renderAnalysisMemo(output),
-      createdBy: "analyst/v1",
+      createdBy: "analyst/v2",
     });
     await updateAttemptOutput(db, work.attempt.id, output);
   };

@@ -985,6 +985,15 @@ The SSE stream is a tail over the existing event write path — it powers the li
 > checkpoint resolve endpoint gained the `approve` verb (plan_review only);
 > `CreateRunRequest` gained `reviewPlan` and `roleTiers`. See
 > docs/plans/phase-7-plan.md D1–D6.
+>
+> **Amended 2026-08-21 (P8.4, analyst robustness):** `AnalystInput` gained
+> `schemaFeedback` (default `[]`) — prior SCHEMA_FAILURE errors of the same
+> task, rendered into the next attempt (`analyst/v2`; v1 frozen per §33) so a
+> schema reject or output-budget truncation is fixable instead of a temp-0
+> verbatim replay. Model-call errors now distinguish truncation
+> (`detail.truncated: true` when finish=length) from malformation, and the
+> worker stamps the agent version it actually ran onto the attempt row. See
+> docs/plans/phase-8-plan.md D6.
 
 ## 24.6 UI Specification (the mockup is normative)
 

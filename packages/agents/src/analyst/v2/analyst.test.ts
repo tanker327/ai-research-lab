@@ -1,10 +1,11 @@
-// Ticket 4.2 contract test: schema in/out with a stubbed ModelClient — the
-// agent is a thin structured call; citation integrity lives in core checks.
+// Ticket 8.4 contract test: v2 = v1's thin structured call + schemaFeedback
+// rendering and id discipline in the prompt. Stubbed ModelClient — citation
+// integrity stays in core checks.
 import type { ModelClient } from "@lab/model";
 import type { AnalysisOutput, AnalystInput } from "@lab/schemas";
 import { describe, expect, it } from "vitest";
 import type { AgentContext } from "../../types";
-import { analystV1 } from "./index";
+import { analystV2 } from "./index";
 import { buildMessages, SYSTEM } from "./prompt";
 
 const INPUT: AnalystInput = {
@@ -39,8 +40,8 @@ const INPUT: AnalystInput = {
     },
   ],
   openContests: [],
-  schemaFeedback: [], // v1 ignores it — the field arrived with v2 (8.4)
-  timeContext: "Current date: 2026-08-19.",
+  schemaFeedback: [],
+  timeContext: "Current date: 2026-08-20.",
 };
 
 const OUTPUT: AnalysisOutput = {
@@ -48,7 +49,7 @@ const OUTPUT: AnalysisOutput = {
     { statement: "PG's DDL is transactional", canonicalClaimIds: ["claim-1"], implication: null },
   ],
   comparisons: [],
-  unresolvedQuestions: ["concurrent index builds?"],
+  unresolvedQuestions: [],
   confidenceNote: "single-source but authoritative",
 };
 
@@ -68,6 +69,7 @@ function makeCtx(object: unknown) {
           outputTokens: 1,
           costUsd: null,
           latencyMs: 1,
+          finishReason: "stop",
         };
       },
       async generateText() {
@@ -94,28 +96,37 @@ function makeCtx(object: unknown) {
   return ctx;
 }
 
-describe("analystV1", () => {
-  it("returns the parsed AnalysisOutput", async () => {
-    const out = await analystV1.run(INPUT, makeCtx(OUTPUT));
+describe("analystV2", () => {
+  it("returns the parsed AnalysisOutput and reports version v2", async () => {
+    expect(analystV2.version).toBe("v2");
+    const out = await analystV2.run(INPUT, makeCtx(OUTPUT));
     expect(out.findings[0]?.canonicalClaimIds).toEqual(["claim-1"]);
   });
 
-  it("throws on schema-invalid model output (finding without citations)", async () => {
+  it("throws on schema-invalid model output", async () => {
     const bad = {
       ...OUTPUT,
       findings: [{ statement: "uncited", canonicalClaimIds: [], implication: null }],
     };
-    await expect(analystV1.run(INPUT, makeCtx(bad))).rejects.toThrow();
+    await expect(analystV2.run(INPUT, makeCtx(bad))).rejects.toThrow();
   });
 
-  it("prompt renders claim ids, source facts, and contest markers", () => {
-    const msg = buildMessages({
+  it("renders schemaFeedback as the failure-fix section when present, omits it when empty", () => {
+    const noFeedback = buildMessages(INPUT)[0]?.content as string;
+    expect(noFeedback).not.toContain("Previous attempt failed");
+
+    const withFeedback = buildMessages({
       ...INPUT,
-      openContests: [{ claimId: "claim-1", statement: "s", contestNote: "docs disagree" }],
+      schemaFeedback: ["Fix exactly this: canonicalClaimIds entries must be single ids"],
     })[0]?.content as string;
-    expect(msg).toContain("id=claim-1");
-    expect(msg).toContain("affiliation-unknown");
-    expect(msg).toContain("docs disagree");
+    expect(withFeedback).toContain("## Previous attempt failed — fix this");
+    expect(withFeedback).toContain("single ids");
+  });
+
+  it("prompt keeps v1's contract language and adds id discipline", () => {
+    expect(SYSTEM).toContain("EXACTLY ONE id");
+    expect(SYSTEM).toContain("never join two ids");
     expect(SYSTEM).toContain("canonicalClaimIds");
+    expect(SYSTEM).toContain("token budget");
   });
 });
