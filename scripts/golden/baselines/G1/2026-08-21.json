@@ -1,0 +1,66 @@
+{
+  "goldenId": "G1",
+  "title": "R2 vs B2 vs Garage — comparative research, clean accept",
+  "date": "2026-08-21",
+  "runId": "01a0244c-492f-76ca-bde9-6c01d8465622",
+  "runStatus": "ANALYZING",
+  "expectations": {
+    "targetCycles": 1,
+    "budgetUsd": 1.5,
+    "wallClockMin": 45
+  },
+  "metrics": {
+    "tasksTotal": 31,
+    "tasksDone": 26,
+    "tasksFailed": 4,
+    "tasksResearch": 24,
+    "tasksControl": 7,
+    "attemptsTotal": 48,
+    "intelligenceRetries": 18,
+    "tierEscalations": 6,
+    "liveEvidence": 129,
+    "liveClaims": 106,
+    "contestedClaims": 1,
+    "modelCalls": 201,
+    "frontierCalls": 36,
+    "frontierSpendUsd": 0.605367,
+    "toolCalls": 151,
+    "toolLatencyMs": 183675,
+    "evalCycles": 2,
+    "wallClockSeconds": 2822,
+    "maxEvalCycles": 3
+  },
+  "maxEvalCycles": 3,
+  "checkpointReasons": [],
+  "cycleGuardEvents": 0,
+  "verdicts": [
+    {
+      "cycle": 1,
+      "decision": "RESEARCH_MORE",
+      "reasons": [
+        "R2 and B2 pricing, free tiers, and egress allowances are concretely captured, and Garage hardware, replication, and operational burden are well documented.",
+        "Three success criteria are unsatisfied: B2 S3 compatibility is only a page pointer, B2 durability/recovery is unverified, and Garage has no quantitative cost model for direct comparison.",
+        "The remaining gaps are specific and stage-2-resolvable rather than analysis errors, so further targeted research is the correct next step."
+      ]
+    },
+    {
+      "cycle": 2,
+      "decision": "RESEARCH_MORE",
+      "reasons": [
+        "Garage cost comparison is not settled because storage cost rests on one unvalidated affiliation-unknown TCO model and no Garage request/operations cost is stated.",
+        "Durability/recovery for R2 and B2 remains vendor-only, partly contested, and partly stale, so accepting 11-nines as settled would violate the evidence standard.",
+        "R2 object-level S3 compatibility has zero collected evidence, leaving a key tooling question unanswered.",
+        "Stage 2 planning exists, but criteria 1 and 4 remain unsatisfied until targeted research fills these gaps."
+      ]
+    }
+  ],
+  "report": null,
+  "assertionFailures": [
+    "wall clock 2822s exceeds the 45min ceiling",
+    "run ended ANALYZING, not COMPLETED"
+  ],
+  "divergences": ["eval cycles 2 vs reference 1"],
+  "humanVerdict": "pending",
+  "humanNote": null,
+  "judgedAt": null
+}

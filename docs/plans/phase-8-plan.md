@@ -229,3 +229,16 @@ which assertions fail) and baseline serialization — no live calls in vitest.
   on big cycle-2+ bundles, and whether targetCycles=2 should imply a longer
   wall-clock allowance for loop-expected goldens. The orphaned run may be
   completed by the dev stack's workers via the stale-claim sweep.
+- **2026-08-21 — G1 rerun on the v2 chain: the analyst fix is proven; the
+  over-thoroughness pattern is confirmed as the next tuning target (baseline
+  committed, verdict pending).** Run 01a0244c: the cycle-2 analyze that
+  killed the previous run over 86 claims now SUCCEEDED over a 106-claim
+  bundle (schemaFeedback retries + analyst v2), the evaluator demanded a
+  second cycle and then a third — and the run was still mid-cycle-3 analysis
+  at the 45-min ceiling ($0.61 spent, budget fine). Same two honest
+  failures as G2: wall clock, not COMPLETED. Shared pattern across both
+  goldens: evaluator/v2 never rubber-stamps but now loops hard — G1's
+  "clean accept, target 1 cycle" became 2+ cycles on a homelab comparison.
+  Next iteration's tuning target is evaluator PROPORTIONALITY (the prompt's
+  "strict but proportionate" line is losing to per-criterion rigor), not
+  more machinery.
